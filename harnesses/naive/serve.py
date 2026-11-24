@@ -1,17 +1,27 @@
 """Rung 0: a single model call.
 
-No tools and no agent loop. The model receives the task text and answers once. Files it
-writes as marked blocks in its answer are saved in the task container; the rest of the
-answer is the final message. The model cannot read the task's input files or run anything.
+No tools and no agent loop. Before the call, the harness (not the model) turns the task's
+files into plain text and pastes them after the task text; images are listed by name only.
+The model answers once. Files it writes as marked blocks in its answer are saved in the task
+container; the rest of the answer is the final message. The model cannot open files or run
+anything itself.
 
 This is the floor every later rung is measured against.
 """
 import asyncio
+import json
 import os
+import pathlib
 import re
 
 import openai
 import taskbridge
+
+HERE = pathlib.Path(__file__).resolve().parent
+EXTRACTOR = (HERE / "extract_inputs.py").read_text(encoding="utf-8")
+REMOTE_DIR = "/tmp/naive"  # in the task container, outside every graded path
+PER_FILE_CHARS = int(os.environ.get("NAIVE_PER_FILE_CHARS", "60000"))
+TOTAL_CHARS = int(os.environ.get("NAIVE_TOTAL_CHARS", "500000"))
 
 MODEL = os.environ["MODEL_NAME"]
 MAX_EFFORT_MODELS = ("claude", "glm")
@@ -24,8 +34,10 @@ FILE_BLOCK = re.compile(r"^<<<FILE (?P<path>[^\n>]+)>>>\n(?P<body>.*?)\n<<<END>>
 
 SYSTEM = """You are an experienced engineer completing a task for a client.
 
-You get one reply and nothing else: you cannot open the task's files, run code, or ask
-questions. Work from the task text alone.
+You get one reply and nothing else: you cannot open files, run code, or ask questions.
+The task's project files follow the task text, converted to plain text for you (spreadsheets
+as comma-separated rows, PDFs page by page). Images and other non-text files are listed by
+name only, and very long files are cut where marked. Work from what is given.
 
 Write every file the task asks for in your reply, each as a block exactly like this,
 with the path the task gives (absolute, or relative to {workdir}):
@@ -79,10 +91,50 @@ async def ask(session, messages):
   raise RuntimeError("unreachable")
 
 
+def input_roots(workdir):
+  """Where a task keeps its files: the working directory, plus the world folders."""
+  roots = [] if workdir in ("", "/") else [workdir]
+  return roots + [r for r in ("/filesystem", "/app/files") if r not in roots]
+
+
+def render_inputs(data):
+  """The extracted files as one plain-text block for the prompt."""
+  parts = [f"=== PROJECT FILES ({len(data['files'])} files, converted to plain text) ==="]
+  for f in data["files"]:
+    flags = [f["kind"], f"{f['bytes']} bytes"] + (["cut short"] if f["truncated"] else [])
+    parts.append(f"\n--- {f['path']} [{', '.join(flags)}] ---")
+    if f["text"]:
+      parts.append(f["text"])
+    if f["note"]:
+      parts.append(f"({f['note']})")
+  for s in data.get("skipped", []):
+    parts.append(f"\n--- {s['path']} --- ({s['note']})")
+  return "\n".join(parts)
+
+
+async def gather_inputs(session):
+  """Runs the extractor in the task container; returns the prompt block, or a note why not."""
+  script, out = f"{REMOTE_DIR}/extract_inputs.py", f"{REMOTE_DIR}/inputs.json"
+  try:
+    await session.write_file(script, EXTRACTOR)
+    roots = " ".join(f"'{r}'" for r in input_roots(session.workdir))
+    res = await session.exec(
+        f"python3 {script} --out {out} --per-file {PER_FILE_CHARS} --total {TOTAL_CHARS} {roots}",
+        timeout_sec=600)
+    await session.log(f"naive: extractor exit {res.get('exit_code')}: {(res.get('output') or '')[-500:]}")
+    if res.get("exit_code") != 0:
+      return "(The harness could not convert the project files to text.)"
+    return render_inputs(json.loads(await session.read_file(out)))
+  except (taskbridge.TaskError, ValueError) as exc:
+    await session.log(f"naive: input extraction failed: {type(exc).__name__}: {exc}")
+    return "(The harness could not convert the project files to text.)"
+
+
 async def solve(session):
+  inputs = await gather_inputs(session)
   messages = [
       {"role": "system", "content": SYSTEM.format(workdir=session.workdir)},
-      {"role": "user", "content": session.instruction},
+      {"role": "user", "content": f"{session.instruction}\n\n{inputs}"},
   ]
   answer, usage = await ask(session, messages)
   if usage:

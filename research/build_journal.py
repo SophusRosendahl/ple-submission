@@ -162,7 +162,7 @@ a failure we observe, measuring every step on half A.
 
 | Rung | Harness | Question it answers |
 |---|---|---|
-| 0 | **one model call**: task text in, deliverables written from its reply; it cannot read the inputs or run anything | how much of the score is pure engineering knowledge? |
+| 0 | **one model call**: the harness pastes the task's files in as plain text (images by name only); deliverables are written from the reply; the model cannot open files or run anything | how far does one careful read of the project get? |
 | 1 | a tool loop: read files, run commands, write files | how much does access to the project add? |
 | … | each next capability is chosen from what rung *n* got wrong | |
 
