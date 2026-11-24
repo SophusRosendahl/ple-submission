@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import pathlib
 import subprocess
 import sys
@@ -34,6 +35,17 @@ def git_commit(path: pathlib.Path) -> str | None:
     return (out.stdout.strip() + ("+dirty" if dirty else "")) if out.returncode == 0 else None
 
 
+def split_by_memory(tasks, max_gb):
+    """Splits tasks into those whose task + harness containers fit in max_gb of Docker memory."""
+    res = json.loads((REPO / "research" / "task_resources.json").read_text(encoding="utf-8"))
+    overhead = res["harness_overhead"]["memory_mb"]
+    fits, too_big = [], []
+    for t in tasks:
+        need = res["tasks"].get(t, {}).get("memory_mb")
+        (fits if need is not None and (need + overhead) / 1024 <= max_gb else too_big).append(t)
+    return fits, too_big
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ple", type=pathlib.Path, required=True, help="clone of the competition repository")
@@ -42,6 +54,8 @@ def main(argv=None):
     ap.add_argument("--half", default="A", choices=["A", "B", "all"])
     ap.add_argument("--holdout", default=None, help="reason, required for half B or all")
     ap.add_argument("--tasks", default=None, help="comma-separated subset of the half (default: the whole half)")
+    ap.add_argument("--max-memory-gb", type=float, default=None,
+                    help="only tasks whose task + harness containers fit in this much Docker memory")
     ap.add_argument("--env-file", type=pathlib.Path, default=None)
     ap.add_argument("--trials", type=int, default=None, help="tasks to run in parallel")
     ap.add_argument("--notes", default="")
@@ -54,6 +68,12 @@ def main(argv=None):
     outside = [t for t in tasks if t not in half_tasks]
     if outside:
         sys.exit(f"not in half {a.half}: {', '.join(outside)}")
+    if a.max_memory_gb is not None:
+        fits, too_big = split_by_memory(tasks, a.max_memory_gb)
+        print(f"fits in {a.max_memory_gb:g} GB: {len(fits)} tasks; left for later: {', '.join(too_big) or 'none'}")
+        if not fits:
+            sys.exit("no task fits in that much memory")
+        tasks = fits
 
     entry = a.entry.resolve()
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d-%H%M%S")
@@ -68,12 +88,14 @@ def main(argv=None):
     code = subprocess.run(cmd, cwd=a.ple, check=False).returncode
     if not (out / "results.json").is_file():
         sys.exit(f"eval/run.py exited {code} and wrote no results.json in {out}")
-    notes = a.notes + (f" (subset: {len(tasks)} of {len(half_tasks)} tasks)" if a.tasks else "")
+    partial = len(tasks) < len(half_tasks)
+    notes = a.notes + (f" (subset: {len(tasks)} of {len(half_tasks)} tasks)" if partial else "")
     rec = tracker.import_results(out, a.label, a.half, notes.strip(), git_commit(entry), a.holdout)
     print()
     print(tracker.report(rec))
-    if a.tasks:
-        print("\nnote: tasks of the half that were not run count as 0 in the score above")
+    if partial:
+        print("\nnote: tasks of the half that were not run count as 0 in the score above;"
+              " merge batches with `tracker.py combine`")
 
 
 if __name__ == "__main__":

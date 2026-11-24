@@ -14,11 +14,11 @@ Half-B results are only recorded with an explicit `--holdout` reason.
 
 ## Run a harness on half A
 
-On a machine with Docker, uv, Harbor 0.20.0 (`uv tool install harbor==0.20.0 --with websockets`),
-a clone of the competition repository and the model proxy running (see its `eval/README.md`):
+Setup and batch commands for a laptop: `infra/local/README.md`. In short:
 
 ```bash
-python research/run_dev.py --ple ../ple --entry harnesses/naive --label "rung 0: single model call" --env-file ../ple/local.env
+python3 research/run_dev.py --ple ../ple --entry harnesses/naive --label "rung 0: single model call, files as text" \
+    --env-file ../ple/local.env --max-memory-gb 12.5 --trials 1
 ```
 
 Raw run folders go to `runs/` (git-ignored); the record goes to `research/runs.jsonl`.
@@ -27,6 +27,7 @@ Raw run folders go to `runs/` (git-ignored); the record goes to `research/runs.j
 
 ```bash
 python research/tracker.py list
+python research/tracker.py combine run-001 run-002 --label "…"   # merge batch runs
 python research/tracker.py report run-000
 python research/build_journal.py && jupyter nbconvert --execute --inplace research/journal.ipynb
 ```

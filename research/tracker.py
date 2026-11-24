@@ -11,6 +11,7 @@ Commands:
   import-results  RUN_DIR      record a run folder written by ple's eval/run.py (results.json)
   import-manifest ARTIFACTS    record the scores in an artifacts/manifest.json (e.g. the
                                official template's committed run)
+  combine RUN_ID RUN_ID ...     merge batch runs of the same harness into one record (later runs win)
   list                         one line per recorded run
   report RUN_ID                full scoring of one run, like a live submission
 """
@@ -154,6 +155,40 @@ def import_manifest(artifacts: pathlib.Path, label: str, half: str, notes: str,
     })
 
 
+def commits(run: dict) -> list[str]:
+    c = run["harness"].get("commit")
+    return [x or "?" for x in c] if isinstance(c, list) else [c or "?"]
+
+
+def combine(run_ids: list[str], label: str, notes: str) -> dict:
+    """Merges batch runs of one harness and model into one record; later runs win per task."""
+    by_id = {r["run_id"]: r for r in load_runs()}
+    missing = [i for i in run_ids if i not in by_id]
+    if missing:
+        sys.exit(f"no such run: {', '.join(missing)}")
+    parts = [by_id[i] for i in run_ids]
+    kinds = {(p["harness"].get("name"), p["harness"].get("model"), p["half"]) for p in parts}
+    if len(kinds) > 1:
+        sys.exit(f"these runs differ in harness, model or half, so they cannot be combined: {sorted(kinds, key=str)}")
+    tasks = {}
+    for p in parts:
+        tasks.update(p["tasks"])
+    first = parts[0]
+    return append_run({
+        "label": label,
+        "recorded": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "source": {"kind": "combined", "runs": run_ids,
+                   "run_date": max((p["source"].get("run_date") or "") for p in parts) or None},
+        "harness": {**first["harness"], "commit": sorted({c for p in parts for c in commits(p)})},
+        "judge_model": first.get("judge_model"),
+        "half": first["half"],
+        "holdout_reason": first.get("holdout_reason"),
+        "tasks": tasks,
+        "dropped_outside_half": [],
+        "notes": notes,
+    })
+
+
 def score(run: dict) -> dict:
     """Scores a run the way a submission is scored: the mean over every task of its half."""
     expected = tasks_of(run["half"])
@@ -228,6 +263,10 @@ def main(argv=None):
         p.add_argument("--holdout", default=None, help="reason, required for half B or all")
         p.add_argument("--notes", default="")
     r.add_argument("--commit", default=None, help="harness git commit that produced the run")
+    c = sub.add_parser("combine")
+    c.add_argument("run_ids", nargs="+")
+    c.add_argument("--label", required=True)
+    c.add_argument("--notes", default="")
     sub.add_parser("list")
     rep = sub.add_parser("report")
     rep.add_argument("run_id")
@@ -239,6 +278,8 @@ def main(argv=None):
     elif a.cmd == "import-manifest":
         rec = import_manifest(a.artifacts, a.label, a.half, a.notes, a.source, a.model, a.holdout)
         print(report(rec))
+    elif a.cmd == "combine":
+        print(report(combine(a.run_ids, a.label, a.notes)))
     elif a.cmd == "list":
         for run in load_runs():
             s = score(run)

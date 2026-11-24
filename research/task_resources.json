@@ -1,0 +1,21 @@
+{
+  "_note": "From each task's task.toml [environment] (cpus, memory_mb) and whether it runs app servers (docker-compose). Half A only. Our harness container adds 2 CPUs and 4.25 GB per task.",
+  "harness_overhead": {"cpus": 2, "memory_mb": 4352},
+  "tasks": {
+    "data-hall-mep-routing":       {"cpus": 2, "memory_mb": 4096,  "apps": false},
+    "fire-test-validation-memo":   {"cpus": 2, "memory_mb": 4096,  "apps": false},
+    "eor-review-corrections":      {"cpus": 4, "memory_mb": 8192,  "apps": false},
+    "data-center-site-model":      {"cpus": 2, "memory_mb": 4096,  "apps": false},
+    "solar-witness-test-package":  {"cpus": 4, "memory_mb": 12288, "apps": true},
+    "frame-extension-method":      {"cpus": 4, "memory_mb": 8192,  "apps": false},
+    "fire-solve-convergence":      {"cpus": 2, "memory_mb": 8192,  "apps": true},
+    "les-mesh-resolution":         {"cpus": 2, "memory_mb": 8192,  "apps": true},
+    "division-26-specifications":  {"cpus": 4, "memory_mb": 8192,  "apps": false},
+    "wind-diaphragm-shear":        {"cpus": 4, "memory_mb": 8192,  "apps": false},
+    "roof-deck-design":            {"cpus": 4, "memory_mb": 8192,  "apps": false},
+    "fill-compaction-acceptance":  {"cpus": 2, "memory_mb": 8192,  "apps": true},
+    "shoring-design-verification": {"cpus": 2, "memory_mb": 8192,  "apps": true},
+    "backfeed-energization-reply": {"cpus": 4, "memory_mb": 12288, "apps": true},
+    "lv-cable-sizing":             {"cpus": 4, "memory_mb": 8192,  "apps": false}
+  }
+}

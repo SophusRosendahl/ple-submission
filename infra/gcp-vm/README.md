@@ -1,4 +1,6 @@
-# Run machine on Google Cloud
+# Run machine on Google Cloud (optional, not used for now)
+
+We run locally (see `infra/local/`). Keep this for when a laptop is not enough.
 
 One VM in your project runs everything: Docker and the task containers, Harbor, the
 competition's model proxy, and our run scripts. Models are called on Vertex AI in the same
@@ -21,10 +23,10 @@ stored anywhere.
 2. SSH in (`gcloud compute ssh ple-runner --zone us-central1-a`), copy `setup_vm.sh` over or clone
    `ple-submission`, then run `bash setup_vm.sh` and log out and back in.
 3. Clone `ple-submission` (private) next to `~/ple`.
-4. Start the model proxy: `bash ple-submission/infra/gcp/start_proxy.sh` (asks for the Hugging
+4. Start the model proxy: `bash ple-submission/infra/local/start_proxy.sh` (asks for the Hugging
    Face token once and writes `~/ple/local.env`, readable only by you).
 5. Check the models answer, with text and with an image:
-   `python3 ple-submission/infra/gcp/check_models.py`
+   `python3 ple-submission/infra/local/check_models.py`
 6. Run a harness on half A:
    ```bash
    cd ~/ple-submission

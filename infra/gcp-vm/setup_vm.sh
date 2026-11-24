@@ -20,4 +20,4 @@ echo
 echo "Next:"
 echo "  1. log out and back in (so Docker works without sudo)"
 echo "  2. clone ple-submission (private): gh auth login, or git clone with a token"
-echo "  3. bash ple-submission/infra/gcp/start_proxy.sh"
+echo "  3. bash ple-submission/infra/local/start_proxy.sh"

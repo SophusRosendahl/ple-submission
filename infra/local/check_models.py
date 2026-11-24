@@ -18,7 +18,7 @@ import urllib.error
 import urllib.request
 import zlib
 
-ENV_FILE = pathlib.Path(os.environ.get("PLE_ENV", pathlib.Path.home() / "ple" / "local.env"))
+ENV_FILE = pathlib.Path(os.environ.get("PLE_ENV", pathlib.Path(__file__).resolve().parents[3] / "ple" / "local.env"))
 DEFAULT_MODELS = ["claude-opus-5-5", "gemini-4-neon"]
 
 
