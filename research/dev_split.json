@@ -1,0 +1,191 @@
+{
+  "seed": 20261124,
+  "method": "already-studied tasks fixed in A; the rest assigned at random per grading type",
+  "already_studied": [
+    "data-hall-mep-routing",
+    "data-center-site-model",
+    "backfeed-energization-reply",
+    "fill-compaction-acceptance",
+    "fire-test-validation-memo"
+  ],
+  "A": [
+    "data-hall-mep-routing",
+    "fire-test-validation-memo",
+    "eor-review-corrections",
+    "data-center-site-model",
+    "solar-witness-test-package",
+    "frame-extension-method",
+    "fire-solve-convergence",
+    "les-mesh-resolution",
+    "division-26-specifications",
+    "wind-diaphragm-shear",
+    "roof-deck-design",
+    "fill-compaction-acceptance",
+    "shoring-design-verification",
+    "backfeed-energization-reply",
+    "lv-cable-sizing"
+  ],
+  "B": [
+    "data-hall-mep-routing-offset",
+    "foundation-strategy",
+    "landscape-sheet-revision",
+    "engineers-estimate-check",
+    "footing-settlement-verification",
+    "solar-supplemental-review",
+    "mv-conveyance-study",
+    "data-hall-device-takeoff",
+    "heat-rejection-life-cycle-cost",
+    "cooling-water-flush-plan",
+    "seismic-diaphragm-shear",
+    "emergency-spillway-check",
+    "pre-application-capacity-response",
+    "permission-to-operate-memo"
+  ],
+  "tasks": {
+    "data-hall-mep-routing": {
+      "title": "Clash-free MEP routing through a data hall",
+      "domain": "Mechanical engineering",
+      "grading": "checks"
+    },
+    "fire-test-validation-memo": {
+      "title": "Validation memo for a fire-resistance simulation against its test",
+      "domain": "Mechanical engineering",
+      "grading": "rubric"
+    },
+    "data-hall-mep-routing-offset": {
+      "title": "Clash-free MEP routing through a data hall on an offset structural grid",
+      "domain": "Mechanical engineering",
+      "grading": "checks"
+    },
+    "eor-review-corrections": {
+      "title": "Issue an engineer-of-record review's corrections to two bid packages",
+      "domain": "Structural engineering",
+      "grading": "checks-judge"
+    },
+    "foundation-strategy": {
+      "title": "Spread footings or aggregate piers for six data-campus building pads",
+      "domain": "Civil engineering",
+      "grading": "checks-judge"
+    },
+    "landscape-sheet-revision": {
+      "title": "Street-tree revision worked into a landscape resubmittal",
+      "domain": "Civil engineering",
+      "grading": "rubric"
+    },
+    "data-center-site-model": {
+      "title": "Feasible data-center site design as an IFC model",
+      "domain": "Civil engineering",
+      "grading": "checks"
+    },
+    "engineers-estimate-check": {
+      "title": "Engineer's estimate checked before a bond conversation",
+      "domain": "Civil engineering",
+      "grading": "rubric"
+    },
+    "footing-settlement-verification": {
+      "title": "Settlement verification of a building block's spread footings on clay",
+      "domain": "Civil engineering",
+      "grading": "rubric"
+    },
+    "solar-supplemental-review": {
+      "title": "Supplemental interconnection review memo for a solar project",
+      "domain": "Electrical engineering",
+      "grading": "rubric"
+    },
+    "solar-witness-test-package": {
+      "title": "Witness-test scope and schedule for municipal solar arrays",
+      "domain": "Electrical engineering",
+      "grading": "rubric"
+    },
+    "frame-extension-method": {
+      "title": "Method package for a frame extension over an occupied floor",
+      "domain": "Civil engineering",
+      "grading": "checks"
+    },
+    "fire-solve-convergence": {
+      "title": "Disposition of a non-converging fire-simulation solve",
+      "domain": "Mechanical engineering",
+      "grading": "rubric"
+    },
+    "les-mesh-resolution": {
+      "title": "Mesh-resolution basis for an LES fire case",
+      "domain": "Mechanical engineering",
+      "grading": "rubric"
+    },
+    "mv-conveyance-study": {
+      "title": "Conveyance study for a 13.8 kV site distribution",
+      "domain": "Electrical engineering",
+      "grading": "checks"
+    },
+    "data-hall-device-takeoff": {
+      "title": "Device takeoff and priced bill of materials for a data hall",
+      "domain": "Electrical engineering",
+      "grading": "checks"
+    },
+    "division-26-specifications": {
+      "title": "Division 26 project specifications for an Army facility",
+      "domain": "Electrical engineering",
+      "grading": "checks"
+    },
+    "heat-rejection-life-cycle-cost": {
+      "title": "Life-cycle cost of a condenser-water heat rejection replacement",
+      "domain": "Mechanical engineering",
+      "grading": "checks"
+    },
+    "cooling-water-flush-plan": {
+      "title": "Flushing and passivation of a data hall's process cooling water",
+      "domain": "Mechanical engineering",
+      "grading": "checks"
+    },
+    "wind-diaphragm-shear": {
+      "title": "Roof diaphragm shears and shear-wall loads for wind",
+      "domain": "Structural engineering",
+      "grading": "checks"
+    },
+    "seismic-diaphragm-shear": {
+      "title": "Seismic diaphragm shears and shear-wall loads",
+      "domain": "Structural engineering",
+      "grading": "checks"
+    },
+    "roof-deck-design": {
+      "title": "Roof deck design for gravity and lateral loads",
+      "domain": "Structural engineering",
+      "grading": "checks"
+    },
+    "fill-compaction-acceptance": {
+      "title": "Acceptance of slab-on-grade fill compaction testing",
+      "domain": "Civil engineering",
+      "grading": "rubric"
+    },
+    "shoring-design-verification": {
+      "title": "Verification of a revised shoring design ahead of an excavation",
+      "domain": "Civil engineering",
+      "grading": "rubric"
+    },
+    "emergency-spillway-check": {
+      "title": "Emergency spillway check behind a plan-check comment",
+      "domain": "Civil engineering",
+      "grading": "rubric"
+    },
+    "pre-application-capacity-response": {
+      "title": "Response to a pre-application request for feeder capacity",
+      "domain": "Electrical engineering",
+      "grading": "rubric"
+    },
+    "permission-to-operate-memo": {
+      "title": "Permission-to-operate memo for an office complex's PV system",
+      "domain": "Electrical engineering",
+      "grading": "rubric"
+    },
+    "backfeed-energization-reply": {
+      "title": "Reply on a community solar site's backfeed energization date",
+      "domain": "Electrical engineering",
+      "grading": "rubric"
+    },
+    "lv-cable-sizing": {
+      "title": "Low-voltage wire schedule with voltage drop and duct-bank ampacity",
+      "domain": "Electrical engineering",
+      "grading": "checks-judge"
+    }
+  }
+}
