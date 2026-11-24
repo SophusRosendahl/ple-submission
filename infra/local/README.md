@@ -55,7 +55,17 @@ python3 research/run_dev.py --ple ../ple --entry harnesses/naive \
     --env-file ../ple/local.env --max-memory-gb 12.5 --trials 1
 ```
 
-`--trials 1` runs one task at a time, which a laptop needs. If you run the remaining tasks later
+`--trials 1` runs one task at a time, which a laptop needs.
+
+**On an 8 GB Mac**, give Docker 5–6 GB and run only the tasks without app servers. The memory
+figures above are container limits, not reservations, and these tasks mostly run Python, so they
+usually fit; the 7 app-based tasks need a bigger machine:
+
+```bash
+python3 research/run_dev.py --ple ../ple --entry harnesses/naive \
+    --label "rung 0: single model call, files as text" \
+    --env-file ../ple/local.env --skip-apps --trials 1
+``` If you run the remaining tasks later
 (or on a bigger machine), merge the batches into one half-A score:
 
 ```bash

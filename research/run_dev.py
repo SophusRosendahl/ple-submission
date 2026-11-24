@@ -35,6 +35,12 @@ def git_commit(path: pathlib.Path) -> str | None:
     return (out.stdout.strip() + ("+dirty" if dirty else "")) if out.returncode == 0 else None
 
 
+def app_tasks():
+    """Half-A tasks that run app servers (from research/task_resources.json)."""
+    res = json.loads((REPO / "research" / "task_resources.json").read_text(encoding="utf-8"))
+    return {t for t, r in res["tasks"].items() if r.get("apps")}
+
+
 def split_by_memory(tasks, max_gb):
     """Splits tasks into those whose task + harness containers fit in max_gb of Docker memory."""
     res = json.loads((REPO / "research" / "task_resources.json").read_text(encoding="utf-8"))
@@ -56,6 +62,8 @@ def main(argv=None):
     ap.add_argument("--tasks", default=None, help="comma-separated subset of the half (default: the whole half)")
     ap.add_argument("--max-memory-gb", type=float, default=None,
                     help="only tasks whose task + harness containers fit in this much Docker memory")
+    ap.add_argument("--skip-apps", action="store_true",
+                    help="leave out tasks that run app servers (large images, more memory)")
     ap.add_argument("--env-file", type=pathlib.Path, default=None)
     ap.add_argument("--trials", type=int, default=None, help="tasks to run in parallel")
     ap.add_argument("--notes", default="")
@@ -74,6 +82,14 @@ def main(argv=None):
         if not fits:
             sys.exit("no task fits in that much memory")
         tasks = fits
+
+    if a.skip_apps:
+        apps = app_tasks()
+        left = [t for t in tasks if t in apps]
+        tasks = [t for t in tasks if t not in apps]
+        print(f"without app servers: {len(tasks)} tasks; left for later: {', '.join(left) or 'none'}")
+        if not tasks:
+            sys.exit("every selected task runs app servers")
 
     entry = a.entry.resolve()
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d-%H%M%S")
