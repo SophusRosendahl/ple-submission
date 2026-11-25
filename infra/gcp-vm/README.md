@@ -1,6 +1,21 @@
-# Run machine on Google Cloud (optional, not used for now)
+# Run machine on Google Cloud
 
-We run locally (see `infra/local/`). Keep this for when a laptop is not enough.
+Runs go here: the Mac's Docker has too little memory. The VM `ple-runner` already exists and is set up;
+day to day you only need `vm_up.sh` (below). The steps after it are for building a new VM.
+
+## Day to day (VM already set up)
+
+From Cloud Shell or the Mac (signed in to gcloud, in this repo):
+```bash
+bash infra/gcp-vm/vm_up.sh                            # start, update both repos, start the proxy, check models
+ENV_FILE=~/path/to/local.env bash infra/gcp-vm/vm_up.sh   # also copy a fixed local.env (HF token) over first
+RUN=1 bash infra/gcp-vm/vm_up.sh                      # ... and start rung 0 (rung0.sh) in tmux
+gcloud compute ssh ple-runner --zone us-central1-a -- tail -f rung0.log
+gcloud compute instances stop ple-runner --zone us-central1-a
+```
+The VM checks out the branch you run `vm_up.sh` from (`BRANCH=` to override).
+
+## Building a new VM
 
 One VM in your project runs everything: Docker and the task containers, Harbor, the
 competition's model proxy, and our run scripts. Models are called on Vertex AI in the same
