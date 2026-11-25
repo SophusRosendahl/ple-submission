@@ -33,19 +33,40 @@ scores 0.543 on our dev half A.
 | `infra/local/` | Mac setup, model proxy start script, model check |
 | `docs/` | design decisions, architecture, this note |
 
+## Status (2026-11-25, end of the local-setup session)
+
+Done:
+- Mac: repos side by side in `coding_projects/ple/` (`ple/`, `ple-submission/`), `.venv` with the
+  research deps, uv, gcloud and Harbor installed. Docker Desktop has only 3.8 GB; runs now go to the VM.
+- Google Cloud project `ple-submission` (billing in DKK): budget 600 DKK/month, email alerts at
+  50/90/100/110% and 100% forecast, and a **hard cap** that turns off billing at 100%
+  (`infra/gcp-budget/`). Vertex AI, Compute Engine and the budget/function APIs enabled.
+- Run VM `ple-runner` (spot n2-standard-32, 250 GB, us-central1-a) created and set up: Docker,
+  Harbor, both repos, `~/ple/local.env`, proxy start script. Powers off after 30 idle minutes and
+  after 24 h running. It is **stopped**; start with
+  `gcloud compute instances start ple-runner --zone us-central1-a`.
+- Models through the proxy: Gemini 4 Neon works (text and images). **Claude Opus 5.5 has zero
+  quota**: three increase requests were auto-denied (new billing account). Retry smaller amounts
+  in the console later.
+- `run_dev.py --judge {cheap,dev,official}` (default `dev` = Gemini 4 Neon; `PLE_JUDGE` env) and
+  `--model <id>` (runs the entry with another model, entry unchanged). The tracker records and lists
+  the judge; `combine` refuses to mix judges.
+
+Blocked: the Hugging Face token in `ple/local.env` is rejected ("Invalid username or password"),
+so the dataset download failed. Fix: make a new Read token on the account that has dataset access,
+then in your own Terminal:
+`read -rs "HF?Hugging Face token: " && sed -i '' "s|^HF_TOKEN=.*|HF_TOKEN=$HF|" ~/Documents/coding_projects/ple/ple/local.env && unset HF`
+
 ## Next steps
 
-1. Mac setup per `infra/local/README.md`; `python3 infra/local/check_models.py` (also settles
-   whether image input works through the proxy).
-2. Rung 0 on one task at a time, starting with `data-center-site-model` (lightest, checks-only),
-   then `fire-test-validation-memo` (exercises the judge):
-   ```bash
-   python3 research/run_dev.py --ple ../ple --entry harnesses/naive \
-       --label "rung 0: single model call, files as text" \
-       --env-file ../ple/local.env --tasks data-center-site-model --trials 1
-   ```
-3. Check the first real report against the actual `eval/run.py` output folder (the tracker's
-   grader-detail parsing was only tested on a hand-made run folder).
+1. Fix the HF token (above), copy it to the VM
+   (`gcloud compute scp ple/local.env ple-runner:ple/local.env --zone us-central1-a`), start the VM.
+2. On the VM: `bash ple-submission/infra/local/start_proxy.sh`, then `tmux new -s rung0 "bash ~/rung0.sh 2>&1 | tee ~/rung0.log"`.
+   `~/rung0.sh` runs rung 0 on all 15 half-A tasks (5 at a time, judge Gemini 4 Neon), first with
+   Gemini 3.8 Flash (the "bad" model), then Gemini 4 Neon (the "better" one). App-task images are
+   built in the first run (an hour or more).
+3. Copy `research/runs.jsonl` and the run folders back from the VM, then write the comparison
+   report: what each model does well and where it fails, per task and grader detail.
 4. Record results in the journal; decide rung 1 from what rung 0 got wrong.
 
 ## Open questions
