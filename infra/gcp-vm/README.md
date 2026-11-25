@@ -60,3 +60,10 @@ stored anywhere.
   run; `idle_shutdown.sh`) and is stopped after 24 h of running (`MAX_RUN`). The project's budget
   hard cap (`infra/gcp-budget/`) turns off billing entirely at 600 DKK per month.
 - Stop it yourself when done: `gcloud compute instances stop ple-runner --zone us-central1-a`.
+
+## Driving the VM with no laptop (from a Claude cloud session)
+
+Run `infra/gcp-vm/github_bridge_setup.sh` once in Cloud Shell (any browser works). It also asks for the
+Hugging Face token and writes it into `~/ple/local.env` on the VM. After that, each push that changes
+`.github/vm/job.sh` runs that script on the VM through `.github/workflows/vm.yml`. Its options
+(`# start:`, `# stop:`, `# pull:`) are at the top of the workflow file.

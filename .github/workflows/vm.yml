@@ -1,0 +1,54 @@
+# Runs .github/vm/job.sh on the run VM whenever a push changes it, so the VM can be driven from
+# a cloud session with no laptop. Auth is keyless (Workload Identity Federation, set up once with
+# infra/gcp-vm/github_bridge_setup.sh). Job options are comment lines in job.sh:
+#   # start: no            don't start the VM first (default: start it)
+#   # stop: yes            stop the VM afterwards
+#   # pull: a b            paths under ~/ple-submission on the VM to copy back and commit here
+# The job runs as the VM's owner in ~/ple-submission, after this branch is copied there.
+name: vm
+on:
+  push:
+    paths: [".github/vm/job.sh"]
+permissions:
+  contents: write
+  id-token: write
+concurrency: vm
+env:
+  ZONE: us-central1-a
+  NAME: ple-runner
+jobs:
+  vm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/ple-submission
+          service_account: gh-vm@ple-submission.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Run job on the VM
+        run: |
+          set -euo pipefail
+          J=.github/vm/job.sh
+          opt() { sed -n "s/^# $1: *//p" "$J" | head -1; }
+          ssh_vm() { gcloud compute ssh "$NAME" --zone "$ZONE" --quiet --strict-host-key-checking=no --command "$1"; }
+          AS_OWNER='o=$(stat -c %U /home/*/ple-submission | head -1); sudo -iu "$o" bash -s'
+          [[ "$(opt start)" == "no" ]] || gcloud compute instances start "$NAME" --zone "$ZONE"
+          for i in $(seq 30); do ssh_vm true && break; sleep 10; done
+          git bundle create /tmp/b.bundle HEAD
+          gcloud compute scp /tmp/b.bundle "$NAME:/tmp/b.bundle" --zone "$ZONE" --quiet --strict-host-key-checking=no
+          printf 'set -e; cd ~/ple-submission; git fetch -q /tmp/b.bundle HEAD; git checkout -q -B %s FETCH_HEAD; git log -1 --oneline\n' "$GITHUB_REF_NAME" \
+            | ssh_vm "$AS_OWNER"
+          { echo 'cd ~/ple-submission; export PATH="$HOME/.local/bin:$PATH"'; cat "$J"; } | ssh_vm "$AS_OWNER"
+          PULL="$(opt pull)"
+          if [[ -n "$PULL" ]]; then
+            echo "cd ~/ple-submission && tar -cz $PULL" | ssh_vm "$AS_OWNER" | tar -xz
+            git config user.name "vm job"; git config user.email "actions@github.com"
+            git add -A -- $PULL && git commit -qm "VM results: $PULL" && git push origin "HEAD:$GITHUB_REF_NAME" || echo "nothing to commit"
+          fi
+      - name: Stop the VM
+        if: always()
+        run: |
+          grep -q '^# stop: *yes' .github/vm/job.sh && gcloud compute instances stop "$NAME" --zone "$ZONE" || true
