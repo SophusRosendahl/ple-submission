@@ -8,8 +8,15 @@
 | `runs.jsonl` | every recorded run (committed) |
 | `journal.ipynb` | the lab journal: narrative + live tables and charts from the tracker (built by `build_journal.py`) |
 
-Scoring is the competition's: each task 0–1 from its own grader (rubric tasks judged by Claude
-Opus 5.5), a task with no result counts as 0, the run's score is the mean over the half.
+Scoring is the competition's: each task 0–1 from its own grader (rubric tasks judged by an LLM
+judge), a task with no result counts as 0, the run's score is the mean over the half.
+
+**Judge.** The leaderboard judges with Claude Opus 5.5. Early runs use a cheaper judge to save cost:
+`run_dev.py --judge dev` (Gemini 4 Neon, the default), `--judge cheap` (Gemini 3.8 Flash) or
+`--judge official` (Claude Opus 5.5); `PLE_JUDGE=official` sets it for a whole shell session, and
+the presets live in `JUDGES` at the top of `run_dev.py`. Every record stores its judge,
+`tracker.py list` shows it, and `combine` refuses to merge runs with different judges: compare
+judged scores only between runs with the same judge.
 Half-B results are only recorded with an explicit `--holdout` reason.
 
 ## Run a harness on half A

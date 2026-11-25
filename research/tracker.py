@@ -31,6 +31,16 @@ DETAIL_FILES = ("grade.json", "metrics.json", "reward.json")
 MAX_DETAIL_CHARS = 20000
 
 
+OFFICIAL_JUDGE = "claude-opus-5-5"   # the leaderboard's judge
+
+
+def judge_name(model: str | None) -> str:
+    """The judge model without the proxy's `-judge` suffix; '?' when unknown."""
+    if not model:
+        return "?"
+    return model[: -len("-judge")] if model.endswith("-judge") else model
+
+
 def load_split() -> dict:
     return json.loads(SPLIT.read_text(encoding="utf-8"))
 
@@ -167,9 +177,10 @@ def combine(run_ids: list[str], label: str, notes: str) -> dict:
     if missing:
         sys.exit(f"no such run: {', '.join(missing)}")
     parts = [by_id[i] for i in run_ids]
-    kinds = {(p["harness"].get("name"), p["harness"].get("model"), p["half"]) for p in parts}
+    kinds = {(p["harness"].get("name"), p["harness"].get("model"), p["half"], judge_name(p.get("judge_model"))) for p in parts}
     if len(kinds) > 1:
-        sys.exit(f"these runs differ in harness, model or half, so they cannot be combined: {sorted(kinds, key=str)}")
+        sys.exit("these runs differ in harness, model, half or judge, so they cannot be combined:"
+                 f" {sorted(kinds, key=str)}")
     tasks = {}
     for p in parts:
         tasks.update(p["tasks"])
@@ -224,7 +235,8 @@ def report(run: dict) -> str:
     lines = [
         f"{run['run_id']}  {run['label']}",
         f"harness {h.get('name')} · model {h.get('model')} · commit {h.get('commit')}",
-        f"source {run['source'].get('kind')} · run date {run['source'].get('run_date')} · judge {run.get('judge_model')}",
+        f"source {run['source'].get('kind')} · run date {run['source'].get('run_date')} · judge {judge_name(run.get('judge_model'))}"
+        + ("" if judge_name(run.get("judge_model")) in (OFFICIAL_JUDGE, "?") else " (not the leaderboard's judge: judged scores approximate)"),
         f"half {run['half']} ({s['n_tasks']} tasks)" + (f" · hold-out use: {run['holdout_reason']}" if run.get("holdout_reason") else ""),
         "",
         f"SCORE {s['score']:.3f}   measured {s['n_measured']}/{s['n_tasks']}"
@@ -283,7 +295,8 @@ def main(argv=None):
     elif a.cmd == "list":
         for run in load_runs():
             s = score(run)
-            print(f"{run['run_id']}  {s['score']:.3f}  half {run['half']}  {run['harness'].get('model')}  {run['label']}")
+            print(f"{run['run_id']}  {s['score']:.3f}  half {run['half']}  {run['harness'].get('model')}"
+                  f"  judge {judge_name(run.get('judge_model'))}  {run['label']}")
     elif a.cmd == "report":
         runs = {r["run_id"]: r for r in load_runs()}
         if a.run_id not in runs:

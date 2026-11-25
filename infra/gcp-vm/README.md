@@ -18,7 +18,7 @@ stored anywhere.
 
 1. In Cloud Shell, create the VM:
    ```bash
-   PROJECT=<your-project-id> bash create_vm.sh
+   PROJECT=<your-project-id> bash create_vm.sh     # spot by default; SPOT=0 for on-demand
    ```
 2. SSH in (`gcloud compute ssh ple-runner --zone us-central1-a`), copy `setup_vm.sh` over or clone
    `ple-submission`, then run `bash setup_vm.sh` and log out and back in.
@@ -36,9 +36,12 @@ stored anywhere.
 
 ## Costs
 
-- VM (default `n2-standard-32`, about 5 tasks at once): roughly 1.5 USD per hour on demand, about a
-  third of that as spot (`SPOT=1`; Google may stop a spot VM, and `eval/run.py` re-runs tasks that
-  did not finish). The 500 GB disk costs about 40 USD per month while it exists.
+- VM (default `n2-standard-32` as spot, about 5 tasks at once): roughly 0.4–0.5 USD per hour
+  (about 1.5 USD on demand with `SPOT=0`). Google may stop a spot VM; `eval/run.py` re-runs tasks
+  that did not finish. The 250 GB disk costs about 25 USD per month while it exists, running or not.
 - Model calls are billed by Vertex AI per token. A rung-0 run on half A is 15 single calls plus the
   judge's calls on the rubric tasks.
-- **Stop the VM when idle**: `gcloud compute instances stop ple-runner --zone us-central1-a`.
+- **Guards**: the VM powers itself off after 30 idle minutes (no SSH session, no containers, no
+  run; `idle_shutdown.sh`) and is stopped after 24 h of running (`MAX_RUN`). The project's budget
+  hard cap (`infra/gcp-budget/`) turns off billing entirely at 600 DKK per month.
+- Stop it yourself when done: `gcloud compute instances stop ple-runner --zone us-central1-a`.

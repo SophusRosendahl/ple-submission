@@ -1,9 +1,14 @@
 """Run a harness on one half of the dev split, score it, and record it in the tracker.
 
 Scoring is the competition's own: ple's eval/run.py runs each task with the real task images
-and graders (rubric tasks judged by the judge model, Claude Opus 5.5 by default), every task
-in the half counts, and a task with no result scores 0. The tracker then prints the full
-report (research/tracker.py report).
+and graders, every task in the half counts, and a task with no result scores 0. The tracker
+then prints the full report (research/tracker.py report).
+
+Judge: rubric and checks-judge tasks are scored by an LLM judge. The leaderboard uses Claude
+Opus 5.5 (`--judge official`); early runs use a cheaper one (`--judge dev`, the default, or
+`--judge cheap`), and any proxy model name works too. `PLE_JUDGE` sets the default for a shell
+session. The tracker records the judge of every run, and scores are only comparable between
+runs with the same judge.
 
 Needs, on the machine that runs it: Docker, uv, Harbor 0.20.0 with websockets, a clone of the
 competition repository, and an env file with MODEL_PROXY_URL / MODEL_PROXY_KEY (and HF_TOKEN
@@ -12,19 +17,46 @@ on first use). See the competition's eval/README.md.
 Example:
   python research/run_dev.py --ple ../ple --entry harnesses/naive \\
       --label "rung 0: single model call" --env-file ../ple/local.env
+  PLE_JUDGE=official python research/run_dev.py ...     # judge with Claude Opus 5.5
+  python research/run_dev.py ... --model gemini-3.8-flash   # same entry, another harness model
 """
 from __future__ import annotations
 
 import argparse
 import datetime as dt
 import json
+import os
 import pathlib
+import re
+import shutil
 import subprocess
 import sys
+import tempfile
 
 import tracker
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
+
+# Judge presets (proxy model names). Change a preset here to switch every run that uses it.
+JUDGES = {
+    "cheap": "gemini-3.8-flash",     # plumbing tests: does the pipeline score at all
+    "dev": "gemini-4-neon",          # early ladder runs on half A
+    "official": "claude-opus-5-5",   # what the leaderboard uses; for runs we compare to the reference
+}
+DEFAULT_JUDGE = "dev"
+
+
+def resolve_judge(name: str, env_file: pathlib.Path | None) -> str:
+    """Maps a preset or model name to the judge model; refuses a conflicting JUDGE_MODEL in the env file."""
+    model = JUDGES.get(name, name)
+    if env_file and env_file.is_file():
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            key, _, value = line.partition("=")
+            if key.strip() == "JUDGE_MODEL" and value.strip():
+                if tracker.judge_name(value.strip()) != tracker.judge_name(model):
+                    sys.exit(f"{env_file} sets JUDGE_MODEL={value.strip()}, which overrides --judge {name} ({model}):"
+                             " remove it from the env file and choose the judge with --judge or PLE_JUDGE")
+    return model
 
 
 def git_commit(path: pathlib.Path) -> str | None:
@@ -52,6 +84,22 @@ def split_by_memory(tasks, max_gb):
     return fits, too_big
 
 
+def with_model(entry: pathlib.Path, model: str) -> pathlib.Path:
+    """A temporary copy of the entry whose submission.yaml calls `model`; the entry itself is unchanged.
+
+    The copy lives outside any git work tree, so the kit builds every file in it.
+    """
+    model_api = model if "/" in model else f"google-cloud/{model}"
+    variant = pathlib.Path(tempfile.mkdtemp(prefix="ple-variant-")) / entry.name
+    shutil.copytree(entry, variant, ignore=shutil.ignore_patterns(".venv", "__pycache__", "node_modules", "artifacts"))
+    spec = variant / "submission.yaml"
+    text, n = re.subn(r"^model_api:.*$", f"model_api: {model_api}", spec.read_text(encoding="utf-8"), count=1, flags=re.M)
+    if n != 1:
+        sys.exit(f"{entry / 'submission.yaml'} has no model_api line to replace")
+    spec.write_text(text, encoding="utf-8")
+    return variant
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ple", type=pathlib.Path, required=True, help="clone of the competition repository")
@@ -66,8 +114,17 @@ def main(argv=None):
                     help="leave out tasks that run app servers (large images, more memory)")
     ap.add_argument("--env-file", type=pathlib.Path, default=None)
     ap.add_argument("--trials", type=int, default=None, help="tasks to run in parallel")
+    ap.add_argument("--judge", default=os.environ.get("PLE_JUDGE", DEFAULT_JUDGE),
+                    help=f"judge preset ({', '.join(f'{k}={v}' for k, v in JUDGES.items())}) or a proxy model name;"
+                         f" default $PLE_JUDGE or {DEFAULT_JUDGE}")
+    ap.add_argument("--model", default=None,
+                    help="run the entry with this model instead of its submission.yaml model_api"
+                         " (e.g. gemini-3.8-flash; runs a temporary copy, the entry is unchanged)")
     ap.add_argument("--notes", default="")
     a = ap.parse_args(argv)
+    judge = resolve_judge(a.judge, a.env_file)
+    print(f"judge: {judge}" + ("" if tracker.judge_name(judge) == tracker.OFFICIAL_JUDGE
+                                else " (not the leaderboard's judge: judged scores are approximate)"), flush=True)
 
     if a.half != "A" and not a.holdout:
         sys.exit("running half B needs --holdout 'why this hold-out use is justified'")
@@ -92,16 +149,21 @@ def main(argv=None):
             sys.exit("every selected task runs app servers")
 
     entry = a.entry.resolve()
+    run_entry = with_model(entry, a.model) if a.model else entry
+    if a.model:
+        print(f"harness model: {a.model} (temporary copy of {entry.name} at {run_entry})", flush=True)
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d-%H%M%S")
     out = REPO / "runs" / f"{entry.name}-{a.half}-{stamp}"
-    cmd = ["uv", "run", "python", "eval/run.py", str(entry), "--tasks", ",".join(tasks),
+    cmd = ["uv", "run", "python", "eval/run.py", str(run_entry), "--tasks", ",".join(tasks),
            "--out", str(out), "--no-export"]
     if a.env_file:
         cmd += ["--env-file", str(a.env_file.resolve())]
     if a.trials:
         cmd += ["--trials", str(a.trials)]
     print("running:", " ".join(cmd), flush=True)
-    code = subprocess.run(cmd, cwd=a.ple, check=False).returncode
+    code = subprocess.run(cmd, cwd=a.ple, check=False, env={**os.environ, "JUDGE_MODEL": judge}).returncode
+    if a.model:
+        shutil.rmtree(run_entry.parent, ignore_errors=True)
     if not (out / "results.json").is_file():
         sys.exit(f"eval/run.py exited {code} and wrote no results.json in {out}")
     partial = len(tasks) < len(half_tasks)
