@@ -1,4 +1,5 @@
 # Job 1: check the HF token, start the model proxy, check the models answer. VM stays on.
+# retry 1: owner lookup fixed
 set -e
 git -C ~/ple pull -q --ff-only || echo "ple pull failed"
 HF=$(sed -n 's/^HF_TOKEN=//p' ~/ple/local.env)

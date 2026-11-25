@@ -34,12 +34,12 @@ jobs:
           J=.github/vm/job.sh
           opt() { sed -n "s/^# $1: *//p" "$J" | head -1; }
           ssh_vm() { gcloud compute ssh "$NAME" --zone "$ZONE" --quiet --strict-host-key-checking=no --command "$1"; }
-          AS_OWNER='o=$(stat -c %U /home/*/ple-submission | head -1); sudo -iu "$o" bash -s'
+          AS_OWNER='o=$(sudo sh -c "stat -c %U /home/*/ple/local.env" | head -1); sudo -iu "$o" bash -s'
           [[ "$(opt start)" == "no" ]] || gcloud compute instances start "$NAME" --zone "$ZONE"
           for i in $(seq 30); do ssh_vm true && break; sleep 10; done
           git bundle create /tmp/b.bundle HEAD
           gcloud compute scp /tmp/b.bundle "$NAME:/tmp/b.bundle" --zone "$ZONE" --quiet --strict-host-key-checking=no
-          printf 'set -e; cd ~/ple-submission; git fetch -q /tmp/b.bundle HEAD; git checkout -q -B %s FETCH_HEAD; git log -1 --oneline\n' "$GITHUB_REF_NAME" \
+          printf 'set -e; [ -d ~/ple-submission ] || git clone -q /tmp/b.bundle ~/ple-submission; cd ~/ple-submission; git fetch -q /tmp/b.bundle HEAD; git checkout -q -B %s FETCH_HEAD; git log -1 --oneline\n' "$GITHUB_REF_NAME" \
             | ssh_vm "$AS_OWNER"
           { echo 'cd ~/ple-submission; export PATH="$HOME/.local/bin:$PATH"'; cat "$J"; } | ssh_vm "$AS_OWNER"
           PULL="$(opt pull)"
