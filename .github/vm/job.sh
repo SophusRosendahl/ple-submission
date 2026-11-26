@@ -1,4 +1,4 @@
-# Job 3: check the HF token can read the gated dataset; if so, start rung 0 in tmux. VM stays on.
+# Job 3 (rerun with the HF_TOKEN repo secret): check gated access; if granted, start rung 0 in tmux.
 HF=$(sed -n 's/^HF_TOKEN=//p' ~/ple/local.env)
 echo "token shape: length ${#HF}, starts '${HF:0:3}'"
 echo "whoami: $(curl -s -H "Authorization: Bearer $HF" https://huggingface.co/api/whoami-v2 | jq -r '.name // .error')"
