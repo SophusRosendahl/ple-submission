@@ -290,6 +290,37 @@ which the model runs its script and the checks the grader will apply, and fixes 
 seven drawings read and a 400-line script written does not fit in a 64,000-token output budget.
 The reasoning level is therefore a design knob to measure (low / medium / high), not a constant."""),
 
+    md("""### The score is not enough: every check, one by one
+
+The grader runs many checks and a single failed *gate* zeroes the score, so the score hides the rest.
+`research/check_table.py` lists every check of a trial next to the score. Below: the blind v2 attempt
+(run-004), Flash at low effort (run-009, crashed before any check) and Neon at low effort (run-010)."""),
+
+    code("""import check_table
+from IPython.display import Markdown, display
+for rid in ("run-004", "run-009", "run-010"):
+    display(Markdown(check_table.table(rid)))"""),
+
+    md("""**Reading run-010 (Neon, low effort, images), check by check**
+
+* **Passed:** the script runs, the IFC4 contract (gate 0), and **connectivity (gate 2)**: all 6 rows
+  served at 98 % or better and all 22 cooling units reached. This is the effect of seeing the drawings:
+  the blind run (run-004) was not connected to the entry at all.
+* **Failed gate 1, 30 clashes, in two groups.** **22 are segments of the same service overlapping where
+  they join** (8 chilled water, 7 busway, 7 cable tray): the same defect the official template's near
+  miss had. **8 are the model's own background rebuild** clashing with itself (for example the
+  containment roof against its door). One generic check, "no two pieces of a route overlap by more than
+  2 mm", would remove 22 of the 30.
+* **Failed two compliance rules, both from the rebuild, not the routing.** 16 sprinkler heads sit at
+  1,890 mm above the floor where 2,600 mm is needed (an elevation misread), and 8 cable-tray runs leave
+  only 166 mm of access underneath where 300 mm is needed.
+* **Efficiency:** the route is 402 m against a 261 m reference (factor 0.648, 54 % too long).
+* **If every gate had passed, the score would have been 0.593** (compliance 0.915 x efficiency 0.648).
+  That is the real distance to a usable answer.
+
+Neither the 22 same-service overlaps nor the sprinkler height needed engineering judgement to find: a
+script that checks its own model finds them."""),
+
     code("""import costs
 usage = pd.DataFrame([{"run": r["run_id"], "model": r["harness"]["model"], **costs.run_usage(r)} for r in runs])
 usage"""),
@@ -439,6 +470,10 @@ Dated, honest notes, including what went wrong. Newest last.
   wrote a script. Flash's crashed (a wrong ifcopenshell argument); Neon's ran, passed the schema and
   connectivity gates and failed the clash gate (30 clashes). Score 0.0 each, for reasons a run-and-check
   loop would catch. Lowering the effort cut Neon's output from 65,536 hidden-thinking tokens to 25,954.
+* **2026-11-26.** Looked at the grader's checks one by one (`research/check_table.py`). Neon at low effort:
+  schema and connectivity pass; 30 clashes (22 are consecutive segments of the same service overlapping at
+  their joints, 8 are the model's own background); 16 sprinkler heads at 1,890 mm (needs 2,600) and 8
+  tray runs with 166 mm of access (needs 300); route 54 % too long. Would score 0.593 if the gates passed.
 * **2026-11-26.** Process: a job that powers the VM off by itself raced the workflow's own pull and
   lost its results for a while (they were safe on the VM disk and in the bucket). The VM is now
   stopped by the workflow, after the pull.

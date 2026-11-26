@@ -39,6 +39,12 @@ VM's own start and stop times.
   `judge_fallback`; it can appear as an extra judge record.
 * Failed calls' tokens are unknown to us; successful calls' tokens come from the endpoint.
 
+## Reading a trial check by check
+
+`python3 research/check_table.py run-010` prints every check the grader ran (gates, each compliance rule, the
+clashes grouped by kind, efficiency) next to the score, from the grader files in `research/run-details/`.
+It is written for `data-hall-mep-routing`; each task type's grader needs its own rows.
+
 ## Analysis this has to support
 
 * **Per task, per check:** which grader checks or rubric items failed, with the grader's reasoning
