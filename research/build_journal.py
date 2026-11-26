@@ -177,7 +177,14 @@ def plot_runs(run_ids, title):
 
     md("""### Rung 0 results
 
-Filled in from the tracker once the runs are recorded (`rung 0` in the run label)."""),
+**v1 (invalid as a floor).** Both models scored about zero (Gemini 3.8 Flash 0.007, Gemini 4 Neon
+0.000). The cause is our setup, not the models: the harness capped the reply at 32,000 tokens, and
+the model's thinking tokens count against that cap. Output was at the cap in 15 of 15 (Flash) and
+14 of 15 (Neon) tasks, and several tasks wrote no file at all (the grader reports
+`ERR_NO_SUBMISSION`). We did not log why each reply stopped, so the cut-off is inferred.
+
+**v2.** The cap is 64,000 for Gemini and every call now records its finish reason, so a cut-off
+shows up as one. Filled in from the tracker below (`rung 0` in the run label)."""),
 
     code("""rung0 = [r for r in runs if r["label"].lower().startswith("rung 0")]
 if rung0:
@@ -296,6 +303,11 @@ Dated, honest notes, including what went wrong. Newest last.
   keeps all of them. Found that the competition's proxy retries failed requests itself (3 times),
   so our own call counts are lower bounds; added a request log at the proxy to count what the
   provider actually served, judge calls included.
+* **2026-11-26.** Rung 0 v1 finished: Flash 0.007, Neon 0.000. Not a result about the models: the
+  32,000-token output cap was reached in nearly every task (thinking tokens count against it) and
+  most tasks wrote no file. Kept in the tracker, annotated invalid; reran as v2 with a 64,000 cap
+  and finish reasons logged. A lesson for every later rung: **check that the harness's own limits are
+  not the thing being measured.**
 * **2026-11-26.** Review of `harnesses/naive` found that a reply cut off at the token limit
   silently lost its last file. Fixed in the harness (the partial file is now written and the cut-off
   is logged); rung 0's first runs predate that fix, which matters only for tasks where the reply
