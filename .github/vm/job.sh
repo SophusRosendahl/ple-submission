@@ -1,9 +1,10 @@
-# Rung 0 v2 (retry: the sync now saves local changes on the VM first): new harness, 64k cap, call counting, request-logging proxy.
-if tmux has-session -t rung0 2>/dev/null; then echo "rung0 already running: not touching it"; exit 0; fi
+# Stop the 15-task rung-0 v2 run (on request) and start it on one task only: data-hall-mep-routing, both models.
+echo "stopping the 15-task run"
+tmux kill-session -t rung0 2>/dev/null
+pkill -f 'research/run_dev.py'; pkill -f 'eval/run.py'; pkill -f 'harbor'
+sleep 8; docker ps -q | xargs -r docker rm -f >/dev/null 2>&1; sleep 2
+echo "left running: processes=$(pgrep -fc 'run_dev.py|eval/run.py|harbor') containers=$(docker ps -q | wc -l)"
 cd ~/ple-submission && git log -1 --oneline
-[ -f ~/ple-proxy.pid ] && kill "$(cat ~/ple-proxy.pid)" 2>/dev/null; sleep 3   # restart it, so the request log is on
-tmux new -d -s rung0 "bash ~/ple-submission/infra/gcp-vm/rung0.sh 2>&1 | tee ~/rung0.log"
-sleep 150
-echo "--- rung0.log:"; tr '\r' '\n' < ~/rung0.log | grep -v '^Fetching' | tail -14 | cut -c1-220
-echo "--- proxy: $(curl -s -o /dev/null -m 5 -w '%{http_code}' http://172.17.0.1:4000/health/liveliness) | request log: $(ls -la ~/ple-proxy-requests.jsonl 2>&1 | awk '{print $5" bytes"}')"
-grep -c . ~/ple-proxy-config/config.yaml >/dev/null 2>&1 && grep -n 'callbacks' ~/ple-proxy-config/config.yaml
+tmux new -d -s rung0 "TASKS=data-hall-mep-routing bash ~/ple-submission/infra/gcp-vm/rung0.sh 2>&1 | tee ~/rung0.log"
+sleep 90
+echo "--- rung0.log:"; tr '\r' '\n' < ~/rung0.log | grep -v '^Fetching' | tail -10 | cut -c1-230

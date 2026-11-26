@@ -20,10 +20,13 @@ if ! up; then
   up || { echo "model proxy still not answering after 200 s: see ~/ple-proxy.log"; exit 1; }
 fi
 
+# TASKS=<id,id> limits the run to those tasks (default: all of half A)
+TASK_ARGS=(); [[ -n "${TASKS:-}" ]] && TASK_ARGS=(--tasks "$TASKS")
+
 for MODEL in gemini-3.8-flash gemini-4-neon; do
   echo "=== rung 0 with $MODEL ($(date -u +%FT%TZ)) ==="
   python3 research/run_dev.py --ple "$HOME/ple" --entry harnesses/naive \
-      --model "$MODEL" --judge dev --trials 5 --env-file "$ENV_FILE" \
+      --model "$MODEL" --judge dev --trials 5 --env-file "$ENV_FILE" "${TASK_ARGS[@]}" \
       --label "rung 0 v2: single model call, files as text, 64k output cap ($MODEL)" || echo "=== run for $MODEL failed ==="
   bash "$HOME/ple-submission/infra/gcp-vm/save_runs.sh" || true   # keep the full outputs off the VM disk
 done
