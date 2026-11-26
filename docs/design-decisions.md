@@ -214,3 +214,9 @@ Running log of decisions for our PLE competition entry. Newest at the bottom of 
   should make that cheap, which `research/kvcache.py` will show).
 - Tests: `research/test_restart.py`.
 
+
+- **Source of the 65,536 limit (checked 2026-11-26).** Google's Vertex AI API itself, for Gemini 3.8 Flash:
+  "maxOutputTokens value of 100000 but the supported range is from 1 (inclusive) to 65537 (exclusive)". It is a
+  documented model maximum, not something we or the competition set. For Gemini 4 Neon the API accepts larger
+  values but real runs stop at exactly 65,536; a test asking it for a 150,000-word answer was inconclusive (it
+  declined and wrote 341 tokens), so that the same limit applies there is likely, not proven.
