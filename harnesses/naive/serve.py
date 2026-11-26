@@ -55,7 +55,11 @@ client = openai.AsyncOpenAI(timeout=1800, max_retries=0)  # no hidden SDK retrie
 
 # Efficiency accounting. A "call" is one request sent to the model endpoint by this harness.
 # `ok` finished with a finish reason, `failed` raised or ended early. Retries are separate calls.
-CALLS = {"ok": 0, "failed": 0, "input_tokens": 0, "output_tokens": 0}
+# Tokens, as the endpoint reports them: `input` is all prompt tokens, of which `cached_input` were
+# served from the provider's prompt (KV) cache; `output` is all completion tokens, of which
+# `reasoning` were thinking tokens. Cached and reasoning tokens are parts of the totals, not extras.
+CALLS = {"ok": 0, "failed": 0, "input_tokens": 0, "cached_input_tokens": 0,
+         "output_tokens": 0, "reasoning_tokens": 0}
 
 
 async def ask(session, messages):
@@ -156,9 +160,14 @@ async def _solve(session):
   ]
   answer, usage = await ask(session, messages)
   if usage:
-    CALLS["input_tokens"] += usage.prompt_tokens or 0
-    CALLS["output_tokens"] += usage.completion_tokens or 0
     cached = getattr(getattr(usage, "prompt_tokens_details", None), "cached_tokens", 0) or 0
+    reasoning = getattr(getattr(usage, "completion_tokens_details", None), "reasoning_tokens", 0) or 0
+    CALLS["input_tokens"] += usage.prompt_tokens or 0
+    CALLS["cached_input_tokens"] += cached
+    CALLS["output_tokens"] += usage.completion_tokens or 0
+    CALLS["reasoning_tokens"] += reasoning
+    raw = usage.model_dump() if hasattr(usage, "model_dump") else repr(usage)
+    await session.log("naive: USAGE " + json.dumps(raw, default=str))  # the endpoint's own figures, unprocessed
     await session.usage(MODEL, input_tokens=usage.prompt_tokens or 0,
                         output_tokens=usage.completion_tokens or 0, cache_read_tokens=cached)
 

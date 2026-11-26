@@ -195,9 +195,14 @@ else:
   by `infra/gcp-vm/save_runs.sh`. The "engineering reasoning" walk-through is written from these.
 * **Effort is counted in model calls, tokens and runtime, not dollars.** A *call* is one request
   the harness sends to the model endpoint. The harness counts them itself and writes one
-  `CALLS {...}` line per task to its log: successful calls, failed calls (errors and streams that
-  ended early) and tokens, with every retry counted as its own call and the SDK's hidden retries
-  switched off. Judge calls are made by the grader, not the harness, and are never added in.
+  `CALLS {...}` line per task: successful calls, failed calls (errors and streams that ended
+  early), and tokens as the endpoint reports them: input (of which **cached**, served from the
+  provider's prompt/KV cache) and output (of which **reasoning**). Every retry is its own call
+  and the SDK's hidden retries are switched off. The raw `usage` object of each call is logged
+  too (`USAGE {...}`), so the figures can be checked against what the endpoint said. Two limits:
+  a failed call's tokens are invisible to us, and whether the evaluator's own `tokens` figure
+  counts cached tokens inside input or beside it is still to be verified against these lines.
+  Judge calls are made by the grader and are never added in.
   The efficiency plots (score against calls, tokens and runtime) read these numbers."""),
 
     code("""import costs

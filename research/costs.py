@@ -23,7 +23,7 @@ def run_usage(run):
     rows = [t for t in run["tasks"].values() if t.get("tokens") is not None or t.get("seconds") is not None]
     tokens = sum(t.get("tokens") or 0 for t in rows)
     seconds = [t.get("seconds") or 0 for t in rows]
-    calls = [t.get("calls") for t in rows if t.get("calls") is not None]
+    calls = [t.get("calls") for t in rows if t.get("calls") is not None]  # filled once the tracker reads CALLS lines
     return {"tasks": len(rows), "calls": sum(calls) if calls else None, "tokens": tokens, "task_hours": round(sum(seconds) / 3600, 2),
             "longest_min": round(max(seconds, default=0) / 60, 1)}
 
