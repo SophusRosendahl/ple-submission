@@ -1,27 +1,19 @@
 # sync: no
 # pull: research/runs.jsonl
-# Read the single-task rung-0 v2 runs (read only).
-tmux ls 2>&1 | head -2
+# Look inside the single-task trials (read only). Waits up to 12 min for the Neon run to finish.
+for i in $(seq 48); do tmux has-session -t rung0 2>/dev/null || break; sleep 15; done
+tmux ls 2>&1 | head -1
 echo "recorded runs: $(wc -l < ~/ple-submission/research/runs.jsonl)"
-for R in $(ls -dt ~/ple-submission/runs/naive-A-20261126-18*/ 2>/dev/null | tac); do
-  echo "=== $R"; python3 - "$R" <<'PY'
-import json, sys, pathlib
-p = pathlib.Path(sys.argv[1]) / "results.json"
-if not p.is_file(): print("no results.json yet"); sys.exit()
-d = json.load(open(p)); print({k: d.get(k) for k in ("model", "score", "complete", "date")})
-for t in d["tasks"]: print(t["id"], "score", t["score"], t["status"], t.get("seconds"), "s", t.get("tokens"), "trial", t.get("trial"))
+for T in $(ls -d ~/ple-submission/runs/naive-A-20261126-1805*/attempt1/jobs/dev/data-hall*/ ~/ple-submission/runs/naive-A-20261126-1813*/attempt1/jobs/dev/data-hall*/ 2>/dev/null); do
+  echo; echo "################ $T"
+  python3 - "$T/../../../results.json" <<'PY'
+import json, sys, os
+p = sys.argv[1]
+if os.path.isfile(p):
+    d = json.load(open(p)); print({k: d.get(k) for k in ("model", "score", "complete")}); [print(t["id"], t["score"], t["status"], t.get("seconds"), t.get("tokens")) for t in d["tasks"]]
 PY
+  echo "--- files (size):"; (cd "$T" && find . -type f -printf '%s %p\n' | sort -k2 | head -40)
+  echo "--- harness lines:"; grep -rhs "naive:" "$T" 2>/dev/null | cut -c1-900 | head -12
+  echo "--- verifier:"; for f in "$T"/verifier/*; do [ -f "$f" ] && { echo "[$f]"; head -c 1500 "$f"; echo; }; done
+  echo "--- exception:"; head -c 600 "$T/exception.txt" 2>/dev/null
 done
-R=$(ls -dt ~/ple-submission/runs/naive-A-20261126-18*/ | tac | head -1); T=$(find "$R" -maxdepth 4 -type d -name '*__*' | head -1)
-echo "=== trial dir: $T"; (cd "$T" && find . -maxdepth 2 | head -30)
-echo "=== harness log lines (naive:)"; grep -rhs "naive:" "$T" 2>/dev/null | cut -c1-700 | head -12
-echo "=== proxy request log by model/judge:"
-python3 - <<'PY'
-import json, collections
-rows = [json.loads(l) for l in open("/home/sophusrosendahl/ple-proxy-requests.jsonl")]
-agg = collections.defaultdict(lambda: [0, 0, 0, 0, 0.0])
-for r in rows:
-    k = (r["requested_model"], "judge" if r["is_judge"] else "harness", r["status"], r.get("finish_reason"))
-    a = agg[k]; a[0] += 1; a[1] += r.get("prompt_tokens") or 0; a[2] += r.get("completion_tokens") or 0; a[3] += r.get("reasoning_tokens") or 0; a[4] += r.get("latency_s") or 0
-for k, a in sorted(agg.items(), key=str): print(k, "n=%d prompt=%d completion=%d reasoning=%d latency=%.0fs" % tuple(a))
-PY
