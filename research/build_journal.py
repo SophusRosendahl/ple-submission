@@ -20,29 +20,73 @@ A living record of how our entry to the *Physical-Engineering's Last Exam* compe
 what we measured, what we observed, and why each part of the harness exists. It is the source for
 the competition write-up.
 
-Every number below is read from the run tracker (`research/runs.jsonl`) when the notebook runs."""),
+Every number below is read from the run tracker (`research/runs.jsonl`) when the notebook runs.
+The story so far, in order: **(1)** a cloud VM so we can judge exactly, **(2)** a split of the
+dev set in two, **(3)** a very simple naive test with just a model."""),
+
+    md("""## Write-up tracker
+
+The final upload is written from this notebook. Status: `todo` / `draft` / `done`. Update the
+table in `research/build_journal.py`, then rebuild.
+
+| # | Write-up section | Source in this journal | Status |
+|---|---|---|---|
+| 1 | Summary: what the entry is and how it scores | final results | todo |
+| 2 | The problem and how we read it | section 1 | draft |
+| 3 | Evaluation setup: exact grading in a cloud VM, judge caveats | section 2 | draft |
+| 4 | Dev split and hold-out discipline | section 3 | draft |
+| 5 | Baselines: reference template, rung 0 (one model call) | sections 4 and 5 | draft |
+| 6 | The ladder: each rung, the failure that motivated it, the measured gain | section 6 onwards | todo |
+| 7 | Final harness: architecture and design decisions | `docs/architecture.md`, `docs/design-decisions.md` | draft |
+| 8 | What did not work | lab log | todo |
+| 9 | Cost, limits and reproduction (how to rerun) | section 2, `infra/` | draft |
+
+*The competition's own write-up requirements have not been checked against this outline yet.*"""),
 
     md("""## 1. The problem
 
 PLE has 85 real engineering tasks: structural, civil, electrical and mechanical. Each runs in an
 isolated container with the project's files and up to 6 hours, and asks for a real deliverable: a
-calculation package, a coordinated IFC model, a review memo. Tasks are graded `0`–`1` by
+calculation package, a coordinated IFC model, a review memo. Tasks are graded `0`-`1` by
 programmatic checks, by an LLM judge against an expert rubric, or both.
 
 An entry is a **harness**, the code that drives a model through each task, paired with one of the
 Google-sponsored models. The best stock setup on the public leaderboard (Gemini 4 Neon with
 Google's own agent) scores **0.507** on the 56 hidden tasks: about half the available points."""),
 
-    md("""## 2. How we measure
+    md("""## 2. An evaluation environment in a cloud VM
 
-**The score.** A run is scored exactly as the competition scores a submission: each task's grader
-gives `0`–`1`, rubric tasks are judged by Claude Opus 5.5, a task with no result counts as `0`, and
-the run's score is the mean over the set.
+**Why.** We want to judge our harness *exactly* as the competition does: its own task images,
+its own graders, the same protocol. That needs Docker with real memory (some tasks run app
+servers and need up to 16 GB), and a model endpoint for both the harness and the judge.
+
+**What we set up**
+
+* One VM (`ple-runner`, spot `n2-standard-32`, 250 GB, Docker + Harbor) in our own Google Cloud
+  project, running the competition's `eval/run.py` unchanged. It powers itself off after 30 idle
+  minutes and after 24 h, so a forgotten VM cannot run up a bill.
+* The competition's model proxy on the VM, calling Vertex AI as the VM's own service account (no
+  keys stored).
+* A budget of 600 DKK a month with alerts, and a **hard cap** that switches billing off at 100 %.
+* Control from a cloud session, with no laptop: a GitHub Actions workflow starts the VM, runs a
+  job script on it and reads the log back. Google trusts GitHub's identity for this one
+  repository (workload identity federation), so no keys are stored.
+
+**Why not the laptop.** Docker Desktop on the 8 GB Mac had 3.8 GB, too little for the larger
+tasks, and the laptop later broke.
+
+**Caveat on the judge.** The leaderboard judges rubric tasks with Claude Opus 5.5. Our project
+has no Vertex quota for it (three increase requests were auto-denied), so development runs use
+Gemini 4 Neon as judge. Judged scores are therefore *approximate*; we only compare runs that
+share a judge, and the tracker refuses to merge runs with different judges."""),
+
+    md("""## 3. Splitting the dev set in two
 
 **A split we don't cheat on.** The 29 public dev tasks are split in two. We develop only on
-**half A**. **Half B** is held out and run rarely, to check that what helps on A carries over to
-tasks we have never looked at. Five tasks we had studied in detail before splitting were placed in
-A by construction; the rest were assigned at random (fixed seed), balanced by grading type."""),
+**half A** (15 tasks). **Half B** (14 tasks) is held out and run rarely, to check that what helps
+on A carries over to tasks we have never looked at; the tracker refuses to record a half-B run
+without a stated reason. Five tasks we had studied in detail before splitting were placed in A by
+construction; the rest were assigned at random (fixed seed), balanced by grading type."""),
 
     code("""import json, pathlib, sys
 import pandas as pd
@@ -61,24 +105,34 @@ pd.crosstab(tasks["grading"], tasks["half"], margins=True, margins_name="total")
 
     code("""tasks[tasks.half == "A"][["task", "grading", "domain"]].reset_index(drop=True)"""),
 
-    md("""## 3. Runs recorded so far"""),
+    md("""## 4. Rung 0: a naive test with just a model
+
+**Design.** One model call, no tools, no agent loop. Before the call the harness (not the model)
+turns the task's files into plain text and pastes them after the task text; images are listed by
+name only. The model answers once; files it writes as marked blocks in its answer are saved in
+the task container, and the rest of the answer is the final message. It cannot open files or run
+anything. It lives in `harnesses/naive/`.
+
+**Why start here.** It is the floor every later rung is measured against. If a tool loop does not
+beat it, the loop is not earning its cost.
+
+**Known limits, by design.** It can only write text files (no xlsx, docx or images), and it never
+checks its own work. We expect it to fail on those tasks, and *which* tasks it fails is the point.
+
+**The comparison.** The same harness with two models: Gemini 3.8 Flash (the "bad" model) and
+Gemini 4 Neon (the "better" one), over all of half A, judged by Gemini 4 Neon."""),
 
     code("""runs = tracker.load_runs()
 overview = pd.DataFrame([{
     "run": r["run_id"], "label": r["label"], "model": r["harness"]["model"],
-    "half": r["half"], "score": round(tracker.score(r)["score"], 3),
+    "half": r["half"], "judge": tracker.judge_name(r.get("judge_model")), "score": round(tracker.score(r)["score"], 3),
     "measured": f"{tracker.score(r)['n_measured']}/{tracker.score(r)['n_tasks']}",
     "run date": (r["source"].get("run_date") or "")[:10],
 } for r in runs])
 overview"""),
 
-    md("""## 4. A reference point: the official template on half A
-
-The competition's starter repository ships a complete dev run of the Pi coding agent on Claude
-Opus 5.5. We did not build it; we record it as a reference for what a capable general-purpose
-coding agent scores on our half A."""),
-
-    code("""INK, MUTED, GRID, SURFACE = "#1f1f1e", "#6b6a64", "#e7e6e1", "#fcfcfb"
+    code("""from IPython.display import display
+INK, MUTED, GRID, SURFACE = "#1f1f1e", "#6b6a64", "#e7e6e1", "#fcfcfb"
 SERIES = ["#2a78d6", "#eb6834"]  # categorical slots 1-2, validated (CVD and contrast)
 
 def task_frame(run):
@@ -117,9 +171,28 @@ def plot_runs(run_ids, title):
     if len(chosen) > 1:
         ax.legend(frameon=False, fontsize=9, loc="lower right")
     fig.tight_layout()
-    return fig
+    return fig"""),
 
-reference = runs[0]
+    md("""### Rung 0 results
+
+Filled in from the tracker once the runs are recorded (`rung 0` in the run label)."""),
+
+    code("""rung0 = [r for r in runs if r["label"].lower().startswith("rung 0")]
+if rung0:
+    display(plot_runs([r["run_id"] for r in rung0], "Rung 0: one model call, score per task on half A"))
+    print(overview[overview["label"].str.lower().str.startswith("rung 0")].to_string(index=False))
+else:
+    print("No rung-0 run is recorded yet.")"""),
+
+    md("""## 5. A reference point, and what it taught us
+
+### The official template on half A
+
+The competition's starter repository ships a complete dev run of the Pi coding agent on Claude
+Opus 5.5. We did not build it; we record it as a reference for what a capable general-purpose
+coding agent scores on our half A."""),
+
+    code("""reference = runs[0]
 plot_runs([reference["run_id"]], "Reference: official template (Pi + Claude Opus 5.5), score per task on half A");"""),
 
     code("""f = task_frame(reference)
@@ -132,7 +205,7 @@ f.groupby("grading")["score"].agg(["mean", "count"]).round(3)"""),
   all sit around `0.3`.
 * One of the zeros, `data-hall-mep-routing`, is a near miss, below."""),
 
-    md("""## 5. First observation: a near miss scored zero
+    md("""### A near miss that scored zero
 
 `data-hall-mep-routing` asks for a Python script that builds a clash-free 3D model (IFC) of a data
 hall from seven drawing sheets and routes cable tray, busway and chilled-water pipe through it.
@@ -155,18 +228,39 @@ have caught it.
 This is the pattern our harness is built around: **the agent defines how its work will be
 judged, checks its work against that before finishing, and fixes what fails.**"""),
 
-    md("""## 6. Plan: build up from a single model call
+    md("""## 6. The ladder: build up from the floor
 
-We start from the simplest possible harness and add one capability at a time, each motivated by
-a failure we observe, measuring every step on half A.
+We add one capability at a time, each motivated by a failure we observe, measuring every step on
+half A.
 
 | Rung | Harness | Question it answers |
 |---|---|---|
-| 0 | **one model call**: the harness pastes the task's files in as plain text (images by name only); deliverables are written from the reply; the model cannot open files or run anything | how far does one careful read of the project get? |
+| 0 | **one model call**: files pasted in as plain text, deliverables written from the reply | how far does one careful read of the project get? |
 | 1 | a tool loop: read files, run commands, write files | how much does access to the project add? |
-| … | each next capability is chosen from what rung *n* got wrong | |
+| ... | each next capability is chosen from what rung *n* got wrong | |
 
-Rung 0 is implemented in `harnesses/naive/`. Next step: run it on half A."""),
+Rung 1 is chosen after we have read rung 0's failures task by task."""),
+
+    md("""## Lab log
+
+Dated, honest notes, including what went wrong. Newest last.
+
+* **2026-11-25.** Docker on the Mac is too small, so runs move to a cloud VM. Budget and hard cap
+  set up. Claude Opus 5.5 has zero Vertex quota (three increase requests auto-denied), so the dev
+  judge is Gemini 4 Neon.
+* **2026-11-25.** The Mac broke. A GitHub Actions workflow now drives the VM from a cloud session.
+  First attempts failed on small things (a service-account name too short, a lookup that needed
+  admin rights).
+* **2026-11-26.** The Hugging Face token never reached the VM (it was empty), and two of our own
+  checks reported "access OK" when it was not. Replaced with a repository secret and a check that
+  tests real access.
+* **2026-11-26.** First rung-0 start: the 29-task dataset (16,425 files) downloaded in 28 minutes
+  through Hugging Face's rate limit, then the run stopped because the model proxy was not running
+  after the VM's reboot. The run script now starts the proxy if it is down.
+* **2026-11-26.** Review of `harnesses/naive` found that a reply cut off at the token limit
+  silently lost its last file. Fixed in the harness (the partial file is now written and the cut-off
+  is logged); rung 0's first runs predate that fix, which matters only for tasks where the reply
+  was cut off."""),
 ]
 
 nb = nbf.v4.new_notebook(cells=cells, metadata={
