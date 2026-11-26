@@ -31,6 +31,8 @@ EFFORT = os.environ.get("REASONING_EFFORT") or (
 MAX_OUTPUT_TOKENS = int(os.environ.get("MAX_OUTPUT_TOKENS", "32000"))
 RETRY_WAITS = (5, 15, 30, 60, 120)
 FILE_BLOCK = re.compile(r"^<<<FILE (?P<path>[^\n>]+)>>>\n(?P<body>.*?)\n<<<END>>>$", re.S | re.M)
+# A reply cut off mid-file has an opening marker and no <<<END>>>: keep what was written.
+OPEN_BLOCK = re.compile(r"^<<<FILE (?P<path>[^\n>]+)>>>\n(?P<body>(?:(?!^<<<FILE ).)*)\Z", re.S | re.M)
 
 SYSTEM = """You are an experienced engineer completing a task for a client.
 
@@ -70,7 +72,7 @@ async def ask(session, messages):
           stream=True,
           stream_options={"include_usage": True},
       )
-      text, usage, finished = [], None, False
+      text, usage, finished, reason = [], None, False, None
       async for chunk in stream:
         if chunk.usage:
           usage = chunk.usage
@@ -78,9 +80,11 @@ async def ask(session, messages):
           if choice.delta and choice.delta.content:
             text.append(choice.delta.content)
           if choice.finish_reason:
-            finished = True
+            finished, reason = True, choice.finish_reason
       if not finished:
         raise RuntimeError("the stream ended without a finish reason")
+      if reason == "length":
+        await session.log(f"naive: reply cut off at the {MAX_OUTPUT_TOKENS}-token limit (reasoning counts towards it)")
       return "".join(text), usage
     except openai.BadRequestError:
       raise  # a 400 will fail again unchanged
@@ -143,7 +147,12 @@ async def solve(session):
                         output_tokens=usage.completion_tokens or 0, cache_read_tokens=cached)
 
   written = []
-  for block in FILE_BLOCK.finditer(answer):
+  blocks = list(FILE_BLOCK.finditer(answer))
+  tail = OPEN_BLOCK.search(answer[blocks[-1].end():] if blocks else answer)
+  if tail and tail["body"].strip():
+    await session.log(f"naive: {tail['path'].strip()} has no <<<END>>>: the reply was cut off; writing the partial file")
+    blocks.append(tail)
+  for block in blocks:
     path = block["path"].strip()
     try:
       await session.write_file(path, block["body"] + "\n")
@@ -152,7 +161,7 @@ async def solve(session):
       await session.log(f"naive: could not write {path}: {exc}")
   await session.log(f"naive: wrote {len(written)} file(s): {', '.join(written) or 'none'}")
 
-  summary = re.sub(r"\n{3,}", "\n\n", FILE_BLOCK.sub("", answer)).strip()
+  summary = re.sub(r"\n{3,}", "\n\n", OPEN_BLOCK.sub("", FILE_BLOCK.sub("", answer))).strip()
   return summary or "(no summary in the model's reply)"
 
 
