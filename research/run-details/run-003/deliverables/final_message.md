@@ -1,0 +1,1 @@
+An end-to-end coordinated BIM model generator script has been authored for the data hall (`dc_model__hall_seed000_d000`).
