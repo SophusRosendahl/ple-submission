@@ -1,14 +1,7 @@
-# Job 3 (rerun with the HF_TOKEN repo secret): check gated access; if granted, start rung 0 in tmux.
-HF=$(sed -n 's/^HF_TOKEN=//p' ~/ple/local.env)
-echo "token shape: length ${#HF}, starts '${HF:0:3}'"
-echo "whoami: $(curl -s -H "Authorization: Bearer $HF" https://huggingface.co/api/whoami-v2 | jq -r '.name // .error')"
-code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $HF" \
-  https://huggingface.co/api/datasets/google/physical-engineerings-last-exam/auth-check)
-echo "gated dataset access: $code (200 = granted)"
-if [[ "$code" == 200 ]]; then
-  tmux has-session -t rung0 2>/dev/null && tmux kill-session -t rung0
-  tmux new -d -s rung0 "bash ~/ple-submission/infra/gcp-vm/rung0.sh 2>&1 | tee ~/rung0.log"
-  sleep 120; echo "--- rung0.log so far:"; tail -20 ~/rung0.log
-else
-  echo "NOT starting rung 0: powering the VM off"; sudo shutdown -h +1
-fi
+# Job 4: status of the rung-0 run (read only).
+tmux ls 2>&1 | head -3
+echo "--- VM uptime / disk:"; uptime -p; df -h / | tail -1
+echo "--- dataset cache files: $(find ~/.cache/plebench -type f 2>/dev/null | wc -l) / 16425"
+echo "--- containers: $(docker ps -q | wc -l)"
+echo "--- rung0.log (last 25 lines, progress bars collapsed):"
+tail -c 6000 ~/rung0.log | tr '\r' '\n' | tail -25
