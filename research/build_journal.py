@@ -255,6 +255,14 @@ increasing `max_completion_tokens` (2026-11-26): **Gemini 3.8 Flash rejects anyt
 model (Flash 65,536, its ceiling; Neon 200,000; Gemini 4 Argon stays at 65,536 as the competition
 notes say). The duplicate-image bug is fixed too. This is rung 0 v4.
 
+**v4 (run-007, run-008): the budget cannot be raised.** Flash was cut off again (62,914 of 65,532 tokens
+spent thinking). Neon was asked for 200,000 tokens and stopped at **exactly 65,536, all of it thinking,
+zero text tokens**, with `finish_reason: stop`. The probe only showed that the API *accepts* larger
+values for a trivial request, not that the model generates beyond 65,536 (accepted is not honoured).
+The effective output ceiling is 65,536 tokens for both models. Both runs are flagged `INVALID`: at the
+default reasoning level one call cannot read the drawings and write the script. Seven drawings cost
+7,560 image tokens (1,080 each) and the images are now attached once.
+
 **What this says.** In one call, at the default (highest) reasoning level, a task that needs
 seven drawings read and a 400-line script written does not fit in a 64,000-token output budget.
 The reasoning level is therefore a design knob to measure (low / medium / high), not a constant."""),
@@ -397,6 +405,9 @@ Dated, honest notes, including what went wrong. Newest last.
 * **2026-11-26.** Decision: v3 (run-005, run-006) is **invalid**: the output budget was too small, so
   nothing was written. Probed the endpoints: Flash's hard output limit is 65,536, Neon accepts up to
   1,000,000. Rung 0 v4 uses a per-model budget (Flash 65,536, Neon 200,000) and the image-dedupe fix.
+* **2026-11-26.** Rung 0 v4 (run-007, run-008) invalid: the effective output ceiling is 65,536 for
+  both models, even though the API accepted 200,000 for Neon (it stopped at exactly 65,536, all
+  thinking, no text). The budget cannot be raised; the reasoning level is the remaining lever.
 * **2026-11-26.** Process: a job that powers the VM off by itself raced the workflow's own pull and
   lost its results for a while (they were safe on the VM disk and in the bucket). The VM is now
   stopped by the workflow, after the pull.

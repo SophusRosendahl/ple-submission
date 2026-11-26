@@ -187,3 +187,13 @@ Running log of decisions for our PLE competition entry. Newest at the bottom of 
   (low / medium / high), measured as an ablation. A 400 error on the evaluation server counts
   against the entry, so a budget is only used if the endpoint accepted it in a probe.
 
+## Output budget: the ceiling is 65,536 (2026-11-26, correcting the entry above)
+
+- Neon accepted `max_completion_tokens` up to 1,000,000 in a probe, but a real request for 200,000 stopped
+  at exactly 65,536 output tokens, all of them thinking. **Accepted by the API is not the same as honoured
+  by the model.** Treat 65,536 as the ceiling for both Gemini models and never set a budget from a probe
+  with a trivial prompt alone.
+- Consequence: at the highest reasoning level a single call on `data-hall-mep-routing` spends the whole
+  ceiling thinking. The harness's per-model cap table stays (it is harmless) but cannot help; the lever is
+  the reasoning level, to be set and measured explicitly.
+
