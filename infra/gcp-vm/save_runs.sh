@@ -7,3 +7,4 @@ BUCKET="${RUNS_BUCKET:-gs://ple-runs-${N:-314857451555}}"
 cd "$HOME/ple-submission"
 gcloud storage rsync --recursive runs "$BUCKET/runs" && echo "saved runs/ to $BUCKET/runs" || echo "could not save runs/ to $BUCKET (bucket missing? see infra/gcp-vm/storage_cost_setup.sh)"
 gcloud storage cp research/runs.jsonl "$BUCKET/runs.jsonl" 2>/dev/null || true
+[ -f "$HOME/ple-proxy-requests.jsonl" ] && gcloud storage cp "$HOME/ple-proxy-requests.jsonl" "$BUCKET/ple-proxy-requests.jsonl" 2>/dev/null || true

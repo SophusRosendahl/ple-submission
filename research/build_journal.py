@@ -291,6 +291,11 @@ Dated, honest notes, including what went wrong. Newest last.
 * **2026-11-26.** Read the judging criteria. Added: a bucket for full run outputs, exact model-call
   counting in the harness (efficiency is judged on calls, tokens and runtime, so no billing
   export), and a write-up tracker keyed to the five criteria.
+* **2026-11-26.** Wrote down what every run must record (`docs/run-records.md`) so failures can be
+  analysed check by check. Found that the tracker kept only the first grader file per task; it now
+  keeps all of them. Found that the competition's proxy retries failed requests itself (3 times),
+  so our own call counts are lower bounds; added a request log at the proxy to count what the
+  provider actually served, judge calls included.
 * **2026-11-26.** Review of `harnesses/naive` found that a reply cut off at the token limit
   silently lost its last file. Fixed in the harness (the partial file is now written and the cut-off
   is logged); rung 0's first runs predate that fix, which matters only for tasks where the reply
