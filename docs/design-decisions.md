@@ -197,3 +197,20 @@ Running log of decisions for our PLE competition entry. Newest at the bottom of 
   ceiling thinking. The harness's per-model cap table stays (it is harmless) but cannot help; the lever is
   the reasoning level, to be set and measured explicitly.
 
+## Restart on interruption (2026-11-26, user decision)
+
+- **Not two separate calls.** When the output budget can't be raised, a reply that is cut off is restarted by
+  calling again with the original input **and the model's output so far**, asking it to continue where it
+  stopped. The pieces are joined into one answer and the files are written from that.
+- **Cut-off detection** is `finish_reason == length` **or** the output used at least 97 % of the budget,
+  because the proxy reports `stop` for some calls that used the whole budget (Neon, run-008).
+- **If the output so far is empty** (Neon: all 65,536 tokens were hidden thinking, so there is nothing to feed
+  back), the restart says so and tells the model to write the files now, without long thinking.
+- **Added by us, switchable:** each restart steps the reasoning level down one notch (max/high, medium, low;
+  `NAIVE_RESTART_EFFORT_STEP=0` turns it off). Without it, restarting an all-thinking call would think for
+  65,536 tokens again. Up to 5 restarts (`NAIVE_MAX_RESTARTS`), and none when under 15 minutes remain.
+- **Known limits:** the model's hidden thinking is never returned by the API, so it cannot be fed back; a
+  restart re-thinks from the visible text only. Every restart re-sends the inputs and images (prompt caching
+  should make that cheap, which `research/kvcache.py` will show).
+- Tests: `research/test_restart.py`.
+

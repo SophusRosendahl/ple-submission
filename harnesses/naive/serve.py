@@ -40,14 +40,22 @@ MAX_EFFORT_MODELS = ("claude", "glm")
 EFFORT = os.environ.get("REASONING_EFFORT") or (
     "max" if any(m in MODEL.lower() for m in MAX_EFFORT_MODELS) else "high"
 )
-# Reasoning tokens count against this cap. Rung 0 v1-v3 used 32,000 and then 64,000 for every model and the
-# model spent all of it thinking, so no file was written. The endpoints were probed on 2026-11-26: Gemini 3.8
-# Flash rejects anything above 65,536 (HTTP 400), Gemini 4 Neon accepted every value up to 1,000,000 (Gemini 4 Argon
-# is kept at 65,536 as the competition notes say). So the cap is per model: the endpoint's ceiling for Flash,
-# a much larger budget for Neon.
-MODEL_CAPS = (("gemini-4-argon", 65536), ("gemini-3", 65536), ("gemini-4", 200000), ("gemini", 65536))  # Argon: competition notes
+# Reasoning tokens count against this cap. Measured 2026-11-26: Gemini 3.8 Flash rejects anything above 65,536
+# (HTTP 400), and Gemini 4 Neon accepts larger values but stops at exactly 65,536 (all of it thinking), so the
+# effective ceiling is 65,536 for both. A reply that reaches it is treated as cut off and restarted (below).
+MODEL_CAPS = (("gemini", 65536),)
 MAX_OUTPUT_TOKENS = int(os.environ.get("MAX_OUTPUT_TOKENS") or next(
     (cap for key, cap in MODEL_CAPS if key in MODEL.lower()), 32000))
+# Restart on interruption: when a reply is cut off, call again with the input AND the output so far.
+MAX_RESTARTS = int(os.environ.get("NAIVE_MAX_RESTARTS", "5"))
+RESTART_EFFORT_STEP = os.environ.get("NAIVE_RESTART_EFFORT_STEP", "1") != "0"   # think less on each restart
+EFFORT_LADDER = ("max", "high", "medium", "low")
+CUT_OFF_FRACTION = 0.97   # the proxy reports `stop` for some calls that used the whole budget: count tokens too
+CONTINUE_NOTE = ("Your reply was cut off at the output limit. Continue exactly where it stopped: do not repeat "
+                 "anything already written, and finish every required file. If you were inside a file block, "
+                 "carry on with that file's content (do not start the block again).")
+EMPTY_NOTE = ("Your previous attempt used its entire output allowance on thinking and wrote nothing. Do not think "
+              "at length this time: write the required files now, in the <<<FILE ...>>> format, then the summary.")
 RETRY_WAITS = (5, 15, 30, 60, 120)
 FILE_BLOCK = re.compile(r"^<<<FILE (?P<path>[^\n>]+)>>>\n(?P<body>.*?)\n<<<END>>>$", re.S | re.M)
 # A reply cut off mid-file has an opening marker and no <<<END>>>: keep what was written.
@@ -83,7 +91,7 @@ CALLS = {"ok": 0, "failed": 0, "input_tokens": 0, "cached_input_tokens": 0,
          "output_tokens": 0, "reasoning_tokens": 0}
 
 
-async def ask(session, messages):
+async def ask(session, messages, effort=None):
   """One streamed model call with retries for transient errors."""
   for attempt, wait in enumerate((0,) + RETRY_WAITS):
     if wait:
@@ -97,7 +105,7 @@ async def ask(session, messages):
           model=MODEL,
           messages=messages,
           max_completion_tokens=MAX_OUTPUT_TOKENS,
-          reasoning_effort=EFFORT,
+          reasoning_effort=effort or EFFORT,
           stream=True,
           stream_options={"include_usage": True},
       )
@@ -219,6 +227,50 @@ async def solve(session):
     await session.log("naive: CALLS " + json.dumps({"model": MODEL, **CALLS}))
 
 
+def cut_off(usage, reason):
+  """True when a reply was interrupted: the provider said `length`, or it used (nearly) the whole budget."""
+  used = (usage.completion_tokens or 0) if usage else 0
+  return reason == "length" or used >= CUT_OFF_FRACTION * MAX_OUTPUT_TOKENS
+
+
+def assemble(pieces):
+  """Joins a reply and its continuation. If the continuation starts a new file block while the reply ended
+  inside an unfinished one, the unfinished block is dropped (the model restarted that file)."""
+  answer = pieces[0]
+  for piece in pieces[1:]:
+    open_block = OPEN_BLOCK.search(answer)
+    if open_block and piece.lstrip().startswith("<<<FILE"):
+      answer = answer[:open_block.start()]
+    answer += piece
+  return answer
+
+
+async def record_call(session, messages, usage, reason, started, n_images, effort, n):
+  """Counters, the CALL log line and the usage report for one finished model call."""
+  if reason == "length" or cut_off(usage, reason):
+    await session.log(f"naive: call {n + 1} used the whole output budget ({MAX_OUTPUT_TOKENS} tokens, finish={reason})")
+  if not usage:
+    return
+  cached = getattr(getattr(usage, "prompt_tokens_details", None), "cached_tokens", 0) or 0
+  reasoning = getattr(getattr(usage, "completion_tokens_details", None), "reasoning_tokens", 0) or 0
+  CALLS["input_tokens"] += usage.prompt_tokens or 0
+  CALLS["cached_input_tokens"] += cached
+  CALLS["output_tokens"] += usage.completion_tokens or 0
+  CALLS["reasoning_tokens"] += reasoning
+  chars, fp = prompt_fingerprint.fingerprint(loggable(messages))
+  raw = usage.model_dump() if hasattr(usage, "model_dump") else repr(usage)
+  # One record per successful call: what research/kvcache.py needs to estimate cache use (hashes of the
+  # prompt, never its text) next to the endpoint's own, unprocessed usage figures.
+  await session.log("naive: CALL " + json.dumps({
+      "t": round(started, 1), "model": MODEL, "n": n, "effort": effort, "chars": chars,
+      "step": prompt_fingerprint.STEP, "fp": fp, "finish_reason": reason, "max_output_tokens": MAX_OUTPUT_TOKENS,
+      "images_attached": n_images, "prompt_tokens": usage.prompt_tokens or 0, "cached_reported": cached,
+      "completion_tokens": usage.completion_tokens or 0, "reasoning_reported": reasoning, "usage_raw": raw},
+      default=str))
+  await session.usage(MODEL, input_tokens=usage.prompt_tokens or 0,
+                      output_tokens=usage.completion_tokens or 0, cache_read_tokens=cached)
+
+
 async def _solve(session):
   data, image_files = await gather_inputs(session)
   image_parts, attached = await load_images(session, image_files) if (ATTACH_IMAGES and image_files) else ([], [])
@@ -228,27 +280,25 @@ async def _solve(session):
       {"role": "system", "content": SYSTEM.format(workdir=session.workdir)},
       {"role": "user", "content": [{"type": "text", "text": text}] + image_parts if image_parts else text},
   ]
-  started = time.time()
-  answer, usage, reason = await ask(session, messages)
-  if usage:
-    cached = getattr(getattr(usage, "prompt_tokens_details", None), "cached_tokens", 0) or 0
-    reasoning = getattr(getattr(usage, "completion_tokens_details", None), "reasoning_tokens", 0) or 0
-    CALLS["input_tokens"] += usage.prompt_tokens or 0
-    CALLS["cached_input_tokens"] += cached
-    CALLS["output_tokens"] += usage.completion_tokens or 0
-    CALLS["reasoning_tokens"] += reasoning
-    chars, fp = prompt_fingerprint.fingerprint(loggable(messages))
-    raw = usage.model_dump() if hasattr(usage, "model_dump") else repr(usage)
-    # One record per successful call: what research/kvcache.py needs to estimate cache use (hashes of
-    # the prompt, never its text) next to the endpoint's own, unprocessed usage figures.
-    await session.log("naive: CALL " + json.dumps({
-        "t": round(started, 1), "model": MODEL, "chars": chars, "step": prompt_fingerprint.STEP, "fp": fp,
-        "finish_reason": reason, "max_output_tokens": MAX_OUTPUT_TOKENS, "images_attached": len(attached),
-        "prompt_tokens": usage.prompt_tokens or 0, "cached_reported": cached,
-        "completion_tokens": usage.completion_tokens or 0, "reasoning_reported": reasoning, "usage_raw": raw},
-        default=str))
-    await session.usage(MODEL, input_tokens=usage.prompt_tokens or 0,
-                        output_tokens=usage.completion_tokens or 0, cache_read_tokens=cached)
+  base, answer, effort = messages, "", EFFORT
+  for n in range(MAX_RESTARTS + 1):
+    convo = base if n == 0 else base + (
+        [{"role": "assistant", "content": answer}, {"role": "user", "content": CONTINUE_NOTE}] if answer.strip()
+        else [{"role": "user", "content": EMPTY_NOTE}])
+    started = time.time()
+    text, usage, reason = await ask(session, convo, effort)
+    await record_call(session, convo, usage, reason, started, len(attached), effort, n)
+    answer = assemble([answer, text]) if answer else text
+    if not cut_off(usage, reason) or n == MAX_RESTARTS:
+      break
+    left = session.time_left()
+    if left is not None and left < 900:
+      await session.log("naive: no time left to restart")
+      break
+    if RESTART_EFFORT_STEP:
+      i = EFFORT_LADDER.index(effort) if effort in EFFORT_LADDER else 1
+      effort = EFFORT_LADDER[min(i + 1, len(EFFORT_LADDER) - 1)]
+    await session.log("naive: RESTART " + json.dumps({"n": n + 1, "after": reason, "kept_chars": len(answer), "next_effort": effort}))
 
   written = []
   blocks = list(FILE_BLOCK.finditer(answer))
