@@ -13,8 +13,10 @@ import json
 import os
 import pathlib
 import re
+import time
 
 import openai
+import prompt_fingerprint
 import taskbridge
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -158,6 +160,7 @@ async def _solve(session):
       {"role": "system", "content": SYSTEM.format(workdir=session.workdir)},
       {"role": "user", "content": f"{session.instruction}\n\n{inputs}"},
   ]
+  started = time.time()
   answer, usage = await ask(session, messages)
   if usage:
     cached = getattr(getattr(usage, "prompt_tokens_details", None), "cached_tokens", 0) or 0
@@ -166,8 +169,15 @@ async def _solve(session):
     CALLS["cached_input_tokens"] += cached
     CALLS["output_tokens"] += usage.completion_tokens or 0
     CALLS["reasoning_tokens"] += reasoning
+    chars, fp = prompt_fingerprint.fingerprint(messages)
     raw = usage.model_dump() if hasattr(usage, "model_dump") else repr(usage)
-    await session.log("naive: USAGE " + json.dumps(raw, default=str))  # the endpoint's own figures, unprocessed
+    # One record per successful call: what research/kvcache.py needs to estimate cache use (hashes of
+    # the prompt, never its text) next to the endpoint's own, unprocessed usage figures.
+    await session.log("naive: CALL " + json.dumps({
+        "t": round(started, 1), "model": MODEL, "chars": chars, "step": prompt_fingerprint.STEP, "fp": fp,
+        "prompt_tokens": usage.prompt_tokens or 0, "cached_reported": cached,
+        "completion_tokens": usage.completion_tokens or 0, "reasoning_reported": reasoning, "usage_raw": raw},
+        default=str))
     await session.usage(MODEL, input_tokens=usage.prompt_tokens or 0,
                         output_tokens=usage.completion_tokens or 0, cache_read_tokens=cached)
 

@@ -202,6 +202,12 @@ else:
   too (`USAGE {...}`), so the figures can be checked against what the endpoint said. Two limits:
   a failed call's tokens are invisible to us, and whether the evaluator's own `tokens` figure
   counts cached tokens inside input or beside it is still to be verified against these lines.
+  Our own cache estimate: each call also logs hashes of its prompt prefix (never the text), and
+  `research/kvcache.py` replays the calls through a simulated prefix cache (longest shared prefix
+  with an earlier call of the same model within a time window, above a minimum size) to split
+  input tokens into cached and uncached. The window and minimum are provider-specific and not
+  known to us: they are placeholders until calibrated against the endpoint's reported cached
+  tokens, and `kvcache.compare` shows how far off the estimate is.
   Judge calls are made by the grader and are never added in.
   The efficiency plots (score against calls, tokens and runtime) read these numbers."""),
 
