@@ -228,3 +228,13 @@ Rung 0 instead tries a **low reasoning effort** (v5).
   documented model maximum, not something we or the competition set. For Gemini 4 Neon the API accepts larger
   values but real runs stop at exactly 65,536; a test asking it for a 150,000-word answer was inconclusive (it
   declined and wrote 341 tokens), so that the same limit applies there is likely, not proven.
+
+## Rung 0 first valid result (2026-11-26)
+
+- **Rung 0 v5 = one call, images attached once, reasoning effort low.** It is the first rung-0 configuration that
+  produces output on `data-hall-mep-routing`. Flash: script crashed (wrong ifcopenshell argument). Neon: valid
+  model, connectivity gate passed, 30 clashes. Both 0.0 (run-009, run-010).
+- **The failures are of the kind a run-and-check loop finds**, which is the case for rung 1 (the agent loop).
+- **Reasoning effort is now a recorded, switchable setting** (`run_dev.py --effort`), so it can be varied as an
+  ablation (low / medium / high) rather than left at the proxy's default.
+

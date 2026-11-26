@@ -107,11 +107,9 @@ pd.crosstab(tasks["grading"], tasks["half"], margins=True, margins_name="total")
 
     code("""tasks[tasks.half == "A"][["task", "grading", "domain"]].reset_index(drop=True)"""),
 
-    md("""> **Status (2026-11-26): rung 0 is invalid so far.** Every rung-0 run to date (run-001 to run-004) was
-> blind to images: the harness listed them by name only, and the model never saw the drawings.
-> Those runs stay in the tracker, flagged `INVALID` with the reason (`tracker.py invalidate`), and
-> say nothing about the models on image-based tasks. **Rung 0 v3**, with images attached, replaces
-> them. See the lab log."""),
+    md("""> **Status (2026-11-26): rung 0 has its first valid result: v5 (single call, images attached, low
+> reasoning effort).** Runs run-001 to run-008 stay in the tracker flagged `INVALID` with their reasons
+> (blind to images, then a thinking budget that left no room to answer). See the lab log.""),
 
     md("""## 4. Rung 0: a naive test with just a model
 
@@ -269,6 +267,25 @@ fed back, so for Neon (65,536 tokens of hidden thinking, nothing visible) a rest
 real answer to a fixed output budget is an agent loop, with state in files and a fresh budget per step.
 For rung 0 the next try is simpler: **a low reasoning effort** (v5, single call, nothing else changed).
 
+### Rung 0 v5: low reasoning effort, the first valid result (run-009, run-010)
+
+Same single call, images attached once, reasoning effort **low**. Both models now write a script and
+the grader runs it.
+
+| | Gemini 3.8 Flash | Gemini 4 Neon |
+|---|---|---|
+| output tokens (thinking) | 11,506 (0) | 25,954 (14,730) |
+| files written | `solution.py`, `reconciliation.json` | `solution.py`, `reconciliation.json` |
+| grader | `ERR_EXEC`: the script crashed | valid model; **connectivity gate passed**, **clash gate failed** |
+| the failure | `pset.edit_pset(product=...)`: no such argument (an ifcopenshell API mistake) | 30 hard clashes, 8.5 % rule violations, route 402 m against an optimum of 261 m |
+| score | 0.0 | 0.0 |
+
+Reading the drawings worked: Neon's design connects every service to the entry that its first,
+blind attempt missed. What is left are the failures a person finds by *running* the work: Flash's
+script dies on its first execution, and Neon's clashes show up as soon as a clash check is run on its
+own model. Neither model could run anything in this design. That is the evidence for rung 1: a loop in
+which the model runs its script and the checks the grader will apply, and fixes what they show.
+
 **What this says.** In one call, at the default (highest) reasoning level, a task that needs
 seven drawings read and a 400-line script written does not fit in a 64,000-token output budget.
 The reasoning level is therefore a design knob to measure (low / medium / high), not a constant."""),
@@ -418,6 +435,10 @@ Dated, honest notes, including what went wrong. Newest last.
   input and its output so far), implemented it with seven tests, then **scrapped it** the same day: hidden
   thinking can't be fed back, so for Neon it degenerates into a retry. The output ceiling is simply 65,536
   for both Gemini models. Rung 0 v5 = the single call at **low reasoning effort** instead.
+* **2026-11-26.** Rung 0 v5 (low effort), run-009 and run-010: **the first valid rung-0 result.** Both
+  wrote a script. Flash's crashed (a wrong ifcopenshell argument); Neon's ran, passed the schema and
+  connectivity gates and failed the clash gate (30 clashes). Score 0.0 each, for reasons a run-and-check
+  loop would catch. Lowering the effort cut Neon's output from 65,536 hidden-thinking tokens to 25,954.
 * **2026-11-26.** Process: a job that powers the VM off by itself raced the workflow's own pull and
   lost its results for a while (they were safe on the VM disk and in the bucket). The VM is now
   stopped by the workflow, after the pull.
