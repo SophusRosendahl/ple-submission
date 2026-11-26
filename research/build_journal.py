@@ -336,6 +336,9 @@ Dated, honest notes, including what went wrong. Newest last.
   request log works against the real proxy, and showed that the proxy reports `finish_reason: stop`
   on some calls that spent their whole budget thinking: our cut-off check is only reliable when the
   provider reports `length`, so the harness also needs a token-count check.
+* **2026-11-26.** Near-loss: syncing the VM's code overwrote its `runs.jsonl`, which held the Neon
+  run's record uncommitted. A saved patch let us recover it; the sync now merges records instead
+  (`infra/gcp-vm/merge_runs.py`). Lesson: a record that lives only on a machine is not recorded.
 * **2026-11-26.** Review of `harnesses/naive` found that a reply cut off at the token limit
   silently lost its last file. Fixed in the harness (the partial file is now written and the cut-off
   is logged); rung 0's first runs predate that fix, which matters only for tasks where the reply
