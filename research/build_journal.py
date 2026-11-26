@@ -26,22 +26,21 @@ dev set in two, **(3)** a very simple naive test with just a model."""),
 
     md("""## Write-up tracker
 
-The final upload is written from this notebook. Status: `todo` / `draft` / `done`. Update the
-table in `research/build_journal.py`, then rebuild.
+The final upload is written from this notebook, against the competition's judging criteria
+(from the Kaggle page; the fifth criterion was cut off in our copy and is still to be added).
+Status: `todo` / `draft` / `done`. Update the table in `research/build_journal.py`, then rebuild.
 
-| # | Write-up section | Source in this journal | Status |
-|---|---|---|---|
-| 1 | Summary: what the entry is and how it scores | final results | todo |
-| 2 | The problem and how we read it | section 1 | draft |
-| 3 | Evaluation setup: exact grading in a cloud VM, judge caveats | section 2 | draft |
-| 4 | Dev split and hold-out discipline | section 3 | draft |
-| 5 | Baselines: reference template, rung 0 (one model call) | sections 4 and 5 | draft |
-| 6 | The ladder: each rung, the failure that motivated it, the measured gain | section 6 onwards | todo |
-| 7 | Final harness: architecture and design decisions | `docs/architecture.md`, `docs/design-decisions.md` | draft |
-| 8 | What did not work | lab log | todo |
-| 9 | Cost, limits and reproduction (how to rerun) | section 2, `infra/` | draft |
+| # | Criterion (points) | What judges look for | What we have / still need | Status |
+|---|---|---|---|---|
+| 1 | **Insight & failure analysis** (25) | Something non-obvious; real dev-set failures; controlled ablations ("we added X, score went A to B"); ideas that failed | Near miss in section 5; lab log. Need: one-change-at-a-time ladder runs, failures read task by task, failed ideas written down | draft |
+| 2 | **Engineering reasoning** (25) | One concrete dev task walked through, our agent's trajectory against a licensed engineer's workflow: where it held up, where it took shortcuts, which domain skills separated pass from fail | Need: keep the full trajectory of each run (not just scores) and pick one task | todo |
+| 3 | **Cross-model generalizability** (15) | All 29 dev tasks with at least two models, ideally across families; which changes help every model, which only one; how model choice shifts accuracy and token cost; comparison table in the write-up; one target `google-cloud/<id>` committed in `submission.yaml` for Stage 2 | Rung 0 runs two models on half A only. Need: every rung on 2+ models, a final pass over all 29 (half B needs a stated reason), and the single target model chosen | todo |
+| 4 | **Efficiency & scaling** (20) | Dev score against compute budget (calls, tokens, runtime or parallel verification attempts); where accuracy plateaus; remaining headroom | Tracker stores tokens and seconds per task. Need: a score-vs-budget chart per rung, and at least one budget knob to vary (for example verification attempts) | todo |
+| 5 | *(not yet seen)* | | Add from the Kaggle page | todo |
 
-*The competition's own write-up requirements have not been checked against this outline yet.*"""),
+Also needed, from our own plan: the evaluation setup (section 2), the split and hold-out
+discipline (section 3), the final architecture (`docs/architecture.md`,
+`docs/design-decisions.md`) and how to reproduce (`infra/`)."""),
 
     md("""## 1. The problem
 
