@@ -10,5 +10,5 @@ if [[ "$code" == 200 ]]; then
   tmux new -d -s rung0 "bash ~/ple-submission/infra/gcp-vm/rung0.sh 2>&1 | tee ~/rung0.log"
   sleep 120; echo "--- rung0.log so far:"; tail -20 ~/rung0.log
 else
-  echo "NOT starting rung 0"
+  echo "NOT starting rung 0: powering the VM off"; sudo shutdown -h +1
 fi
