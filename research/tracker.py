@@ -29,6 +29,7 @@ RUNS = pathlib.Path(os.environ.get("PLE_TRACKER_RUNS", HERE / "runs.jsonl"))
 SPLIT = HERE / "dev_split.json"
 DETAIL_FILES = ("grade.json", "metrics.json", "reward.json")
 MAX_DETAIL_CHARS = 20000
+MAX_FILE_CHARS = 60000     # per grader file kept in the record; the whole folder is also saved to the bucket
 
 
 OFFICIAL_JUDGE = "claude-opus-5-5"   # the leaderboard's judge
@@ -106,8 +107,36 @@ def grader_detail(trial_dir: pathlib.Path) -> dict | None:
     return None
 
 
+def grader_files(trial_dir: pathlib.Path) -> dict | None:
+    """Every file the grader left in the trial's verifier folder (all check reports), not just the first.
+
+    JSON files are kept parsed, anything else as text; a file over MAX_FILE_CHARS keeps its head
+    and tail. The complete folder is in the run outputs bucket.
+    """
+    verifier = trial_dir / "verifier"
+    if not verifier.is_dir():
+        return None
+    out = {}
+    for path in sorted(p for p in verifier.rglob("*") if p.is_file()):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if len(text) > MAX_FILE_CHARS:
+            text = text[: MAX_FILE_CHARS // 2] + f"\n[... {len(text) - MAX_FILE_CHARS} characters cut ...]\n" + text[-MAX_FILE_CHARS // 2:]
+        try:
+            out[str(path.relative_to(verifier))] = {"data": json.loads(text)}
+        except ValueError:
+            out[str(path.relative_to(verifier))] = {"text": text}
+    return out
+
+
+def trial_listing(trial_dir: pathlib.Path) -> list | None:
+    """Every file in the trial folder with its size: shows what a run left behind, whatever the layout."""
+    if not trial_dir.is_dir():
+        return None
+    return [[str(p.relative_to(trial_dir)), p.stat().st_size] for p in sorted(trial_dir.rglob("*")) if p.is_file()]
+
+
 def import_results(run_dir: pathlib.Path, label: str, half: str, notes: str,
-                   harness_commit: str | None, holdout: str | None) -> dict:
+                   harness_commit: str | None, holdout: str | None, env: dict | None = None) -> dict:
     saved = json.loads((run_dir / "results.json").read_text(encoding="utf-8"))
     tasks = {}
     for row in saved.get("tasks", []):
@@ -120,6 +149,8 @@ def import_results(run_dir: pathlib.Path, label: str, half: str, notes: str,
             "seconds": row.get("seconds"),
             "tokens": row.get("tokens"),
             "grader": grader_detail(trial) if trial else None,
+            "grader_files": grader_files(trial) if trial else None,
+            "trial_files": trial_listing(trial) if trial else None,
         }
     tasks, dropped = keep_tasks(tasks, half, holdout)
     return append_run({
@@ -128,6 +159,7 @@ def import_results(run_dir: pathlib.Path, label: str, half: str, notes: str,
         "source": {"kind": "eval/run.py", "run_dir": str(run_dir), "run_date": saved.get("date")},
         "harness": {"name": saved.get("submission"), "model": saved.get("model"), "commit": harness_commit},
         "judge_model": saved.get("judge_model"),
+        "env": env,
         "half": half,
         "holdout_reason": holdout,
         "tasks": tasks,

@@ -27,6 +27,7 @@ import datetime as dt
 import json
 import os
 import pathlib
+import platform
 import re
 import shutil
 import subprocess
@@ -100,6 +101,20 @@ def with_model(entry: pathlib.Path, model: str) -> pathlib.Path:
     return variant
 
 
+def run_environment(started, finished, trials, judge, model_override):
+    """Where and how long a run took: what the efficiency plots and the VM-hours count need."""
+    try:
+        mem_gb = round(os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") / 2**30, 1)
+    except (ValueError, OSError, AttributeError):
+        mem_gb = None
+    return {
+        "started": started.strftime("%Y-%m-%dT%H:%M:%SZ"), "finished": finished.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "wall_seconds": round((finished - started).total_seconds()),
+        "parallel_trials": trials, "machine": {"host": platform.node(), "cpus": os.cpu_count(), "memory_gb": mem_gb},
+        "judge": judge, "model_override": model_override,
+    }
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ple", type=pathlib.Path, required=True, help="clone of the competition repository")
@@ -161,14 +176,17 @@ def main(argv=None):
     if a.trials:
         cmd += ["--trials", str(a.trials)]
     print("running:", " ".join(cmd), flush=True)
+    started = dt.datetime.now(dt.timezone.utc)
     code = subprocess.run(cmd, cwd=a.ple, check=False, env={**os.environ, "JUDGE_MODEL": judge}).returncode
+    finished = dt.datetime.now(dt.timezone.utc)
     if a.model:
         shutil.rmtree(run_entry.parent, ignore_errors=True)
     if not (out / "results.json").is_file():
         sys.exit(f"eval/run.py exited {code} and wrote no results.json in {out}")
     partial = len(tasks) < len(half_tasks)
     notes = a.notes + (f" (subset: {len(tasks)} of {len(half_tasks)} tasks)" if partial else "")
-    rec = tracker.import_results(out, a.label, a.half, notes.strip(), git_commit(entry), a.holdout)
+    rec = tracker.import_results(out, a.label, a.half, notes.strip(), git_commit(entry), a.holdout,
+                                 env=run_environment(started, finished, a.trials, judge, a.model))
     print()
     print(tracker.report(rec))
     if partial:
