@@ -39,6 +39,7 @@ jobs:
           AS_OWNER='o=$(sudo sh -c "stat -c %U /home/*/ple/local.env" | head -1); sudo -iu "$o" bash -s'
           [[ "$(opt start)" == "no" ]] || gcloud compute instances start "$NAME" --zone "$ZONE"
           for i in $(seq 30); do ssh_vm true && break; sleep 10; done
+          ssh_vm true   # fail here, loudly, if the VM never accepted SSH
           git bundle create /tmp/b.bundle HEAD
           gcloud compute scp /tmp/b.bundle "$NAME:/tmp/b.bundle" --zone "$ZONE" --quiet --strict-host-key-checking=no
           printf 'set -e; [ -d ~/ple-submission ] || git clone -q /tmp/b.bundle ~/ple-submission; cd ~/ple-submission; git fetch -q /tmp/b.bundle HEAD; git checkout -q -B %s FETCH_HEAD; git log -1 --oneline\n' "$GITHUB_REF_NAME" \
@@ -49,7 +50,9 @@ jobs:
               echo '((f)) || L+=("HF_TOKEN=$t"); printf "%s\n" "${L[@]}" > ~/ple/local.env; echo "HF_TOKEN written from the repo secret"'
             } | ssh_vm "$AS_OWNER"
           fi
-          { echo 'cd ~/ple-submission; export PATH="$HOME/.local/bin:$PATH"'; cat "$J"; } | ssh_vm "$AS_OWNER"
+          # run the job from a file, not stdin: a command in the job that reads stdin would eat the rest of the script
+          { echo "cat > /tmp/job.sh <<'JOB_EOF'"; echo 'cd ~/ple-submission; export PATH="$HOME/.local/bin:$PATH"'; cat "$J"; echo 'JOB_EOF'
+            echo 'bash /tmp/job.sh </dev/null'; } | ssh_vm "$AS_OWNER"
           PULL="$(opt pull)"
           if [[ -n "$PULL" ]]; then
             echo "cd ~/ple-submission && tar -cz $PULL" | ssh_vm "$AS_OWNER" | tar -xz

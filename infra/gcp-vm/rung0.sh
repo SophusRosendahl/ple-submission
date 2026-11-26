@@ -10,6 +10,16 @@ cd "$HOME/ple-submission"
 ENV_FILE="$HOME/ple/local.env"
 [[ -f "$ENV_FILE" ]] || { echo "missing $ENV_FILE: run infra/local/start_proxy.sh first"; exit 1; }
 
+# The proxy dies with the VM (nohup, no service), so make sure it answers where task containers
+# reach it (Docker's bridge address), starting it if not. Never restart a proxy that is up.
+up() { curl -s -o /dev/null -m 5 "http://172.17.0.1:4000/health/liveliness"; }
+if ! up; then
+  echo "model proxy not answering: starting it"
+  VERTEXAI_PROJECT="${VERTEXAI_PROJECT:-ple-submission}" bash "$HOME/ple-submission/infra/local/start_proxy.sh"
+  for _ in $(seq 40); do up && break; sleep 5; done
+  up || { echo "model proxy still not answering after 200 s: see ~/ple-proxy.log"; exit 1; }
+fi
+
 for MODEL in gemini-3.8-flash gemini-4-neon; do
   echo "=== rung 0 with $MODEL ($(date -u +%FT%TZ)) ==="
   python3 research/run_dev.py --ple "$HOME/ple" --entry harnesses/naive \
