@@ -1,9 +1,10 @@
-# Job 5: start rung 0 in tmux unless it is already running; then show the first minutes of its log.
-if tmux has-session -t rung0 2>/dev/null; then
-  echo "rung0 is already running: not touching it"
-else
-  tmux new -d -s rung0 "bash ~/ple-submission/infra/gcp-vm/rung0.sh 2>&1 | tee ~/rung0.log"
-fi
-sleep 150
-echo "--- rung0.log (tail):"; tail -c 5000 ~/rung0.log | tr '\r' '\n' | tail -25
-echo "--- proxy answers at 172.17.0.1: $(curl -s -o /dev/null -m 5 -w '%{http_code}' http://172.17.0.1:4000/health/liveliness)"
+# sync: no
+# Status of rung 0 (read only), and the layout of a run folder.
+tmux ls 2>&1 | head -3
+echo "uptime: $(uptime -p) | containers: $(docker ps -q | wc -l) | disk: $(df -h / | tail -1 | awk '{print $3" used, "$5}')"
+echo "--- rung0.log (tail):"; tail -c 4000 ~/rung0.log | tr '\r' '\n' | tail -22
+R=$(ls -dt ~/ple-submission/runs/*/ 2>/dev/null | head -1); echo "--- newest run folder: $R"
+ls "$R" 2>/dev/null | head -20
+echo "--- results.json:"; [ -f "$R/results.json" ] && head -c 1500 "$R/results.json"
+echo "--- one trial dir:"; T=$(find "$R" -maxdepth 3 -type d -name '*__*' 2>/dev/null | head -1); echo "$T"; find "$T" -maxdepth 2 -type f 2>/dev/null | head -25
+echo "--- research/runs.jsonl lines: $(wc -l < ~/ple-submission/research/runs.jsonl)"
