@@ -29,6 +29,8 @@ jobs:
           service_account: gh-ple-vm@ple-submission.iam.gserviceaccount.com
       - uses: google-github-actions/setup-gcloud@v2
       - name: Run job on the VM
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           set -euo pipefail
           J=.github/vm/job.sh
@@ -41,6 +43,12 @@ jobs:
           gcloud compute scp /tmp/b.bundle "$NAME:/tmp/b.bundle" --zone "$ZONE" --quiet --strict-host-key-checking=no
           printf 'set -e; [ -d ~/ple-submission ] || git clone -q /tmp/b.bundle ~/ple-submission; cd ~/ple-submission; git fetch -q /tmp/b.bundle HEAD; git checkout -q -B %s FETCH_HEAD; git log -1 --oneline\n' "$GITHUB_REF_NAME" \
             | ssh_vm "$AS_OWNER"
+          if [[ -n "${HF_TOKEN:-}" ]]; then   # repo secret HF_TOKEN -> ~/ple/local.env (bash builtins only: never in a command line)
+            { printf 't=%q\n' "$HF_TOKEN"
+              echo 'mapfile -t L < ~/ple/local.env; f=0; for i in "${!L[@]}"; do [[ ${L[i]} == HF_TOKEN=* ]] && L[i]="HF_TOKEN=$t" && f=1; done'
+              echo '((f)) || L+=("HF_TOKEN=$t"); printf "%s\n" "${L[@]}" > ~/ple/local.env; echo "HF_TOKEN written from the repo secret"'
+            } | ssh_vm "$AS_OWNER"
+          fi
           { echo 'cd ~/ple-submission; export PATH="$HOME/.local/bin:$PATH"'; cat "$J"; } | ssh_vm "$AS_OWNER"
           PULL="$(opt pull)"
           if [[ -n "$PULL" ]]; then
