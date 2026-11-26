@@ -176,3 +176,14 @@ Running log of decisions for our PLE competition entry. Newest at the bottom of 
 - Reasoning effort and the 64,000-token output cap are unchanged; Gemini spends much of its output on
   thinking, which is a separate question to study later (an ablation on effort).
 
+## Output budget (2026-11-26)
+
+- **Rung 0 v3 is invalid too:** with the images attached, both models spent the whole output budget
+  thinking and wrote no file.
+- **The output-token ceiling was measured**, not assumed: Gemini 3.8 Flash accepts at most 65,536
+  (HTTP 400 above), Gemini 4 Neon accepted up to 1,000,000. The harness uses a per-model budget:
+  Flash 65,536, Neon 200,000, Gemini 4 Argon 65,536 (as the competition notes say).
+- **Open:** if a model still spends its whole budget thinking, the next lever is the reasoning level
+  (low / medium / high), measured as an ablation. A 400 error on the evaluation server counts
+  against the entry, so a budget is only used if the endpoint accepted it in a probe.
+

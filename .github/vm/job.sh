@@ -1,27 +1,19 @@
-# stop: yes
-# Probe: what output-token limit does each model endpoint accept? (trivial prompt, low effort, a few cents at most)
-up() { curl -s -o /dev/null -m 5 http://172.17.0.1:4000/health/liveliness; }
-if ! up; then
-  VERTEXAI_PROJECT=ple-submission bash infra/local/start_proxy.sh >/dev/null 2>&1
-  for i in $(seq 40); do up && break; sleep 5; done
+# stop: idle
+# pull: research/runs.jsonl research/run-details
+# Rung 0 v4 on one task, both models: per-model output budget, images attached once. Waits up to 70 min.
+cd ~/ple-submission && git log -1 --oneline
+if tmux has-session -t rung0 2>/dev/null; then echo "rung0 already running: waiting for it"; else
+  tmux new -d -s rung0 "TASKS=data-hall-mep-routing bash ~/ple-submission/infra/gcp-vm/rung0.sh 2>&1 | tee ~/rung0.log"
 fi
-up && echo "proxy up" || echo "proxy NOT up"
-python3 - <<'PY'
-import json, os, urllib.request, urllib.error
-env = dict(l.split("=", 1) for l in open(os.path.expanduser("~/ple/local.env")).read().splitlines() if "=" in l)
-url, key = env["MODEL_PROXY_URL"].rstrip("/"), env["MODEL_PROXY_KEY"]
-for model in ("gemini-3.8-flash", "gemini-4-neon"):
-    for n in (65536, 100000, 131072, 200000, 1000000):
-        body = {"model": model, "messages": [{"role": "user", "content": "Reply with the single word OK."}],
-                "max_completion_tokens": n, "reasoning_effort": "low"}
-        req = urllib.request.Request(url + "/v1/chat/completions", data=json.dumps(body).encode(),
-                                     headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
-        try:
-            with urllib.request.urlopen(req, timeout=300) as r:
-                d = json.loads(r.read()); print(f"{model:18s} max={n:>8d}  ACCEPTED  usage={d.get('usage', {}).get('completion_tokens')}")
-        except urllib.error.HTTPError as e:
-            print(f"{model:18s} max={n:>8d}  HTTP {e.code}  {e.read().decode(errors='replace')[:230]!r}")
-        except Exception as e:
-            print(f"{model:18s} max={n:>8d}  {type(e).__name__}: {e}")
-PY
+sleep 30
+for i in $(seq 280); do tmux has-session -t rung0 2>/dev/null || break; sleep 15; done
+if tmux has-session -t rung0 2>/dev/null; then echo "STILL RUNNING after 70 min: left running, VM stays on"; tr '\r' '\n' < ~/rung0.log | grep -v '^Fetching' | tail -6 | cut -c1-200; exit 0; fi
+echo "runs ended"; tr '\r' '\n' < ~/rung0.log | grep -v '^Fetching' | tail -24 | cut -c1-200
+IDS=$(python3 -c "
+import json
+print(' '.join(r['run_id'] for r in map(json.loads, open('research/runs.jsonl')) if 'rung 0 v4' in r['label']))")
+echo "v4 runs: $IDS"; python3 research/collect_details.py $IDS
+N=$(gcloud projects describe ple-submission --format='value(projectNumber)' 2>/dev/null | tail -1); B="gs://ple-runs-$N"
+gcloud storage rsync --recursive runs "$B/runs" 2>&1 | tail -1
+gcloud storage cp ~/ple-proxy-requests.jsonl "$B/ple-proxy-requests.jsonl" 2>&1 | tail -1
 true

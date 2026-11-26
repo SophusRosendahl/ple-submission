@@ -246,6 +246,15 @@ Also found: every image was attached **twice** (the extractor scans two overlapp
 doubled the image tokens (18.5k prompt tokens for seven sheets). Fixed in the harness; the v3
 token figures are inflated by it.
 
+**Verdict (user decision): v3 is invalid too.** The budget was too small for what the task needs, so
+the run measures nothing about the model. v3 is flagged `INVALID` in the tracker.
+
+**The output limit, measured, not assumed.** We probed each endpoint with a trivial request at
+increasing `max_completion_tokens` (2026-11-26): **Gemini 3.8 Flash rejects anything above 65,536**
+(HTTP 400), while **Gemini 4 Neon accepted every value up to 1,000,000.** So the budget is now per
+model (Flash 65,536, its ceiling; Neon 200,000; Gemini 4 Argon stays at 65,536 as the competition
+notes say). The duplicate-image bug is fixed too. This is rung 0 v4.
+
 **What this says.** In one call, at the default (highest) reasoning level, a task that needs
 seven drawings read and a 400-line script written does not fit in a 64,000-token output budget.
 The reasoning level is therefore a design knob to measure (low / medium / high), not a constant."""),
@@ -385,6 +394,9 @@ Dated, honest notes, including what went wrong. Newest last.
   drawings visible, both models spent the whole 64,000-token budget thinking (Neon: all 64,000 as
   reasoning, empty reply) and wrote no file. Also found that images were attached twice; fixed.
   Next knob to measure: reasoning effort.
+* **2026-11-26.** Decision: v3 (run-005, run-006) is **invalid**: the output budget was too small, so
+  nothing was written. Probed the endpoints: Flash's hard output limit is 65,536, Neon accepts up to
+  1,000,000. Rung 0 v4 uses a per-model budget (Flash 65,536, Neon 200,000) and the image-dedupe fix.
 * **2026-11-26.** Process: a job that powers the VM off by itself raced the workflow's own pull and
   lost its results for a while (they were safe on the VM disk and in the bucket). The VM is now
   stopped by the workflow, after the pull.

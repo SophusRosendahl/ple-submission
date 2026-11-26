@@ -40,10 +40,14 @@ MAX_EFFORT_MODELS = ("claude", "glm")
 EFFORT = os.environ.get("REASONING_EFFORT") or (
     "max" if any(m in MODEL.lower() for m in MAX_EFFORT_MODELS) else "high"
 )
-# Reasoning tokens count against this cap. Rung 0's first runs used 32,000 for every model and Gemini 4
-# Neon spent all of it thinking in 14 of 15 tasks, so no file was ever written. Gemini 4 takes up to
-# 65,536 (competition notes); other families keep the 32,000 the notes recommend.
-MAX_OUTPUT_TOKENS = int(os.environ.get("MAX_OUTPUT_TOKENS") or (64000 if "gemini" in MODEL.lower() else 32000))
+# Reasoning tokens count against this cap. Rung 0 v1-v3 used 32,000 and then 64,000 for every model and the
+# model spent all of it thinking, so no file was written. The endpoints were probed on 2026-11-26: Gemini 3.8
+# Flash rejects anything above 65,536 (HTTP 400), Gemini 4 Neon accepted every value up to 1,000,000 (Gemini 4 Argon
+# is kept at 65,536 as the competition notes say). So the cap is per model: the endpoint's ceiling for Flash,
+# a much larger budget for Neon.
+MODEL_CAPS = (("gemini-4-argon", 65536), ("gemini-3", 65536), ("gemini-4", 200000), ("gemini", 65536))  # Argon: competition notes
+MAX_OUTPUT_TOKENS = int(os.environ.get("MAX_OUTPUT_TOKENS") or next(
+    (cap for key, cap in MODEL_CAPS if key in MODEL.lower()), 32000))
 RETRY_WAITS = (5, 15, 30, 60, 120)
 FILE_BLOCK = re.compile(r"^<<<FILE (?P<path>[^\n>]+)>>>\n(?P<body>.*?)\n<<<END>>>$", re.S | re.M)
 # A reply cut off mid-file has an opening marker and no <<<END>>>: keep what was written.
