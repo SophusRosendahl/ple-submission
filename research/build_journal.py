@@ -109,7 +109,7 @@ pd.crosstab(tasks["grading"], tasks["half"], margins=True, margins_name="total")
 
     md("""> **Status (2026-11-26): rung 0 has its first valid result: v5 (single call, images attached, low
 > reasoning effort).** Runs run-001 to run-008 stay in the tracker flagged `INVALID` with their reasons
-> (blind to images, then a thinking budget that left no room to answer). See the lab log.""),
+> (blind to images, then a thinking budget that left no room to answer). See the lab log."""),
 
     md("""## 4. Rung 0: a naive test with just a model
 
