@@ -22,12 +22,14 @@ fi
 
 # TASKS=<id,id> limits the run to those tasks (default: all of half A)
 TASK_ARGS=(); [[ -n "${TASKS:-}" ]] && TASK_ARGS=(--tasks "$TASKS")
+# EFFORT=low|medium|high|max sets the reasoning level of the harness's model calls (default: the proxy's highest)
+EFFORT_ARGS=(); [[ -n "${EFFORT:-}" ]] && EFFORT_ARGS=(--effort "$EFFORT")
 
 for MODEL in gemini-3.8-flash gemini-4-neon; do
   echo "=== rung 0 with $MODEL ($(date -u +%FT%TZ)) ==="
   python3 research/run_dev.py --ple "$HOME/ple" --entry harnesses/naive \
-      --model "$MODEL" --judge dev --trials 5 --env-file "$ENV_FILE" "${TASK_ARGS[@]}" \
-      --label "rung 0 v4: single call, text files and images attached, per-model output budget ($MODEL)" || echo "=== run for $MODEL failed ==="
+      --model "$MODEL" --judge dev --trials 5 --env-file "$ENV_FILE" "${TASK_ARGS[@]}" "${EFFORT_ARGS[@]}" \
+      --label "rung 0 v5: single call, images attached, reasoning effort ${EFFORT:-default} ($MODEL)" || echo "=== run for $MODEL failed ==="
   bash "$HOME/ple-submission/infra/gcp-vm/save_runs.sh" || true   # keep the full outputs off the VM disk
 done
 echo "=== done ($(date -u +%FT%TZ)) ==="

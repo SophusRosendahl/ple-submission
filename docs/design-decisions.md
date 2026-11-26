@@ -197,7 +197,15 @@ Running log of decisions for our PLE competition entry. Newest at the bottom of 
   ceiling thinking. The harness's per-model cap table stays (it is harmless) but cannot help; the lever is
   the reasoning level, to be set and measured explicitly.
 
-## Restart on interruption (2026-11-26, user decision)
+## Restart on interruption: SCRAPPED (2026-11-26, user decision)
+
+**Scrapped the same day it was built.** Reason: the model's hidden thinking cannot be fed back, so for Neon
+(all 65,536 tokens hidden thinking, no visible output) a restart is only "retry with less effort", and the
+real answer to a limited output budget is an agent loop, which keeps state in files and gives every step its
+own budget. The design below is kept as a record of the idea; the code was removed from `harnesses/naive`.
+Rung 0 instead tries a **low reasoning effort** (v5).
+
+(Original entry:)
 
 - **Not two separate calls.** When the output budget can't be raised, a reply that is cut off is restarted by
   calling again with the original input **and the model's output so far**, asking it to continue where it

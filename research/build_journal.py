@@ -263,11 +263,11 @@ The effective output ceiling is 65,536 tokens for both models. Both runs are fla
 default reasoning level one call cannot read the drawings and write the script. Seven drawings cost
 7,560 image tokens (1,080 each) and the images are now attached once.
 
-**Next design (user decision): restart on interruption, not two calls.** If a reply is cut off, call
-again with the input and the output so far and let the model continue; join the pieces; write the files.
-Where the output so far is empty (Neon spends the whole budget on hidden thinking), say so and ask for
-the files with brief thinking. Each restart also steps the reasoning level down one notch (switchable).
-This is rung 0 **v5**. See `docs/design-decisions.md` for the exact rules.
+**Restart on interruption: built, then scrapped (user decision).** The idea was to call again with the
+input and the output so far when a reply is cut off. It does not fit: the model's hidden thinking cannot be
+fed back, so for Neon (65,536 tokens of hidden thinking, nothing visible) a restart is just a retry. The
+real answer to a fixed output budget is an agent loop, with state in files and a fresh budget per step.
+For rung 0 the next try is simpler: **a low reasoning effort** (v5, single call, nothing else changed).
 
 **What this says.** In one call, at the default (highest) reasoning level, a task that needs
 seven drawings read and a 400-line script written does not fit in a 64,000-token output budget.
@@ -414,9 +414,10 @@ Dated, honest notes, including what went wrong. Newest last.
 * **2026-11-26.** Rung 0 v4 (run-007, run-008) invalid: the effective output ceiling is 65,536 for
   both models, even though the API accepted 200,000 for Neon (it stopped at exactly 65,536, all
   thinking, no text). The budget cannot be raised; the reasoning level is the remaining lever.
-* **2026-11-26.** Decision: do not split into two calls; **restart on interruption**, feeding the model its
-  input and its output so far (rung 0 v5). Implemented with seven scripted tests; also the output
-  ceiling is now simply 65,536 for both Gemini models.
+* **2026-11-26.** Decision: do not split into two calls; tried **restart on interruption** (feed the model its
+  input and its output so far), implemented it with seven tests, then **scrapped it** the same day: hidden
+  thinking can't be fed back, so for Neon it degenerates into a retry. The output ceiling is simply 65,536
+  for both Gemini models. Rung 0 v5 = the single call at **low reasoning effort** instead.
 * **2026-11-26.** Process: a job that powers the VM off by itself raced the workflow's own pull and
   lost its results for a while (they were safe on the VM disk and in the bucket). The VM is now
   stopped by the workflow, after the pull.

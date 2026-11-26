@@ -46,16 +46,7 @@ EFFORT = os.environ.get("REASONING_EFFORT") or (
 MODEL_CAPS = (("gemini", 65536),)
 MAX_OUTPUT_TOKENS = int(os.environ.get("MAX_OUTPUT_TOKENS") or next(
     (cap for key, cap in MODEL_CAPS if key in MODEL.lower()), 32000))
-# Restart on interruption: when a reply is cut off, call again with the input AND the output so far.
-MAX_RESTARTS = int(os.environ.get("NAIVE_MAX_RESTARTS", "5"))
-RESTART_EFFORT_STEP = os.environ.get("NAIVE_RESTART_EFFORT_STEP", "1") != "0"   # think less on each restart
-EFFORT_LADDER = ("max", "high", "medium", "low")
 CUT_OFF_FRACTION = 0.97   # the proxy reports `stop` for some calls that used the whole budget: count tokens too
-CONTINUE_NOTE = ("Your reply was cut off at the output limit. Continue exactly where it stopped: do not repeat "
-                 "anything already written, and finish every required file. If you were inside a file block, "
-                 "carry on with that file's content (do not start the block again).")
-EMPTY_NOTE = ("Your previous attempt used its entire output allowance on thinking and wrote nothing. Do not think "
-              "at length this time: write the required files now, in the <<<FILE ...>>> format, then the summary.")
 RETRY_WAITS = (5, 15, 30, 60, 120)
 FILE_BLOCK = re.compile(r"^<<<FILE (?P<path>[^\n>]+)>>>\n(?P<body>.*?)\n<<<END>>>$", re.S | re.M)
 # A reply cut off mid-file has an opening marker and no <<<END>>>: keep what was written.
@@ -233,18 +224,6 @@ def cut_off(usage, reason):
   return reason == "length" or used >= CUT_OFF_FRACTION * MAX_OUTPUT_TOKENS
 
 
-def assemble(pieces):
-  """Joins a reply and its continuation. If the continuation starts a new file block while the reply ended
-  inside an unfinished one, the unfinished block is dropped (the model restarted that file)."""
-  answer = pieces[0]
-  for piece in pieces[1:]:
-    open_block = OPEN_BLOCK.search(answer)
-    if open_block and piece.lstrip().startswith("<<<FILE"):
-      answer = answer[:open_block.start()]
-    answer += piece
-  return answer
-
-
 async def record_call(session, messages, usage, reason, started, n_images, effort, n):
   """Counters, the CALL log line and the usage report for one finished model call."""
   if reason == "length" or cut_off(usage, reason):
@@ -280,25 +259,9 @@ async def _solve(session):
       {"role": "system", "content": SYSTEM.format(workdir=session.workdir)},
       {"role": "user", "content": [{"type": "text", "text": text}] + image_parts if image_parts else text},
   ]
-  base, answer, effort = messages, "", EFFORT
-  for n in range(MAX_RESTARTS + 1):
-    convo = base if n == 0 else base + (
-        [{"role": "assistant", "content": answer}, {"role": "user", "content": CONTINUE_NOTE}] if answer.strip()
-        else [{"role": "user", "content": EMPTY_NOTE}])
-    started = time.time()
-    text, usage, reason = await ask(session, convo, effort)
-    await record_call(session, convo, usage, reason, started, len(attached), effort, n)
-    answer = assemble([answer, text]) if answer else text
-    if not cut_off(usage, reason) or n == MAX_RESTARTS:
-      break
-    left = session.time_left()
-    if left is not None and left < 900:
-      await session.log("naive: no time left to restart")
-      break
-    if RESTART_EFFORT_STEP:
-      i = EFFORT_LADDER.index(effort) if effort in EFFORT_LADDER else 1
-      effort = EFFORT_LADDER[min(i + 1, len(EFFORT_LADDER) - 1)]
-    await session.log("naive: RESTART " + json.dumps({"n": n + 1, "after": reason, "kept_chars": len(answer), "next_effort": effort}))
+  started = time.time()
+  answer, usage, reason = await ask(session, messages)
+  await record_call(session, messages, usage, reason, started, len(attached), EFFORT, 0)
 
   written = []
   blocks = list(FILE_BLOCK.finditer(answer))
