@@ -1,0 +1,14 @@
+{
+  "combined_score": 0.0,
+  "valid": 0.0,
+  "script_seconds": 0.8,
+  "exec_status": "ERR_EXEC",
+  "reason": "script exited 1: pset_name, properties=props)\n  File \"/usr/local/lib/python3.11/site-packages/ifcopenshell/api/__init__.py\", line 115, in run\n    return usecase_function(ifc_file, should_run_listeners=should_run_listeners, **settings)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/ifcopenshell/api/__init__.py\", line 288, in wrapper\n    raise TypeError(msg) from e\nTypeError: Incorrect function arguments provided for pset.edit_pset\nedit_pset() got an unexpected keyword argument 'product'. You specified args (<ifcopenshell.file.file object at 0x7ebbcc7e00d0>,) and settings {'product': #153=IfcFurniture('0GX4cyouj7C8fvhHnHDFmI',$,'RACK-A01',$,'Rack',#164,#159,$,.USERDEFINED.), 'name': 'Pset_DCM_Cabinet', 'properties': {'Row': 'A', 'Facing': 'SOUTH', 'Type': 'C1'}}\n\nCorrect signature is (file: ifcopenshell.file.file, pset: ifcopenshell.entity_instance.entity_instance, name: Optional[str] = None, properties: Optional[dict[str, Any]] = None, pset_template: Optional[ifcopenshell.entity_instance.entity_instance] = None, should_purge: bool = True) -> None\nSee help(ifcopenshell.api.pset.edit_pset) for documentation.\n"
+}{
+  "combined_score": 0.0,
+  "valid": 0.0,
+  "script_seconds": 0.8,
+  "exec_status": "ERR_EXEC",
+  "reason": "script exited 1: pset_name, properties=props)\n  File \"/usr/local/lib/python3.11/site-packages/ifcopenshell/api/__init__.py\", line 115, in run\n    return usecase_function(ifc_file, should_run_listeners=should_run_listeners, **settings)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/ifcopenshell/api/__init__.py\", line 288, in wrapper\n    raise TypeError(msg) from e\nTypeError: Incorrect function arguments provided for pset.edit_pset\nedit_pset() got an unexpected keyword argument 'product'. You specified args (<ifcopenshell.file.file object at 0x7ebbcc7e00d0>,) and settings {'product': #153=IfcFurniture('0GX4cyouj7C8fvhHnHDFmI',$,'RACK-A01',$,'Rack',#164,#159,$,.USERDEFINED.), 'name': 'Pset_DCM_Cabinet', 'properties': {'Row': 'A', 'Facing': 'SOUTH', 'Type': 'C1'}}\n\nCorrect signature is (file: ifcopenshell.file.file, pset: ifcopenshell.entity_instance.entity_instance, name: Optional[str] = None, properties: Optional[dict[str, Any]] = None, pset_template: Optional[ifcopenshell.entity_instance.entity_instance] = None, should_purge: bool = True) -> None\nSee help(ifcopenshell.api.pset.edit_pset) for documentation.\n"
+}
+evaluator exit: 0

@@ -1,0 +1,539 @@
+{
+  "report": {
+    "task": "B",
+    "score": 0.0,
+    "exec_status": "ERR_CLASH",
+    "gate_0": {
+      "passed": true,
+      "status": "OK",
+      "reason": "",
+      "errors": [],
+      "n_errors": 0
+    },
+    "gates": {
+      "gate_1_no_hard_clash": false,
+      "gate_2_connectivity": {
+        "passed": true,
+        "unserved_rows": {},
+        "disconnected": {},
+        "unreached_consumers": [],
+        "n_rows": 6,
+        "n_chw_consumers": 22,
+        "coverage": {
+          "A": {
+            "cable_tray": 1.0,
+            "busway": 0.983,
+            "chw_pipe": 1.0
+          },
+          "B": {
+            "cable_tray": 0.983,
+            "busway": 0.983,
+            "chw_pipe": 0.983
+          },
+          "C": {
+            "cable_tray": 1.0,
+            "busway": 1.0,
+            "chw_pipe": 1.0
+          },
+          "D": {
+            "cable_tray": 0.983,
+            "busway": 0.983,
+            "chw_pipe": 0.983
+          },
+          "E": {
+            "cable_tray": 1.0,
+            "busway": 1.0,
+            "chw_pipe": 1.0
+          },
+          "F": {
+            "cable_tray": 0.984,
+            "busway": 0.984,
+            "chw_pipe": 0.984
+          }
+        },
+        "reach_mm": 2500.0,
+        "min_coverage": 0.8,
+        "joint_tolerance_mm": 250.0
+      }
+    },
+    "recovery_confusion": {},
+    "semantics": {},
+    "violations_by_rule": {
+      "clear_height": {
+        "rule": "clear_height",
+        "source": "TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4",
+        "threshold": ">= 2600 mm",
+        "gradeable": true,
+        "n_checkable": 85,
+        "n_violations": 16,
+        "violations": [
+          {
+            "id": "0r$fdrk9XCU8Ne4HO6Iuua",
+            "name": "SPK-A01",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "1X_ATAgVrBBA6XqzUzuxkr",
+            "name": "SPK-A02",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "1w8c87ERLF69Dxjr$jvrRe",
+            "name": "SPK-A03",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "217XH9UwrADviQXXTQQVCz",
+            "name": "SPK-A04",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "2jMQXKzPX8wwBEIwa_5Sb_",
+            "name": "SPK-A05",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "1l7vftL0z2RxgA1t9qTf22",
+            "name": "SPK-A06",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "1aU3oP64L83wVK4EEB4oga",
+            "name": "SPK-A07",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "2BXTB2JVHEsxZN99SmotyA",
+            "name": "SPK-A08",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "3G7952sdb0aeYqFbzWdwke",
+            "name": "SPK-A09",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "0cDFOmwHH12uo59zMo38EB",
+            "name": "SPK-A10",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "37F8HpZ5zF3fTMR1lxdF$7",
+            "name": "SPK-A11",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "2LOTHeYOzAvxbul_DEuywH",
+            "name": "SPK-A12",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "3U_hC6ByD7KBETBKeOYlni",
+            "name": "SPK-A13",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "2qIUGVrcLDKhseFmuS03Ok",
+            "name": "SPK-A14",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "2GtMWSzRv7qxS9xYSi32ZB",
+            "name": "SPK-A15",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "0gMBCgdVPApxErVr1Qbi2I",
+            "name": "SPK-A16",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          }
+        ]
+      },
+      "sprinkler_clearance": {
+        "rule": "sprinkler_clearance",
+        "source": "TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4 + Annex C",
+        "threshold": ">= 460 mm",
+        "gradeable": true,
+        "n_checkable": 79,
+        "n_violations": 0,
+        "violations": []
+      },
+      "sprinkler_obstruction_offset": {
+        "rule": "sprinkler_obstruction_offset",
+        "source": "NFPA 13 (2019, 2022) 10.2.7.2.1.3",
+        "threshold": "3x the obstruction, capped at 610 mm, within 450 mm below the deflector",
+        "gradeable": true,
+        "n_checkable": 79,
+        "n_violations": 0,
+        "violations": []
+      },
+      "wide_obstruction_needs_sprinkler": {
+        "rule": "wide_obstruction_needs_sprinkler",
+        "source": "NFPA 13 (2019, 2022) 9.5.5.3.1 / 10.2.7.4.2",
+        "threshold": "a head beneath any obstruction wider than 1200 mm",
+        "gradeable": true,
+        "n_checkable": 0,
+        "n_violations": 0,
+        "violations": []
+      },
+      "tray_stack_headroom": {
+        "rule": "tray_stack_headroom",
+        "source": "ANSI/TIA-569-B, cited in ANSI/TIA-942 7.3.2",
+        "threshold": ">= 300 mm between stacked runs",
+        "gradeable": true,
+        "n_checkable": 25,
+        "n_violations": 8,
+        "violations": [
+          {
+            "id": "04TqIJm6D9Hfk1d2P2hbP9",
+            "name": "CHW-SEG-01",
+            "detail": "166mm of access below CT-SEG-01 (2ygLfHVBH8jQq9hvt1uPGM), needs 300mm (ANSI/TIA-569-B, cited in ANSI/TIA-942 7.3.2)"
+          },
+          {
+            "id": "1uJQzofmj9lwMEQ4fpCFKH",
+            "name": "CHW-SEG-02",
+            "detail": "166mm of access below CT-SEG-01 (2ygLfHVBH8jQq9hvt1uPGM), needs 300mm (ANSI/TIA-569-B, cited in ANSI/TIA-942 7.3.2)"
+          },
+          {
+            "id": "3gj8J3mrX2GgK_A7roqmW2",
+            "name": "CHW-SEG-04",
+            "detail": "166mm of access below CT-SEG-02 (0uLHR3Q9v4r8K407G9YRxf), needs 300mm (ANSI/TIA-569-B, cited in ANSI/TIA-942 7.3.2)"
+          },
+          {
+            "id": "2abDdANIvDcguWZmlKd7b2",
+            "name": "CHW-SEG-05",
+            "detail": "166mm of access below CT-SEG-02 (0uLHR3Q9v4r8K407G9YRxf), needs 300mm (ANSI/TIA-569-B, cited in ANSI/TIA-942 7.3.2)"
+          },
+          {
+            "id": "3qIWQRkC14reYnqGPAeqHd",
+            "name": "CHW-SEG-06",
+            "detail": "166mm of access below CT-SEG-02 (0uLHR3Q9v4r8K407G9YRxf), needs 300mm (ANSI/TIA-569-B, cited in ANSI/TIA-942 7.3.2)"
+          },
+          {
+            "id": "2kJ$c1_T51PfT7PYzpkrit",
+            "name": "CHW-SEG-07",
+            "detail": "166mm of access below CT-SEG-02 (0uLHR3Q9v4r8K407G9YRxf), needs 300mm (ANSI/TIA-569-B, cited in ANSI/TIA-942 7.3.2)"
+          },
+          {
+            "id": "19BWT2Cp940eIUCJ$8xPDd",
+            "name": "CHW-SEG-08",
+            "detail": "166mm of access below CT-SEG-02 (0uLHR3Q9v4r8K407G9YRxf), needs 300mm (ANSI/TIA-569-B, cited in ANSI/TIA-942 7.3.2)"
+          },
+          {
+            "id": "1EI$41cJ54HhLp0xHQMvOV",
+            "name": "CHW-SEG-09",
+            "detail": "166mm of access below CT-SEG-02 (0uLHR3Q9v4r8K407G9YRxf), needs 300mm (ANSI/TIA-569-B, cited in ANSI/TIA-942 7.3.2)"
+          }
+        ]
+      },
+      "tray_below_tile": {
+        "rule": "tray_below_tile",
+        "source": "TIA-942-B-2017 8.6.2",
+        "threshold": ">= 20 mm",
+        "gradeable": true,
+        "n_checkable": 0,
+        "n_violations": 0,
+        "violations": []
+      },
+      "pdu_dedicated_space": {
+        "rule": "pdu_dedicated_space",
+        "source": "NFPA 70 (NEC) 110.26(E)(1)(a)",
+        "threshold": "no foreign piping within 1800 mm above a PDU",
+        "gradeable": true,
+        "n_checkable": 6,
+        "n_violations": 0,
+        "violations": []
+      },
+      "power_telecom_separation": {
+        "rule": "power_telecom_separation",
+        "source": "ANSI/TIA-942 7.3.1 Table 2",
+        "threshold": ">= 300 mm on at least one axis",
+        "gradeable": true,
+        "n_checkable": 8,
+        "n_violations": 0,
+        "violations": []
+      }
+    },
+    "advisory": {},
+    "violation_rate": 0.0851063829787234,
+    "checkable_pairs": 282,
+    "clash_count": 30,
+    "clashes": [
+      {
+        "a": "0OcvuGDqD29uOSj0onuvTq",
+        "b": "0XKMp4FivDRQ_lqR$hyil_",
+        "detail": "BW-SEG-02 x BW-SEG-07 (bvh:1)"
+      },
+      {
+        "a": "0OcvuGDqD29uOSj0onuvTq",
+        "b": "1LuWURwCLBheY3UJgJ2jWN",
+        "detail": "BW-SEG-02 x BW-SEG-05 (bvh:1)"
+      },
+      {
+        "a": "0OcvuGDqD29uOSj0onuvTq",
+        "b": "2qOUUtLK58xAzhGS7uNb9y",
+        "detail": "BW-SEG-02 x BW-SEG-01 (bvh:1)"
+      },
+      {
+        "a": "0dqrt_2OfCZfIKVgMwJWXx",
+        "b": "1uJQzofmj9lwMEQ4fpCFKH",
+        "detail": "CHW-SEG-03 x CHW-SEG-02 (bvh:0)"
+      },
+      {
+        "a": "0uLHR3Q9v4r8K407G9YRxf",
+        "b": "00YdqQklf45woS1pbHmLNJ",
+        "detail": "CT-SEG-02 x CT-SEG-05 (bvh:1)"
+      },
+      {
+        "a": "0uLHR3Q9v4r8K407G9YRxf",
+        "b": "0Gze75ep91iuvRxdt0eRAo",
+        "detail": "CT-SEG-02 x CT-SEG-08 (bvh:1)"
+      },
+      {
+        "a": "0uLHR3Q9v4r8K407G9YRxf",
+        "b": "23DPsp52H5LAoMwPbnuYyH",
+        "detail": "CT-SEG-02 x CT-SEG-07 (bvh:1)"
+      },
+      {
+        "a": "0uLHR3Q9v4r8K407G9YRxf",
+        "b": "2ygLfHVBH8jQq9hvt1uPGM",
+        "detail": "CT-SEG-02 x CT-SEG-01 (bvh:1)"
+      },
+      {
+        "a": "0uLHR3Q9v4r8K407G9YRxf",
+        "b": "3Ic59pY$X8y9eUNh6dqKev",
+        "detail": "CT-SEG-02 x CT-SEG-03 (bvh:2)"
+      },
+      {
+        "a": "0uLHR3Q9v4r8K407G9YRxf",
+        "b": "3WcmREQBX6y9aEEdpEzBLL",
+        "detail": "CT-SEG-02 x CT-SEG-06 (bvh:1)"
+      },
+      {
+        "a": "0uLHR3Q9v4r8K407G9YRxf",
+        "b": "3c5EpCRRT0OusE3gad9Vxf",
+        "detail": "CT-SEG-02 x CT-SEG-04 (bvh:1)"
+      },
+      {
+        "a": "17gmhq9X9BDQdkfgb5mXRS",
+        "b": "0kPWydTBT8oRYNMl4CZJF_",
+        "detail": "CAC-DE-ROOF-2 x CAC-DE-DOOR-2-1 (bvh:2)"
+      },
+      {
+        "a": "17gmhq9X9BDQdkfgb5mXRS",
+        "b": "3cE6wtXgn0eAdTZWSBufoV",
+        "detail": "CAC-DE-ROOF-2 x CAC-DE-DOOR-2-2 (bvh:2)"
+      },
+      {
+        "a": "19BWT2Cp940eIUCJ$8xPDd",
+        "b": "1uJQzofmj9lwMEQ4fpCFKH",
+        "detail": "CHW-SEG-08 x CHW-SEG-02 (bvh:0)"
+      },
+      {
+        "a": "1EI$41cJ54HhLp0xHQMvOV",
+        "b": "1uJQzofmj9lwMEQ4fpCFKH",
+        "detail": "CHW-SEG-09 x CHW-SEG-02 (bvh:0)"
+      },
+      {
+        "a": "1IUV_1rSDCtwx34XMSe1K7",
+        "b": "0OujgvV8jADAP0YM2haBT0",
+        "detail": "CAC-BC-ROOF-2 x CAC-BC-DOOR-2-2 (bvh:2)"
+      },
+      {
+        "a": "1IUV_1rSDCtwx34XMSe1K7",
+        "b": "1rQdN9jf9BTf68lanTRh40",
+        "detail": "CAC-BC-ROOF-2 x CAC-BC-DOOR-2-1 (bvh:2)"
+      },
+      {
+        "a": "1uJQzofmj9lwMEQ4fpCFKH",
+        "b": "04TqIJm6D9Hfk1d2P2hbP9",
+        "detail": "CHW-SEG-02 x CHW-SEG-01 (bvh:1)"
+      },
+      {
+        "a": "1uJQzofmj9lwMEQ4fpCFKH",
+        "b": "2kJ$c1_T51PfT7PYzpkrit",
+        "detail": "CHW-SEG-02 x CHW-SEG-07 (bvh:1)"
+      },
+      {
+        "a": "1uJQzofmj9lwMEQ4fpCFKH",
+        "b": "3gj8J3mrX2GgK_A7roqmW2",
+        "detail": "CHW-SEG-02 x CHW-SEG-04 (bvh:1)"
+      },
+      {
+        "a": "2N$cDVxOrDOemKWdZsnVnF",
+        "b": "0OcvuGDqD29uOSj0onuvTq",
+        "detail": "BW-SEG-06 x BW-SEG-02 (bvh:1)"
+      },
+      {
+        "a": "2QRgyCh_1ELfhni7Deky80",
+        "b": "0GSfOuJKTDUBAWAMlJhqtU",
+        "detail": "CAC-DE-ROOF-1 x CAC-DE-DOOR-1-1 (bvh:2)"
+      },
+      {
+        "a": "2QRgyCh_1ELfhni7Deky80",
+        "b": "3sadzf7RH8x8cuhBe2KK6L",
+        "detail": "CAC-DE-ROOF-1 x CAC-DE-DOOR-1-2 (bvh:2)"
+      },
+      {
+        "a": "2abDdANIvDcguWZmlKd7b2",
+        "b": "1uJQzofmj9lwMEQ4fpCFKH",
+        "detail": "CHW-SEG-05 x CHW-SEG-02 (bvh:0)"
+      },
+      {
+        "a": "2q09Yz4jD0fBI421SGJra4",
+        "b": "0OcvuGDqD29uOSj0onuvTq",
+        "detail": "BW-SEG-03 x BW-SEG-02 (bvh:2)"
+      },
+      {
+        "a": "33HGcMEXv5OAnqIJELfFhr",
+        "b": "0OcvuGDqD29uOSj0onuvTq",
+        "detail": "BW-SEG-08 x BW-SEG-02 (bvh:2)"
+      },
+      {
+        "a": "3K2tOzufj5y8LMJBJyX$Ya",
+        "b": "2$nm5Go7PC6ADBq0QH6n6h",
+        "detail": "CAC-BC-DOOR-1-2 x CAC-BC-ROOF-1 (bvh:2)"
+      },
+      {
+        "a": "3MdjdO_vn9afwxQbsT6R2h",
+        "b": "2$nm5Go7PC6ADBq0QH6n6h",
+        "detail": "CAC-BC-DOOR-1-1 x CAC-BC-ROOF-1 (bvh:2)"
+      },
+      {
+        "a": "3YJKo5zI198gJ10xWbbQpC",
+        "b": "0OcvuGDqD29uOSj0onuvTq",
+        "detail": "BW-SEG-04 x BW-SEG-02 (bvh:1)"
+      },
+      {
+        "a": "3qIWQRkC14reYnqGPAeqHd",
+        "b": "1uJQzofmj9lwMEQ4fpCFKH",
+        "detail": "CHW-SEG-06 x CHW-SEG-02 (bvh:0)"
+      }
+    ],
+    "routed_length": {
+      "total_mm": 402000.0,
+      "by_service": {
+        "cable_tray": 125100.0,
+        "busway": 125100.0,
+        "chw_pipe": 151800.0
+      },
+      "l_opt_mm": 260601.59999999998
+    },
+    "objective": null,
+    "secondary": {
+      "length_detail": {
+        "service_share_of_l_opt": {
+          "cable_tray": 0.48,
+          "busway": 0.48,
+          "chw_pipe": 0.5825
+        },
+        "over_length_pct": 54.258,
+        "total_mm": 402000.0,
+        "l_opt_mm": 260601.59999999998
+      },
+      "coverage_quality": {
+        "per_service": {
+          "cable_tray": {
+            "min": 0.983,
+            "mean": 0.9917
+          },
+          "busway": {
+            "min": 0.983,
+            "mean": 0.9888
+          },
+          "chw_pipe": {
+            "min": 0.983,
+            "mean": 0.9917
+          }
+        },
+        "rows_below_90pct": 0,
+        "n_rows": 6
+      },
+      "network_complexity": {
+        "segments_per_service": {
+          "cable_tray": 8,
+          "busway": 8,
+          "chw_pipe": 9
+        },
+        "components_per_service": {
+          "cable_tray": 1,
+          "busway": 1,
+          "chw_pipe": 1
+        },
+        "total_segments": 25
+      },
+      "clash_density": {
+        "clash_count": 30,
+        "per_100m_route": 7.4627
+      },
+      "violation_detail": {
+        "distinct_violating_rules": 2,
+        "worst_rule": "clear_height",
+        "worst_rule_count": 16,
+        "rule_counts": {
+          "clear_height": 16,
+          "tray_stack_headroom": 8
+        }
+      },
+      "extended": {
+        "achieved_clearances": {
+          "min_sprinkler_clearance_mm": {
+            "cable_tray": 3697.6,
+            "busway": null,
+            "chw_pipe": null
+          },
+          "min_pdu_chw_clearance_mm": null,
+          "min_tray_busway_separation_mm": 2923.0
+        },
+        "underfloor_overhead_split": {
+          "cable_tray": {
+            "under_floor_mm": 125100.0,
+            "overhead_mm": 0.0,
+            "total_mm": 125100.0
+          },
+          "busway": {
+            "under_floor_mm": 0.0,
+            "overhead_mm": 125100.0,
+            "total_mm": 125100.0
+          },
+          "chw_pipe": {
+            "under_floor_mm": 151800.0,
+            "overhead_mm": 0.0,
+            "total_mm": 151800.0
+          }
+        },
+        "elevation_bands": {
+          "cable_tray": {
+            "in_clear_height_band_mm": 0.0,
+            "above_band_mm": 0.0,
+            "under_floor_mm": 125100.0,
+            "fraction_in_band": 0.0
+          },
+          "busway": {
+            "in_clear_height_band_mm": 0.0,
+            "above_band_mm": 125100.0,
+            "under_floor_mm": 0.0,
+            "fraction_in_band": 0.0
+          },
+          "chw_pipe": {
+            "in_clear_height_band_mm": 0.0,
+            "above_band_mm": 0.0,
+            "under_floor_mm": 151800.0,
+            "fraction_in_band": 0.0
+          }
+        },
+        "support_and_drops": {
+          "drop_count": 0,
+          "support_count": 0,
+          "drops": [],
+          "supports": []
+        },
+        "reconciliation": {
+          "log_present": false,
+          "log": null
+        }
+      }
+    }
+  },
+  "task": "dc_model__hall_seed000_d000__mep_routing"
+}
