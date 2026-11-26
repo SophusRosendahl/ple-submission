@@ -164,3 +164,15 @@ Running log of decisions for our PLE competition entry. Newest at the bottom of 
   elements out hides violations. That is why our checks must use the full set of facts (decision 8).
 - Reading facts accurately looks like the main source of lost points; the routing itself is
   fairly forgiving.
+
+## Rung 0 validity (2026-11-26)
+
+- **Rung 0 is invalid so far.** The harness showed images by name only. On image-based tasks the
+  model works from the task text alone (confirmed on `data-hall-mep-routing`: its only inputs are
+  seven PNG drawing sheets, and the model said it could not see them). Runs run-001 to run-004 are
+  flagged invalid in `research/runs.jsonl` and kept as a record.
+- **Rung 0 v3 = rung 0 plus the images attached to the single request.** One change only. The switch
+  `NAIVE_IMAGES=0` restores the old behaviour for ablations.
+- Reasoning effort and the 64,000-token output cap are unchanged; Gemini spends much of its output on
+  thinking, which is a separate question to study later (an ablation on effort).
+

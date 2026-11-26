@@ -107,6 +107,12 @@ pd.crosstab(tasks["grading"], tasks["half"], margins=True, margins_name="total")
 
     code("""tasks[tasks.half == "A"][["task", "grading", "domain"]].reset_index(drop=True)"""),
 
+    md("""> **Status (2026-11-26): rung 0 is invalid so far.** Every rung-0 run to date (run-001 to run-004) was
+> blind to images: the harness listed them by name only, and the model never saw the drawings.
+> Those runs stay in the tracker, flagged `INVALID` with the reason (`tracker.py invalidate`), and
+> say nothing about the models on image-based tasks. **Rung 0 v3**, with images attached, replaces
+> them. See the lab log."""),
+
     md("""## 4. Rung 0: a naive test with just a model
 
 **Design.** One model call, no tools, no agent loop. Before the call the harness (not the model)
@@ -128,6 +134,7 @@ Gemini 4 Neon (the "better" one), over all of half A, judged by Gemini 4 Neon.""
 overview = pd.DataFrame([{
     "run": r["run_id"], "label": r["label"], "model": r["harness"]["model"],
     "half": r["half"], "judge": tracker.judge_name(r.get("judge_model")), "score": round(tracker.score(r)["score"], 3),
+    "valid": "NO" if tracker.invalid_reason(r) else "yes",
     "measured": f"{tracker.score(r)['n_measured']}/{tracker.score(r)['n_tasks']}",
     "run date": (r["source"].get("run_date") or "")[:10],
 } for r in runs])
@@ -344,6 +351,11 @@ Dated, honest notes, including what went wrong. Newest last.
 * **2026-11-26.** Correction after reading the full trial folders: both models were blind to the
   seven drawing PNGs (images are listed by name only). Neon said so itself and wrote placeholders.
   The "needs run-and-check" conclusion above was premature; rung 0 cannot be a floor on image tasks.
+* **2026-11-26.** Decision: **rung 0 is invalid so far.** All four runs (run-001 to run-004) are marked
+  invalid in the tracker with the reason; they are kept, not deleted. Rung 0 v3 changes exactly one
+  thing: images are attached to the request (the harness reads them and sends them as image parts;
+  `NAIVE_IMAGES=0` switches it off for later comparison). Same 64,000-token cap, same reasoning
+  effort, same single call.
 * **2026-11-26.** Near-loss: syncing the VM's code overwrote its `runs.jsonl`, which held the Neon
   run's record uncommitted. A saved patch let us recover it; the sync now merges records instead
   (`infra/gcp-vm/merge_runs.py`). Lesson: a record that lives only on a machine is not recorded.

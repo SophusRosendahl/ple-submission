@@ -204,6 +204,26 @@ def import_results(run_dir: pathlib.Path, label: str, half: str, notes: str,
     })
 
 
+def invalid_reason(run: dict) -> str | None:
+    """Why a run is marked invalid, or None if it is not."""
+    v = run.get("validity") or {}
+    return v.get("reason") if v.get("valid") is False else None
+
+
+def mark_invalid(run_ids: list[str], reason: str) -> list[str]:
+    """Marks runs invalid (kept, never deleted): the record stays, with the reason and the date."""
+    runs = load_runs()
+    known = {r["run_id"] for r in runs}
+    missing = [r for r in run_ids if r not in known]
+    if missing:
+        sys.exit(f"no such run: {', '.join(missing)}")
+    for r in runs:
+        if r["run_id"] in run_ids:
+            r["validity"] = {"valid": False, "reason": reason, "marked": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")}
+    RUNS.write_text("".join(json.dumps(r, sort_keys=False) + "\n" for r in runs), encoding="utf-8")
+    return run_ids
+
+
 def enrich(run_id: str, run_dir: pathlib.Path) -> dict:
     """Adds the detail fields (grader files, trial listing, harness records) to an existing record from its
     run folder. Only adds or refreshes those fields; scores and everything else stay as recorded."""
@@ -319,6 +339,7 @@ def report(run: dict) -> str:
     h = run["harness"]
     lines = [
         f"{run['run_id']}  {run['label']}",
+        *([f"*** INVALID: {invalid_reason(run)}"] if invalid_reason(run) else []),
         f"harness {h.get('name')} · model {h.get('model')} · commit {h.get('commit')}",
         f"source {run['source'].get('kind')} · run date {run['source'].get('run_date')} · judge {judge_name(run.get('judge_model'))}"
         + ("" if judge_name(run.get("judge_model")) in (OFFICIAL_JUDGE, "?") else " (not the leaderboard's judge: judged scores approximate)"),
@@ -367,6 +388,9 @@ def main(argv=None):
     e = sub.add_parser("enrich", help="add detail fields to an existing record from its run folder")
     e.add_argument("run_id")
     e.add_argument("run_dir", type=pathlib.Path)
+    iv = sub.add_parser("invalidate", help="mark runs invalid (kept in the tracker, flagged everywhere)")
+    iv.add_argument("run_ids", nargs="+")
+    iv.add_argument("--reason", required=True)
     sub.add_parser("list")
     rep = sub.add_parser("report")
     rep.add_argument("run_id")
@@ -378,6 +402,8 @@ def main(argv=None):
     elif a.cmd == "import-manifest":
         rec = import_manifest(a.artifacts, a.label, a.half, a.notes, a.source, a.model, a.holdout)
         print(report(rec))
+    elif a.cmd == "invalidate":
+        print("marked invalid:", ", ".join(mark_invalid(a.run_ids, a.reason)))
     elif a.cmd == "enrich":
         rec = enrich(a.run_id, a.run_dir)
         print(f"{rec['run_id']}: {sum(1 for t in rec['tasks'].values() if t.get('harness'))} of {len(rec['tasks'])} task(s) have harness records")
@@ -387,7 +413,8 @@ def main(argv=None):
         for run in load_runs():
             s = score(run)
             print(f"{run['run_id']}  {s['score']:.3f}  half {run['half']}  {run['harness'].get('model')}"
-                  f"  judge {judge_name(run.get('judge_model'))}  {run['label']}")
+                  f"  judge {judge_name(run.get('judge_model'))}  {run['label']}"
+                  + (f"  [INVALID: {invalid_reason(run)[:70]}...]" if invalid_reason(run) else ""))
     elif a.cmd == "report":
         runs = {r["run_id"]: r for r in load_runs()}
         if a.run_id not in runs:

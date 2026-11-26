@@ -1,14 +1,19 @@
-# stop: yes
-# pull: research/run-details
-# Copy what the two single-task trials produced into research/run-details/ (small files only; no config or lock files).
-cd ~/ple-submission
-for pair in "run-003:naive-A-20261126-180514" "run-004:naive-A-20261126-181344"; do
-  id=${pair%%:*}; dir=${pair##*:}
-  T=$(ls -d runs/$dir/attempt1/jobs/dev/data-hall*/ | head -1)
-  D=research/run-details/$id; mkdir -p $D
-  cp -r "$T/agent" "$T/deliverables" "$T/verifier" $D/ 2>/dev/null
-  rm -f $D/agent/egress.log
-  echo "$id <- $T"; (cd $D && find . -type f -printf '%s %p\n' | sort -k2)
-done
-du -sh research/run-details
+# pull: research/runs.jsonl research/run-details
+# Rung 0 v3 (images attached) on one task, both models. Waits up to 40 min, collects details, powers the VM off only if the runs ended.
+cd ~/ple-submission && git log -1 --oneline
+if tmux has-session -t rung0 2>/dev/null; then echo "rung0 already running: waiting for it"; else
+  tmux new -d -s rung0 "TASKS=data-hall-mep-routing bash ~/ple-submission/infra/gcp-vm/rung0.sh 2>&1 | tee ~/rung0.log"
+fi
+sleep 30
+for i in $(seq 160); do tmux has-session -t rung0 2>/dev/null || break; sleep 15; done
+if tmux has-session -t rung0 2>/dev/null; then echo "STILL RUNNING after 40 min: leaving it, VM stays on"; tr '\r' '\n' < ~/rung0.log | grep -v '^Fetching' | tail -8 | cut -c1-200; exit 0; fi
+echo "runs ended"; tr '\r' '\n' < ~/rung0.log | grep -v '^Fetching' | tail -30 | cut -c1-200
+IDS=$(python3 -c "
+import json
+print(' '.join(r['run_id'] for r in map(json.loads, open('research/runs.jsonl')) if 'rung 0 v3' in r['label']))")
+echo "v3 runs: $IDS"; python3 research/collect_details.py $IDS
+N=$(gcloud projects describe ple-submission --format='value(projectNumber)' 2>/dev/null | tail -1); B="gs://ple-runs-$N"
+gcloud storage rsync --recursive runs "$B/runs" 2>&1 | tail -1
+gcloud storage cp ~/ple-proxy-requests.jsonl "$B/ple-proxy-requests.jsonl" 2>&1 | tail -1
+sudo shutdown -h +2 "rung 0 v3 finished" 2>&1 | tail -1
 true
