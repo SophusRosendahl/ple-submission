@@ -1,19 +1,11 @@
-# sync: no
+# stop: yes
 # pull: research/runs.jsonl
-# Look inside the single-task trials (read only). Waits up to 12 min for the Neon run to finish.
-for i in $(seq 48); do tmux has-session -t rung0 2>/dev/null || break; sleep 15; done
-tmux ls 2>&1 | head -1
-echo "recorded runs: $(wc -l < ~/ple-submission/research/runs.jsonl)"
-for T in $(ls -d ~/ple-submission/runs/naive-A-20261126-1805*/attempt1/jobs/dev/data-hall*/ ~/ple-submission/runs/naive-A-20261126-1813*/attempt1/jobs/dev/data-hall*/ 2>/dev/null); do
-  echo; echo "################ $T"
-  python3 - "$T/../../../results.json" <<'PY'
-import json, sys, os
-p = sys.argv[1]
-if os.path.isfile(p):
-    d = json.load(open(p)); print({k: d.get(k) for k in ("model", "score", "complete")}); [print(t["id"], t["score"], t["status"], t.get("seconds"), t.get("tokens")) for t in d["tasks"]]
-PY
-  echo "--- files (size):"; (cd "$T" && find . -type f -printf '%s %p\n' | sort -k2 | head -40)
-  echo "--- harness lines:"; grep -rhs "naive:" "$T" 2>/dev/null | cut -c1-900 | head -12
-  echo "--- verifier:"; for f in "$T"/verifier/*; do [ -f "$f" ] && { echo "[$f]"; head -c 1500 "$f"; echo; }; done
-  echo "--- exception:"; head -c 600 "$T/exception.txt" 2>/dev/null
-done
+# Finish the single-task runs: add the detail fields to their records, copy the raw outputs to the bucket, stop the VM.
+cd ~/ple-submission
+python3 research/tracker.py enrich run-003 runs/naive-A-20261126-180514
+python3 research/tracker.py enrich run-004 runs/naive-A-20261126-181344
+python3 research/tracker.py list
+N=$(gcloud projects describe ple-submission --format='value(projectNumber)' 2>/dev/null | tail -1); B="gs://ple-runs-$N"
+gcloud storage rsync --recursive runs "$B/runs" 2>&1 | tail -2
+gcloud storage cp ~/ple-proxy-requests.jsonl "$B/ple-proxy-requests.jsonl" 2>&1 | tail -1
+true

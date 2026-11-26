@@ -222,6 +222,28 @@ else:
 usage = pd.DataFrame([{"run": r["run_id"], "model": r["harness"]["model"], **costs.run_usage(r)} for r in runs])
 usage"""),
 
+    md("""### Rung 0 v2, one task: `data-hall-mep-routing`
+
+To start simple we ran both models on a single task, a checks-graded one (no LLM judge involved).
+Both scored **0.0**, for different reasons, and the grader's own report says exactly why.
+
+| | Gemini 3.8 Flash | Gemini 4 Neon |
+|---|---|---|
+| output tokens (of which thinking) | 63,996 (60,587) | 49,290 (29,597) |
+| why the call ended | hit the 64,000-token cap | finished |
+| what was written | a script cut off mid-file | a 48 KB script and a reconciliation file |
+| grader verdict | `ERR_NO_OUTPUT`: the script wrote no file | `ERR_CLASH`: valid design, but two hard gates failed |
+
+**Flash:** 95 % of its output budget went to thinking, and the script it was writing was cut off.
+**Neon:** the design ran and is close in size (route 265.4 m against an optimum of 260.6 m, 7.1 % rule
+violations) but fails two hard gates: **5 hard clashes**, and **nothing within 2,500 mm of the
+service entry at (200, 3360)**, so none of the three services is connected to the feed, and two
+cooling units (CRAH-01, CRAH-04) are never reached.
+
+What this says about the harness, not the models: Neon wrote the whole design in one go and never
+ran it, so it could not see either failure. The grader's gates (clashes, connectivity from the
+service entry) are cheap to check by running the script, which is what rung 1 is for."""),
+
     md("""## 5. A reference point, and what it taught us
 
 ### The official template on half A
@@ -308,6 +330,12 @@ Dated, honest notes, including what went wrong. Newest last.
   most tasks wrote no file. Kept in the tracker, annotated invalid; reran as v2 with a 64,000 cap
   and finish reasons logged. A lesson for every later rung: **check that the harness's own limits are
   not the thing being measured.**
+* **2026-11-26.** Ran rung 0 v2 on one task, both models: 0.0 each. Flash's thinking used 60,587 of
+  its 63,996 output tokens and the script was cut off; Neon finished a runnable script that fails
+  the clash gate (5 clashes) and the connectivity gate (not connected to the service entry). The
+  request log works against the real proxy, and showed that the proxy reports `finish_reason: stop`
+  on some calls that spent their whole budget thinking: our cut-off check is only reliable when the
+  provider reports `length`, so the harness also needs a token-count check.
 * **2026-11-26.** Review of `harnesses/naive` found that a reply cut off at the token limit
   silently lost its last file. Fixed in the harness (the partial file is now written and the cut-off
   is logged); rung 0's first runs predate that fix, which matters only for tasks where the reply

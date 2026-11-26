@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import re
 import os
 import pathlib
 import sys
@@ -135,6 +136,40 @@ def trial_listing(trial_dir: pathlib.Path) -> list | None:
     return [[str(p.relative_to(trial_dir)), p.stat().st_size] for p in sorted(trial_dir.rglob("*")) if p.is_file()]
 
 
+HARNESS_TAGS = ("CALL", "CALLS", "CHECK")
+
+
+def harness_records(trial_dir: pathlib.Path) -> dict | None:
+    """Parses the tagged JSON lines a harness logged (`<name>: CALL {...}`, `CALLS`, `CHECK`) from a trial.
+
+    Looks in the trial's agent logs (the harness's log lines are in agent/*.txt, prefixed `harness:`).
+    Returns {"calls": the CALLS summary or None, "call_records": [...], "checks": [...]}, or None
+    when the folder holds none of these (an older harness, or a different one).
+    """
+    out = {"calls": None, "call_records": [], "checks": []}
+    found = False
+    files = sorted((trial_dir / "agent").glob("*.txt")) + [trial_dir / "trial.log"]
+    for path in files:
+        if not path.is_file():
+            continue
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            m = re.search(r": (CALLS|CALL|CHECK) (\{.*\})\s*$", line)
+            if not m:
+                continue
+            try:
+                data = json.loads(m.group(2))
+            except ValueError:
+                continue
+            found = True
+            if m.group(1) == "CALLS":
+                out["calls"] = data
+            elif m.group(1) == "CALL":
+                out["call_records"].append(data)
+            else:
+                out["checks"].append(data)
+    return out if found else None
+
+
 def import_results(run_dir: pathlib.Path, label: str, half: str, notes: str,
                    harness_commit: str | None, holdout: str | None, env: dict | None = None) -> dict:
     saved = json.loads((run_dir / "results.json").read_text(encoding="utf-8"))
@@ -151,6 +186,7 @@ def import_results(run_dir: pathlib.Path, label: str, half: str, notes: str,
             "grader": grader_detail(trial) if trial else None,
             "grader_files": grader_files(trial) if trial else None,
             "trial_files": trial_listing(trial) if trial else None,
+            "harness": harness_records(trial) if trial else None,
         }
     tasks, dropped = keep_tasks(tasks, half, holdout)
     return append_run({
@@ -166,6 +202,23 @@ def import_results(run_dir: pathlib.Path, label: str, half: str, notes: str,
         "dropped_outside_half": dropped,
         "notes": notes,
     })
+
+
+def enrich(run_id: str, run_dir: pathlib.Path) -> dict:
+    """Adds the detail fields (grader files, trial listing, harness records) to an existing record from its
+    run folder. Only adds or refreshes those fields; scores and everything else stay as recorded."""
+    runs = load_runs()
+    hit = [r for r in runs if r["run_id"] == run_id]
+    if not hit:
+        sys.exit(f"no run {run_id}")
+    saved = json.loads((run_dir / "results.json").read_text(encoding="utf-8"))
+    trials = {row["id"]: run_dir / row["trial"] for row in saved.get("tasks", []) if row.get("trial")}
+    for task, rec in hit[0]["tasks"].items():
+        trial = trials.get(task)
+        if trial and trial.is_dir():
+            rec["grader_files"], rec["trial_files"], rec["harness"] = grader_files(trial), trial_listing(trial), harness_records(trial)
+    RUNS.write_text("".join(json.dumps(r, sort_keys=False) + "\n" for r in runs), encoding="utf-8")
+    return hit[0]
 
 
 def import_manifest(artifacts: pathlib.Path, label: str, half: str, notes: str,
@@ -311,6 +364,9 @@ def main(argv=None):
     c.add_argument("run_ids", nargs="+")
     c.add_argument("--label", required=True)
     c.add_argument("--notes", default="")
+    e = sub.add_parser("enrich", help="add detail fields to an existing record from its run folder")
+    e.add_argument("run_id")
+    e.add_argument("run_dir", type=pathlib.Path)
     sub.add_parser("list")
     rep = sub.add_parser("report")
     rep.add_argument("run_id")
@@ -322,6 +378,9 @@ def main(argv=None):
     elif a.cmd == "import-manifest":
         rec = import_manifest(a.artifacts, a.label, a.half, a.notes, a.source, a.model, a.holdout)
         print(report(rec))
+    elif a.cmd == "enrich":
+        rec = enrich(a.run_id, a.run_dir)
+        print(f"{rec['run_id']}: {sum(1 for t in rec['tasks'].values() if t.get('harness'))} of {len(rec['tasks'])} task(s) have harness records")
     elif a.cmd == "combine":
         print(report(combine(a.run_ids, a.label, a.notes)))
     elif a.cmd == "list":
