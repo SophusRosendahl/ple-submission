@@ -51,7 +51,11 @@ file contents
 Only text files can be written this way. After the file blocks, write a short summary of
 what you delivered and where; it is sent as your final message."""
 
-client = openai.AsyncOpenAI(timeout=1800, max_retries=0)
+client = openai.AsyncOpenAI(timeout=1800, max_retries=0)  # no hidden SDK retries: every request is counted below
+
+# Efficiency accounting. A "call" is one request sent to the model endpoint by this harness.
+# `ok` finished with a finish reason, `failed` raised or ended early. Retries are separate calls.
+CALLS = {"ok": 0, "failed": 0, "input_tokens": 0, "output_tokens": 0}
 
 
 async def ask(session, messages):
@@ -83,12 +87,15 @@ async def ask(session, messages):
             finished, reason = True, choice.finish_reason
       if not finished:
         raise RuntimeError("the stream ended without a finish reason")
+      CALLS["ok"] += 1
       if reason == "length":
         await session.log(f"naive: reply cut off at the {MAX_OUTPUT_TOKENS}-token limit (reasoning counts towards it)")
       return "".join(text), usage
     except openai.BadRequestError:
+      CALLS["failed"] += 1
       raise  # a 400 will fail again unchanged
     except Exception as exc:  # pylint: disable=broad-exception-caught
+      CALLS["failed"] += 1
       await session.log(f"naive: model call failed ({type(exc).__name__}: {exc})")
       if attempt == len(RETRY_WAITS):
         raise
@@ -135,6 +142,13 @@ async def gather_inputs(session):
 
 
 async def solve(session):
+  try:
+    return await _solve(session)
+  finally:  # one machine-readable line per task; research/ reads it back
+    await session.log("naive: CALLS " + json.dumps({"model": MODEL, **CALLS}))
+
+
+async def _solve(session):
   inputs = await gather_inputs(session)
   messages = [
       {"role": "system", "content": SYSTEM.format(workdir=session.workdir)},
@@ -142,6 +156,8 @@ async def solve(session):
   ]
   answer, usage = await ask(session, messages)
   if usage:
+    CALLS["input_tokens"] += usage.prompt_tokens or 0
+    CALLS["output_tokens"] += usage.completion_tokens or 0
     cached = getattr(getattr(usage, "prompt_tokens_details", None), "cached_tokens", 0) or 0
     await session.usage(MODEL, input_tokens=usage.prompt_tokens or 0,
                         output_tokens=usage.completion_tokens or 0, cache_read_tokens=cached)
