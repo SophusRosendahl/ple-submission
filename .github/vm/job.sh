@@ -1,19 +1,7 @@
+# stop: yes
 # pull: research/runs.jsonl research/run-details
-# Rung 0 v3 (images attached) on one task, both models. Waits up to 40 min, collects details, powers the VM off only if the runs ended.
-cd ~/ple-submission && git log -1 --oneline
-if tmux has-session -t rung0 2>/dev/null; then echo "rung0 already running: waiting for it"; else
-  tmux new -d -s rung0 "TASKS=data-hall-mep-routing bash ~/ple-submission/infra/gcp-vm/rung0.sh 2>&1 | tee ~/rung0.log"
-fi
-sleep 30
-for i in $(seq 160); do tmux has-session -t rung0 2>/dev/null || break; sleep 15; done
-if tmux has-session -t rung0 2>/dev/null; then echo "STILL RUNNING after 40 min: leaving it, VM stays on"; tr '\r' '\n' < ~/rung0.log | grep -v '^Fetching' | tail -8 | cut -c1-200; exit 0; fi
-echo "runs ended"; tr '\r' '\n' < ~/rung0.log | grep -v '^Fetching' | tail -30 | cut -c1-200
-IDS=$(python3 -c "
-import json
-print(' '.join(r['run_id'] for r in map(json.loads, open('research/runs.jsonl')) if 'rung 0 v3' in r['label']))")
-echo "v3 runs: $IDS"; python3 research/collect_details.py $IDS
-N=$(gcloud projects describe ple-submission --format='value(projectNumber)' 2>/dev/null | tail -1); B="gs://ple-runs-$N"
-gcloud storage rsync --recursive runs "$B/runs" 2>&1 | tail -1
-gcloud storage cp ~/ple-proxy-requests.jsonl "$B/ple-proxy-requests.jsonl" 2>&1 | tail -1
-sudo shutdown -h +2 "rung 0 v3 finished" 2>&1 | tail -1
+# Only fetch the rung 0 v3 results (the VM powered itself off before the previous job could pull them).
+cd ~/ple-submission
+python3 research/tracker.py list | cut -c1-130 | tail -3
+find research/run-details/run-005 research/run-details/run-006 -type f | wc -l
 true
