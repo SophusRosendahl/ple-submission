@@ -225,6 +225,31 @@ else:
   Judge calls are made by the grader and are never added in.
   The efficiency plots (score against calls, tokens and runtime) read these numbers."""),
 
+    md("""### Rung 0 v3: the model can see the drawings (run-005, run-006)
+
+Same single call as v2, with the seven PNG sheets attached. **Both still score 0.0, now for a third
+reason: the thinking budget.** With the drawings in front of it, the model thinks far longer.
+
+| | Gemini 3.8 Flash | Gemini 4 Neon |
+|---|---|---|
+| output tokens (thinking) | 63,996 (61,438) | 64,000 (**64,000**) |
+| visible answer | thinking text leaking out, no files | none at all |
+| files written | 0 | 0 |
+| grader | `ERR_NO_SUBMISSION` | `ERR_NO_SUBMISSION` |
+
+Neon spent its entire 64,000-token budget on thinking, so the reply is empty. Flash's reply is its
+own working ("Row A: Y = 3000, Row B: Y = 6000, ...": it did read the row positions off the
+sheets) cut off before any file. The v2 runs without images thought for 30k tokens; seeing the
+drawings roughly doubles it.
+
+Also found: every image was attached **twice** (the extractor scans two overlapping folders), which
+doubled the image tokens (18.5k prompt tokens for seven sheets). Fixed in the harness; the v3
+token figures are inflated by it.
+
+**What this says.** In one call, at the default (highest) reasoning level, a task that needs
+seven drawings read and a 400-line script written does not fit in a 64,000-token output budget.
+The reasoning level is therefore a design knob to measure (low / medium / high), not a constant."""),
+
     code("""import costs
 usage = pd.DataFrame([{"run": r["run_id"], "model": r["harness"]["model"], **costs.run_usage(r)} for r in runs])
 usage"""),
@@ -356,6 +381,13 @@ Dated, honest notes, including what went wrong. Newest last.
   thing: images are attached to the request (the harness reads them and sends them as image parts;
   `NAIVE_IMAGES=0` switches it off for later comparison). Same 64,000-token cap, same reasoning
   effort, same single call.
+* **2026-11-26.** Rung 0 v3 (images attached), run-005 and run-006: both 0.0 again. With the
+  drawings visible, both models spent the whole 64,000-token budget thinking (Neon: all 64,000 as
+  reasoning, empty reply) and wrote no file. Also found that images were attached twice; fixed.
+  Next knob to measure: reasoning effort.
+* **2026-11-26.** Process: a job that powers the VM off by itself raced the workflow's own pull and
+  lost its results for a while (they were safe on the VM disk and in the bucket). The VM is now
+  stopped by the workflow, after the pull.
 * **2026-11-26.** Near-loss: syncing the VM's code overwrote its `runs.jsonl`, which held the Neon
   run's record uncommitted. A saved patch let us recover it; the sync now merges records instead
   (`infra/gcp-vm/merge_runs.py`). Lesson: a record that lives only on a machine is not recorded.

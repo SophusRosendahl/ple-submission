@@ -159,7 +159,13 @@ async def gather_inputs(session):
     if res.get("exit_code") != 0:
       return "(The harness could not convert the project files to text.)", []
     data = json.loads(await session.read_file(out))
-    return data, [f for f in data["files"] if f["kind"] == "image"]
+    seen, unique = set(), []
+    for f in data["files"]:  # the roots overlap (workdir sits inside /app/files): each file was listed twice
+      if f["path"] not in seen:
+        seen.add(f["path"])
+        unique.append(f)
+    data["files"] = unique
+    return data, [f for f in unique if f["kind"] == "image"]
   except (taskbridge.TaskError, ValueError) as exc:
     await session.log(f"naive: input extraction failed: {type(exc).__name__}: {exc}")
     return "(The harness could not convert the project files to text.)", []
