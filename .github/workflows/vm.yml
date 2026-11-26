@@ -44,7 +44,7 @@ jobs:
           if [[ "$(opt sync)" != "no" ]]; then   # '# sync: no' leaves the code on the VM untouched (status checks during a run)
             git bundle create /tmp/b.bundle HEAD
             gcloud compute scp /tmp/b.bundle "$NAME:/tmp/b.bundle" --zone "$ZONE" --quiet --strict-host-key-checking=no
-            printf 'set -e; [ -d ~/ple-submission ] || git clone -q /tmp/b.bundle ~/ple-submission; cd ~/ple-submission; git fetch -q /tmp/b.bundle HEAD; if ! git diff --quiet; then mkdir -p ~/sync-backup; git diff > ~/sync-backup/$(date +%%s).patch; echo "local changes saved to ~/sync-backup"; fi; git checkout -q -f -B %s FETCH_HEAD; git log -1 --oneline\n' "$GITHUB_REF_NAME" \
+            printf 'set -e; [ -d ~/ple-submission ] || git clone -q /tmp/b.bundle ~/ple-submission; cd ~/ple-submission; git fetch -q /tmp/b.bundle HEAD; if ! git diff --quiet; then mkdir -p ~/sync-backup; git diff > ~/sync-backup/$(date +%%s).patch; echo "local changes saved to ~/sync-backup"; fi; cp research/runs.jsonl /tmp/runs.before 2>/dev/null; git checkout -q -f -B %s FETCH_HEAD; python3 infra/gcp-vm/merge_runs.py /tmp/runs.before research/runs.jsonl; git log -1 --oneline\n' "$GITHUB_REF_NAME" \
               | ssh_vm "$AS_OWNER"
           fi
           if [[ -n "${HF_TOKEN:-}" ]]; then   # repo secret HF_TOKEN -> ~/ple/local.env (bash builtins only: never in a command line)

@@ -1,11 +1,20 @@
 # stop: yes
 # pull: research/runs.jsonl
-# Finish the single-task runs: add the detail fields to their records, copy the raw outputs to the bucket, stop the VM.
+# Recover run-004 (lost from the VM's runs.jsonl by a sync, but saved as a patch), enrich it, stop the VM.
 cd ~/ple-submission
-python3 research/tracker.py enrich run-003 runs/naive-A-20261126-180514
+ls -la ~/sync-backup 2>/dev/null | tail -6
+for p in ~/sync-backup/*.patch; do
+  grep '^+{' "$p" | sed 's/^+//' > /tmp/recovered.jsonl
+  python3 infra/gcp-vm/merge_runs.py /tmp/recovered.jsonl research/runs.jsonl
+done
 python3 research/tracker.py enrich run-004 runs/naive-A-20261126-181344
-python3 research/tracker.py list
-N=$(gcloud projects describe ple-submission --format='value(projectNumber)' 2>/dev/null | tail -1); B="gs://ple-runs-$N"
-gcloud storage rsync --recursive runs "$B/runs" 2>&1 | tail -2
-gcloud storage cp ~/ple-proxy-requests.jsonl "$B/ple-proxy-requests.jsonl" 2>&1 | tail -1
+python3 research/tracker.py list | cut -c1-120
+python3 - <<'PY'
+import json
+for l in open("research/runs.jsonl"):
+    r = json.loads(l)
+    if r["run_id"] in ("run-003", "run-004"):
+        t = list(r["tasks"].values())[0]
+        print(r["run_id"], "score", t["score"], "env", bool(r.get("env")), "harness", (t.get("harness") or {}).get("calls"))
+PY
 true
