@@ -1,8 +1,21 @@
 # sync: no
-# Rung 0 status (read only). Never touches the run.
-echo "uptime: $(uptime -p) | containers: $(docker ps -q | wc -l) | disk: $(df -h / | tail -1 | awk '{print $3" used, "$5}')"
+# Summarise the finished rung-0 runs (read only).
 tmux ls 2>&1 | head -2
-echo "--- rung0.log (progress lines, tail):"
-tr '\r' '\n' < ~/rung0.log | grep -v '^Fetching' | tail -40 | cut -c1-260
-echo "--- runs:"; ls -d ~/ple-submission/runs/*/ 2>/dev/null; echo "recorded runs: $(wc -l < ~/ple-submission/research/runs.jsonl)"
-for R in $(ls -d ~/ple-submission/runs/*/ 2>/dev/null); do echo "== $R"; ls "$R" | head -12; [ -f "$R/results.json" ] && head -c 1200 "$R/results.json"; echo; done
+echo "recorded runs in research/runs.jsonl: $(wc -l < ~/ple-submission/research/runs.jsonl)"
+for R in $(ls -d ~/ple-submission/runs/*/ 2>/dev/null); do
+  echo "=================== $R"
+  python3 - "$R" <<'PY'
+import json, sys, pathlib
+r = pathlib.Path(sys.argv[1]); p = r / "results.json"
+if not p.is_file(): print("no results.json"); sys.exit()
+d = json.load(open(p))
+print({k: d.get(k) for k in ("submission", "model", "judge_model", "score", "complete", "date")}, "unmeasured:", d.get("unmeasured"))
+for t in d["tasks"]:
+    print(f'{t["id"]:30s} score={t["score"]!s:6} {t["status"]:10s} {t["kind"]!s:10s} {t.get("seconds")!s:>5}s tokens={t.get("tokens")}')
+PY
+done
+echo "=================== one trial's files (first run)"
+R=$(ls -d ~/ple-submission/runs/*/ | head -1); T=$(find "$R" -maxdepth 4 -type d -name '*__*' | head -1); echo "$T"
+find "$T" -type f | sed "s|$T/||" | head -40
+echo "=================== rung0.log (non-progress lines, tail)"
+tr '\r' '\n' < ~/rung0.log | grep -v '^Fetching' | tail -45 | cut -c1-240
