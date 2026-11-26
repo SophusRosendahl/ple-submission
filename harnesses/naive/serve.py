@@ -30,7 +30,10 @@ MAX_EFFORT_MODELS = ("claude", "glm")
 EFFORT = os.environ.get("REASONING_EFFORT") or (
     "max" if any(m in MODEL.lower() for m in MAX_EFFORT_MODELS) else "high"
 )
-MAX_OUTPUT_TOKENS = int(os.environ.get("MAX_OUTPUT_TOKENS", "32000"))
+# Reasoning tokens count against this cap. Rung 0's first runs used 32,000 for every model and Gemini 4
+# Neon spent all of it thinking in 14 of 15 tasks, so no file was ever written. Gemini 4 takes up to
+# 65,536 (competition notes); other families keep the 32,000 the notes recommend.
+MAX_OUTPUT_TOKENS = int(os.environ.get("MAX_OUTPUT_TOKENS") or (64000 if "gemini" in MODEL.lower() else 32000))
 RETRY_WAITS = (5, 15, 30, 60, 120)
 FILE_BLOCK = re.compile(r"^<<<FILE (?P<path>[^\n>]+)>>>\n(?P<body>.*?)\n<<<END>>>$", re.S | re.M)
 # A reply cut off mid-file has an opening marker and no <<<END>>>: keep what was written.
@@ -96,7 +99,7 @@ async def ask(session, messages):
       CALLS["ok"] += 1
       if reason == "length":
         await session.log(f"naive: reply cut off at the {MAX_OUTPUT_TOKENS}-token limit (reasoning counts towards it)")
-      return "".join(text), usage
+      return "".join(text), usage, reason
     except openai.BadRequestError:
       CALLS["failed"] += 1
       raise  # a 400 will fail again unchanged
@@ -161,7 +164,7 @@ async def _solve(session):
       {"role": "user", "content": f"{session.instruction}\n\n{inputs}"},
   ]
   started = time.time()
-  answer, usage = await ask(session, messages)
+  answer, usage, reason = await ask(session, messages)
   if usage:
     cached = getattr(getattr(usage, "prompt_tokens_details", None), "cached_tokens", 0) or 0
     reasoning = getattr(getattr(usage, "completion_tokens_details", None), "reasoning_tokens", 0) or 0
@@ -175,6 +178,7 @@ async def _solve(session):
     # the prompt, never its text) next to the endpoint's own, unprocessed usage figures.
     await session.log("naive: CALL " + json.dumps({
         "t": round(started, 1), "model": MODEL, "chars": chars, "step": prompt_fingerprint.STEP, "fp": fp,
+        "finish_reason": reason, "max_output_tokens": MAX_OUTPUT_TOKENS,
         "prompt_tokens": usage.prompt_tokens or 0, "cached_reported": cached,
         "completion_tokens": usage.completion_tokens or 0, "reasoning_reported": reasoning, "usage_raw": raw},
         default=str))
