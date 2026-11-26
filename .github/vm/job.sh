@@ -1,4 +1,4 @@
-# Rung 0 v2: new harness code (64k output cap, call counting, fingerprints, finish reasons) and the request-logging proxy.
+# Rung 0 v2 (retry: the sync now saves local changes on the VM first): new harness, 64k cap, call counting, request-logging proxy.
 if tmux has-session -t rung0 2>/dev/null; then echo "rung0 already running: not touching it"; exit 0; fi
 cd ~/ple-submission && git log -1 --oneline
 [ -f ~/ple-proxy.pid ] && kill "$(cat ~/ple-proxy.pid)" 2>/dev/null; sleep 3   # restart it, so the request log is on
