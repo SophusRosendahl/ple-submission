@@ -234,15 +234,20 @@ Both scored **0.0**, for different reasons, and the grader's own report says exa
 | what was written | a script cut off mid-file | a 48 KB script and a reconciliation file |
 | grader verdict | `ERR_NO_OUTPUT`: the script wrote no file | `ERR_CLASH`: valid design, but two hard gates failed |
 
-**Flash:** 95 % of its output budget went to thinking, and the script it was writing was cut off.
-**Neon:** the design ran and is close in size (route 265.4 m against an optimum of 260.6 m, 7.1 % rule
-violations) but fails two hard gates: **5 hard clashes**, and **nothing within 2,500 mm of the
-service entry at (200, 3360)**, so none of the three services is connected to the feed, and two
-cooling units (CRAH-01, CRAH-04) are never reached.
+**What the trial folders show once read in full.** This task's only inputs are **seven PNG drawing
+sheets**, and rung 0 lists images by name only (`image: not included as text`). Neither model
+saw a drawing. Neon said so in its final message ("all seven required drawing sheets were omitted
+in this text-only environment") and wrote a template with provisional placeholders for everything
+that comes from the drawings: hall dimensions, column grid, entry points, sprinkler positions. The
+grader's two failed gates are consequences of that: the service entry at (200, 3360) exists only
+on sheets M-101/E-101, and a guessed layout cannot connect to it or clear unseen clashes.
 
-What this says about the harness, not the models: Neon wrote the whole design in one go and never
-ran it, so it could not see either failure. The grader's gates (clashes, connectivity from the
-service entry) are cheap to check by running the script, which is what rung 1 is for."""),
+So the 0.0 on this task measures **missing inputs, not engineering ability**. Flash's cut-off
+(thinking used 60,587 of 63,996 tokens) is a second, separate fault. Two lessons for the ladder:
+rung 0 as built is blind on every task whose inputs are images, so it cannot serve as a floor
+for those; and the first capability to add is *seeing the inputs*, before any run-and-check
+loop. (Our first note here said the missing piece was a run-and-check loop; reading the
+trajectory showed that was premature, and it is kept in the lab log as a correction.)"""),
 
     md("""## 5. A reference point, and what it taught us
 
@@ -336,6 +341,9 @@ Dated, honest notes, including what went wrong. Newest last.
   request log works against the real proxy, and showed that the proxy reports `finish_reason: stop`
   on some calls that spent their whole budget thinking: our cut-off check is only reliable when the
   provider reports `length`, so the harness also needs a token-count check.
+* **2026-11-26.** Correction after reading the full trial folders: both models were blind to the
+  seven drawing PNGs (images are listed by name only). Neon said so itself and wrote placeholders.
+  The "needs run-and-check" conclusion above was premature; rung 0 cannot be a floor on image tasks.
 * **2026-11-26.** Near-loss: syncing the VM's code overwrote its `runs.jsonl`, which held the Neon
   run's record uncommitted. A saved patch let us recover it; the sync now merges records instead
   (`infra/gcp-vm/merge_runs.py`). Lesson: a record that lives only on a machine is not recorded.
