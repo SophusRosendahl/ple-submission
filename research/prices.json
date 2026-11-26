@@ -1,0 +1,7 @@
+{
+  "_note": "US dollars per 1M tokens. null = not filled in yet: costs.py then shows tokens only, never a made-up price. Fill from Google's Vertex AI pricing page and note the date.",
+  "_as_of": null,
+  "gemini-3.8-flash": {"input": null, "output": null},
+  "gemini-4-neon": {"input": null, "output": null},
+  "claude-opus-5-5": {"input": null, "output": null}
+}

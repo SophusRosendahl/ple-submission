@@ -67,3 +67,15 @@ Run `infra/gcp-vm/github_bridge_setup.sh` once in Cloud Shell (any browser works
 Hugging Face token and writes it into `~/ple/local.env` on the VM. After that, each push that changes
 `.github/vm/job.sh` runs that script on the VM through `.github/workflows/vm.yml`. Its options
 (`# start:`, `# stop:`, `# pull:`) are at the top of the workflow file.
+
+## Run outputs and costs
+
+One-time, in Cloud Shell: `bash infra/gcp-vm/storage_cost_setup.sh` (bucket for full run outputs,
+BigQuery dataset for the billing export, access for the VM and the workflow). Then enable the
+billing export in the console (the script prints where); it records only from that day on.
+
+- Full run outputs: `gs://ple-runs-<project number>/runs/`, synced by `save_runs.sh` after each rung-0 run.
+- Cost: `research/costs.py` (per run, from the tracker; prices in `research/prices.json`, fill in
+  before trusting dollar figures) and the billing export (actual spend, by day and service).
+- A job that only needs Google APIs and no VM: put `# where: runner` and `# commit: <files>` at the top
+  of `.github/vm/job.sh`.

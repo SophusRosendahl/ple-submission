@@ -4,6 +4,8 @@
 #   # start: no            don't start the VM first (default: start it)
 #   # stop: yes            stop the VM afterwards
 #   # sync: no            don't copy this branch to the VM first (default: copy it)
+#   # where: runner       run the job on this runner (authenticated as the service account), not on the VM
+#   # commit: a b         with 'where: runner': files the job wrote, to commit back here
 #   # pull: a b            paths under ~/ple-submission on the VM to copy back and commit here
 # The job runs as the VM's owner in ~/ple-submission, after this branch is copied there.
 name: vm
@@ -38,6 +40,15 @@ jobs:
           opt() { sed -n "s/^# $1: *//p" "$J" | head -1; }
           ssh_vm() { gcloud compute ssh "$NAME" --zone "$ZONE" --quiet --strict-host-key-checking=no --command "$1"; }
           AS_OWNER='o=$(sudo sh -c "stat -c %U /home/*/ple/local.env" | head -1); sudo -iu "$o" bash -s'
+          if [[ "$(opt where)" == "runner" ]]; then   # e.g. billing queries: needs no VM
+            bash "$J"
+            C="$(opt commit)"
+            if [[ -n "$C" ]]; then
+              git config user.name "vm job"; git config user.email "actions@github.com"
+              git add -A -- $C && git commit -qm "Runner results: $C" && git push origin "HEAD:$GITHUB_REF_NAME" || echo "nothing to commit"
+            fi
+            exit 0
+          fi
           [[ "$(opt start)" == "no" ]] || gcloud compute instances start "$NAME" --zone "$ZONE"
           for i in $(seq 30); do ssh_vm true && break; sleep 10; done
           ssh_vm true   # fail here, loudly, if the VM never accepted SSH

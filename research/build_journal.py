@@ -27,7 +27,7 @@ dev set in two, **(3)** a very simple naive test with just a model."""),
     md("""## Write-up tracker
 
 The final upload is written from this notebook, against the competition's judging criteria
-(from the Kaggle page; the fifth criterion was cut off in our copy and is still to be added).
+(from the Kaggle page; 100 points in all).
 Status: `todo` / `draft` / `done`. Update the table in `research/build_journal.py`, then rebuild.
 
 | # | Criterion (points) | What judges look for | What we have / still need | Status |
@@ -36,7 +36,10 @@ Status: `todo` / `draft` / `done`. Update the table in `research/build_journal.p
 | 2 | **Engineering reasoning** (25) | One concrete dev task walked through, our agent's trajectory against a licensed engineer's workflow: where it held up, where it took shortcuts, which domain skills separated pass from fail | Need: keep the full trajectory of each run (not just scores) and pick one task | todo |
 | 3 | **Cross-model generalizability** (15) | All 29 dev tasks with at least two models, ideally across families; which changes help every model, which only one; how model choice shifts accuracy and token cost; comparison table in the write-up; one target `google-cloud/<id>` committed in `submission.yaml` for Stage 2 | Rung 0 runs two models on half A only. Need: every rung on 2+ models, a final pass over all 29 (half B needs a stated reason), and the single target model chosen | todo |
 | 4 | **Efficiency & scaling** (20) | Dev score against compute budget (calls, tokens, runtime or parallel verification attempts); where accuracy plateaus; remaining headroom | Tracker stores tokens and seconds per task. Need: a score-vs-budget chart per rung, and at least one budget knob to vary (for example verification attempts) | todo |
-| 5 | *(not yet seen)* | | Add from the Kaggle page | todo |
+| 5 | **Clarity & visuals** (15) | Written for an ML researcher with no civil, mechanical or electrical background; headline finding near the top; the 3 required figures; under 2,000 words | Need: which 3 figures are required (not yet read), and a short plain-language glossary. Word count is checked at the end | todo |
+
+Gate: the top 100 submissions from Stage 1 advance to Stage 2, and an entry must first pass the
+automated `kit check` and artifacts verification before its write-up is scored.
 
 Also needed, from our own plan: the evaluation setup (section 2), the split and hold-out
 discipline (section 3), the final architecture (`docs/architecture.md`,
@@ -183,6 +186,32 @@ if rung0:
 else:
     print("No rung-0 run is recorded yet.")"""),
 
+    md("""### Where the full outputs live, and what runs cost
+
+* **Summary** of every run (scores, per-task seconds and tokens, grader notes): `research/runs.jsonl`,
+  in git, small.
+* **Everything else** (agent trajectories, serve logs, grader output, produced files): the
+  Cloud Storage bucket `gs://ple-runs-<project number>/runs/`, synced from the VM after each run
+  by `infra/gcp-vm/save_runs.sh`. These are what the "engineering reasoning" walk-through is
+  written from.
+* **Cost, per run:** tokens and task-hours from the tracker; an estimate in dollars once
+  `research/prices.json` is filled in (never guessed).
+* **Cost, actual:** the Cloud Billing export (VM, disk, Vertex AI by day), pulled into
+  `research/billing_by_day.csv` by a runner job. It records only from the day it was enabled."""),
+
+    code("""import costs
+usage = pd.DataFrame([{
+    "run": r["run_id"], "model": r["harness"]["model"], **costs.run_usage(r),
+    "est. model $ (upper bound)": costs.estimate_usd(r),
+} for r in runs])
+display(usage)
+billing = costs.billing_by_day()
+if billing:
+    b = pd.DataFrame(billing); b["cost"] = b["cost"].astype(float)
+    display(b.pivot_table(index="day", columns="service", values="cost", aggfunc="sum").round(2))
+else:
+    print("No billing export pulled yet.")"""),
+
     md("""## 5. A reference point, and what it taught us
 
 ### The official template on half A
@@ -256,6 +285,9 @@ Dated, honest notes, including what went wrong. Newest last.
 * **2026-11-26.** First rung-0 start: the 29-task dataset (16,425 files) downloaded in 28 minutes
   through Hugging Face's rate limit, then the run stopped because the model proxy was not running
   after the VM's reboot. The run script now starts the proxy if it is down.
+* **2026-11-26.** Read the judging criteria. Added: a bucket for full run outputs, a cost tracker
+  (per-run tokens and estimates, plus the Cloud Billing export for actual spend), and a write-up
+  tracker keyed to the five criteria.
 * **2026-11-26.** Review of `harnesses/naive` found that a reply cut off at the token limit
   silently lost its last file. Fixed in the harness (the partial file is now written and the cut-off
   is logged); rung 0's first runs predate that fix, which matters only for tasks where the reply
