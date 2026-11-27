@@ -758,3 +758,10 @@ across products; hypothesis only.
 0 of 6 passed (same as v2). Own-room overlaps fell from 4 of 6 to 1 of 6, so the narrow background scope was caused by the wording. All six runs still leave same-service
 pieces out of the sweep, and now say so (in the check's output and in the final message), giving the reason they already believed. Details and the next candidate in
 `docs/why-rung2-struggles.md`. Table of all versions: `docs/ladder-results.md`.
+
+## Failure analysis across the four hypotheses (2026-11-27, user request): `docs/failure-analysis.md`
+
+Reading: not the main cause (70-number cross-run consensus; position-dependent gates pass). Requirements: captured completely, drift in scope when turned into checks
+(same-service pairs, headroom applied to routes only, never to the 16 heads). Check design: the main cause (9 of 12 first runs passed; same belief in design and check;
+tests the plan, not the built solids). Adaptation: fine when a check fails, but the work ends at the first all-pass and no check was ever shown to fail.
+Four candidate changes listed there (independent checker, negative controls, scope audit, print the excluded group); none run yet.
