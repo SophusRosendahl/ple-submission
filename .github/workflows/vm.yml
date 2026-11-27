@@ -61,7 +61,12 @@ jobs:
           if [[ -n "$PULL" ]]; then
             echo "cd ~/ple-submission && tar -cz $PULL" | ssh_vm "$AS_OWNER" | tar -xz
             git config user.name "vm job"; git config user.email "actions@github.com"
-            git add -A -- $PULL && git commit -qm "VM results: $PULL" && git push origin "HEAD:$GITHUB_REF_NAME" || echo "nothing to commit"
+            if git add -A -- $PULL && git commit -qm "VM results: $PULL"; then
+              for try in 1 2 3 4; do   # the branch may have moved while the job ran: rebase, then push
+                git pull -q --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && break
+                echo "push failed (try $try)"; sleep 5; [[ $try == 4 ]] && { echo "RESULTS NOT PUSHED"; exit 1; }
+              done
+            else echo "nothing to commit"; fi
           fi
       - name: Stop the VM
         if: always()

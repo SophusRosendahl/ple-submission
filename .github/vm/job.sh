@@ -1,13 +1,8 @@
 # stop: idle
 # pull: research/runs.jsonl research/run-details
-# Rung 0 v5 repeated 3 times (more observations of the same setup): one task, both models, single call, images attached, effort low.
+# Re-pull the results of the 3 rung 0 repeats (the first pull's push was rejected). No new run is started.
 cd ~/ple-submission && git log -1 --oneline
-if tmux has-session -t rung0 2>/dev/null; then echo "rung0 already running: waiting for it"; else
-  tmux new -d -s rung0 "for REP in 1 2 3; do TASKS=data-hall-mep-routing EFFORT=low REP=\$REP bash ~/ple-submission/infra/gcp-vm/rung0.sh; done 2>&1 | tee ~/rung0.log"
-fi
-sleep 30
-for i in $(seq 280); do tmux has-session -t rung0 2>/dev/null || break; sleep 15; done
-if tmux has-session -t rung0 2>/dev/null; then echo "STILL RUNNING after 70 min: left running, VM stays on"; tr '\r' '\n' < ~/rung0.log | grep -v '^Fetching' | tail -6 | cut -c1-200; exit 0; fi
+if tmux has-session -t rung0 2>/dev/null; then echo "rung0 still running: not collecting"; exit 0; fi
 echo "runs ended"
 IDS=$(python3 -c "
 import json
