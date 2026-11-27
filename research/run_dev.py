@@ -109,7 +109,7 @@ def with_model(entry: pathlib.Path, model: str | None, effort: str | None = None
     return variant
 
 
-def run_environment(started, finished, trials, judge, model_override, effort=None):
+def run_environment(started, finished, trials, judge, model_override, effort=None, ple=None):
     """Where and how long a run took: what the efficiency plots and the VM-hours count need."""
     try:
         mem_gb = round(os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") / 2**30, 1)
@@ -120,6 +120,9 @@ def run_environment(started, finished, trials, judge, model_override, effort=Non
         "wall_seconds": round((finished - started).total_seconds()),
         "parallel_trials": trials, "machine": {"host": platform.node(), "cpus": os.cpu_count(), "memory_gb": mem_gb},
         "judge": judge, "model_override": model_override, "reasoning_effort": effort or "default",
+        # the version of the organizers' repository (grader, task images, eval/run.py) these scores came from;
+        # "+dirty" means it had local changes, which would make the grading not the organizers' own
+        "ple_commit": git_commit(ple) if ple else None,
     }
 
 
@@ -197,7 +200,7 @@ def main(argv=None):
     partial = len(tasks) < len(half_tasks)
     notes = a.notes + (f" (subset: {len(tasks)} of {len(half_tasks)} tasks)" if partial else "")
     rec = tracker.import_results(out, a.label, a.half, notes.strip(), git_commit(entry), a.holdout,
-                                 env=run_environment(started, finished, a.trials, judge, a.model, a.effort))
+                                 env=run_environment(started, finished, a.trials, judge, a.model, a.effort, a.ple))
     print()
     print(tracker.report(rec))
     if partial:
