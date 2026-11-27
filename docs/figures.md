@@ -33,10 +33,10 @@ finish, stops the agent, and sends an honest note as the final message. Either w
 
 ![The structured workflow](figures/fig4-structured-workflow.png)
 
-The agent's one free-form step is Design. Requirements, checks and the report are structured: the harness rejects a requirement it cannot find in the task word for word, an exemption without a quoted source, and offers Finish only when every requirement is checked, every check can fail and nothing is violated.
+A checker (a separate model call that sees only the task) turns the requirements into checks from a prepopulated library before the design exists. The designer builds, binds the checker's roles to its own item kinds, evaluates, and reviews. The engine's report is made of facts it computed: failures, what was examined, which kinds no check touches, which checks missed an injected fault. Any narrowing of a check by the designer is logged and shown.
 
 ## Figure 5. The parts of the structured workflow (proposed)
 
 ![The parts of the structured workflow](figures/fig5-structured-architecture.png)
 
-Four tools we provide, in the serve container: a requirements ledger, a check declaration, an evaluation engine (all-pairs overlap, clearances, ranges, connectivity, coverage, length, a coverage matrix, a self-test, an objective tracker) and a finalizer. The engine runs outside the task container and outside the agent's code.
+The engine (check library and evaluation) runs in the serve container, outside the task container and outside the agent's code. Strict defaults, scope facts, an injected-fault self-test and an objective tracker; the designer cannot make it skip a pair unseen, and the checker never sees the design.

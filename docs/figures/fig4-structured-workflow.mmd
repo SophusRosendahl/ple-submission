@@ -1,11 +1,10 @@
 stateDiagram-v2
-  [*] --> Requirements: task arrives
-  Requirements --> Requirements: ledger rejects a requirement it cannot find word for word in the task, or a number in the task that no requirement covers
-  Requirements --> Design: ledger accepted
-  Design --> Declare: solution written, exposes its items
-  Declare --> Declare: engine rejects an exemption with no quoted source
-  Declare --> Evaluate: checks declared as data
-  Evaluate --> Fix: violations, kinds of item no check covers, or checks that cannot fail
-  Fix --> Evaluate: design changed, evaluate again
-  Evaluate --> Finish: every requirement checked, every check able to fail, no violation
-  Finish --> [*]: final message written from the ledger
+  [*] --> Specify: task arrives
+  Specify --> Design: the checker, a separate model call that sees only the task, turns its requirements into checks from the library
+  Design --> Bind: the designer writes the solution and tags its items by kind
+  Bind --> Evaluate: engine maps the checker's roles onto the designer's kinds
+  Evaluate --> Review: report with failures, scope facts, kinds no check touches, faults the checks missed
+  Review --> Fix: the designer reviews checks and report, may add checks, any narrowing is logged
+  Fix --> Evaluate
+  Review --> Finish: nothing violated, every kind covered, every check caught its injected fault
+  Finish --> [*]: final message plus the engine's evidence

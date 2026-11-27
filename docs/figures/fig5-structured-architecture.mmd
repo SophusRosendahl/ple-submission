@@ -1,15 +1,14 @@
 flowchart LR
-  AG["AGENT<br/>Pi loop, decides and designs"]
-  subgraph TOOLS["TOOLS WE PROVIDE (in the serve container)"]
-    RL["Requirements ledger<br/>quotes must be word for word<br/>every number in the task must be covered"]
-    CD["Check declaration<br/>checks are data, not free code<br/>exemptions need a quoted source"]
-    EN["Evaluation engine<br/>all-pairs overlap, clearance, ranges,<br/>connectivity, coverage, length<br/>coverage matrix, self-test, objective"]
-    FN["Finalize<br/>final message from the ledger"]
+  CK["CHECKER<br/>separate model call<br/>sees only the task and the library<br/>never sees the design"]
+  DS["DESIGNER<br/>the main agent, Pi loop<br/>builds, reviews, fixes"]
+  subgraph ENG["ENGINE WE PROVIDE (serve container, deterministic, tested)"]
+    LB["Check library<br/>all-pairs overlap, clearance, ranges,<br/>connectivity, coverage, counts, length<br/>plus a place for custom checks"]
+    EV["Evaluation<br/>strict defaults, nothing excluded unless declared<br/>scope facts, injected-fault self-test, objective"]
   end
   TC["TASK CONTAINER<br/>solution.py exposes its items"]
-  AG <-->|"submit requirements, declare checks, ask to evaluate"| RL
-  AG <--> CD
-  AG <-->|"precise report: what fails, by how much, what is not checked"| EN
-  AG <--> FN
-  EN <-->|"runs solution, reads the items"| TC
-  AG <-->|"read, write, edit, bash"| TC
+  CK <-->|"reads the library, returns a check configuration"| LB
+  DS <-->|"tags items, asks to evaluate, amends checks"| EV
+  EV <-->|"report: what fails, by how much, what is not checked"| DS
+  LB --> EV
+  EV <-->|"runs solution, reads the items"| TC
+  DS <-->|"read, write, edit, bash"| TC

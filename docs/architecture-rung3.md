@@ -1,68 +1,61 @@
-# Rung 3: the structured workflow (the initial idea, introduced now)
+# Rung 3: a robust engine, a checker that never sees the design, and a designer who reviews (revised 2026-11-27)
 
-Status: **design, for agreement. Nothing is built.** Figures: `docs/figures/fig4-structured-workflow.png` (the workflow) and `fig5-structured-architecture.png` (the parts).
+Status: **design, for agreement. Nothing is built.** Figures: `docs/figures/fig4-structured-workflow.png` (workflow) and `fig5-structured-architecture.png` (parts).
 
-## Why now: what the failure analysis asks of a tool
+**Revision note.** The first draft validated requirements by checking that the agent's quotes appear in the task and made exemptions depend on a quoted source. Rejected (user): a quote is text, and text can be written to satisfy a rule. Nothing in this design depends on the agent being truthful about itself. The mechanisms are (1) an engine whose defaults are strict and whose reports are facts it computed, (2) a checker that is not the designer and never sees the design, and (3) a review by the designer of facts, not claims.
 
-The runs so far (`docs/failure-analysis.md`) say the agent reads the drawings well, lists every requirement, and fixes what its checks report. What fails is the loop around the checks: they are written by the same mind that holds the belief that causes the defect, they are scoped to what the agent was thinking about, nothing shows they can fail, and the work ends at the first all-pass. Each failure maps to one feature:
+## What the analysis asks of the tooling
 
-| What went wrong (evidence) | What the tool does about it |
-|---|---|
-| The check leaves out exactly the pairs that are wrong: same-service pieces, in 12 of 12 rung 2 runs | A clash check is declared as data and defaults to **all pairs**. Leaving a group out is an *exemption* that must carry a sentence **quoted word for word from the task**; no quote, no exemption. The engine also reports the overlaps of any exempted group separately, so the number is always visible. |
-| The headroom check loops over routes only; 16 heads are never looked at | The engine builds a **coverage matrix**: every kind of item in the model against every check. A kind no check touches is listed in the report ("sprinkler heads: covered by no headroom check"). |
-| 9 of 12 checks passed the first time; none was ever seen to fail | A **self-test**: the engine copies the model, injects a violation for each kind of pair (including two items of the same kind) and reports which declared checks caught it. A check that cannot fail is flagged as insensitive. |
-| The agent stops at its own first all-pass | The workflow offers **Finish** only when every requirement has a check, every check passed the self-test, and nothing is violated. Until then the report says what is missing. |
-| Final messages claim "zero clashes" for a check that skipped the failing pairs | **Finalize** writes the final message from the ledger and the last evaluation: each requirement, its status, the evidence, the exemptions and assumptions. The agent can add a note; it cannot delete a line. |
-| Connectivity wanted pieces to touch; the clash rule wanted them not to overlap; only one was tested | Both live in the same engine and the same report: pieces that overlap at a joint show up as clashes, pieces that do not touch show up as a break. The trade-off is visible instead of resolved silently. |
-| No numerical feedback on the objective (route length) | An **objective tracker** reports route length by service, the total, and the change against the previous and the best evaluation. |
+The agent reads well, lists the requirements, and fixes what its checks report (`docs/failure-analysis.md`). What fails is the checks: written by the designer, scoped by the designer's beliefs (pieces of a run "meet at joints", headroom is for routes), tested on the plan, and accepted at the first all-pass. The tooling has to remove the designer's hand from the checks, make the checks strict by default, and show whether they can fail.
+
+## The three parts (fig 5)
+
+**1. The engine (ours, deterministic, tested).** A check library plus an evaluator, in the serve container, outside the task container and outside the agent's code.
+- **Library (prepopulated):** all-pairs overlap with a tolerance; overlap between two roles; minimum clearance (any axis, or per axis, "at least one axis"); z-range of a role (headroom, vertical zones); distance from each item of one role to the nearest of another; connectivity of a group (touching within a tolerance) and whether it reaches a point; coverage of a line by a group within a distance; counts; sums of length. A **custom check** can be programmed against a small API (items, boxes, pair iterators, graph helpers) when the library does not fit; it runs in the same report.
+- **Strict by default:** `no_overlap` examines all pairs of all items. Anything narrower must be declared in the configuration as an explicit scope or exclusion, and the engine **prints it** in the report ("pairs examined: 38,781 of 38,781; excluded: none", or the exact excluded group and its count). No claim is needed from anyone: the numbers are the engine's.
+- **Excluded groups still measured:** for any declared exclusion the engine reports the overlaps inside the excluded group separately, so a "joint" that overlaps by 170 mm is visible as a number whether or not anyone excluded it.
+- **Scope facts:** a matrix of every item kind in the model against every check; kinds no check touches are listed.
+- **Self-test:** the engine copies the model, injects a violation for each kind of pair (including two items of one kind) and reports which declared checks reported it. A check that missed an injected fault is reported as insensitive.
+- **Objective tracker:** route length by group and total, and the change against the previous and the best evaluation.
+- **Robustness is a requirement of its own:** unit tests for touching against overlapping (the 2 mm tolerance edge), identical boxes, empty groups, thousands of items; fast pair search; explicit units; no hidden state between evaluations.
+
+**2. The checker (a separate model call).** Before the design exists, the harness calls the model once, with fresh context: the task text, the library's catalogue and the configuration schema, and nothing else. It returns a configuration: for each requirement it finds, which library check, over which roles ("any solid", "route segments", "sprinkler heads"), with which numbers. It never sees the design, the drawings' content or the designer's notes. The hypothesis it tests: the exclusion of same-service pieces came from the designer's context (it knows its segments overlap at joints), not from the model's reading of the rule, so a checker without that context will not write it. If the checker writes it anyway, the belief is the model's own and the engine's strict default and fault self-test are what remain.
+
+**3. The designer (the main agent).** It reads the drawings, builds the solution, exposes its items, **binds** the checker's roles to its item kinds, evaluates, and then **reviews**: it reads the checker's configuration and the report, and may amend (add, tighten, or narrow a check). Every amendment, and above all every narrowing, is recorded by the engine and printed in the report and in the final evidence. The designer is not stopped from narrowing a check; it cannot do so unseen.
 
 ## The workflow (fig 4)
 
-Requirements (a ledger the harness validates) then Design (the agent writes its solution) then Declare (checks as data) then Evaluate (the engine reports) then Fix and Evaluate again, until the report says READY, then Finish. The only free-form part is Design; everything else has a structure the agent fills in and the harness validates.
+Specify (checker) then Design then Bind then Evaluate then Review then Fix and Evaluate again, until nothing is violated, every item kind is covered, and every check caught its injected fault; then Finish. The final message is the agent's summary followed by an evidence block the harness appends from the engine: the checks run, pairs examined, exclusions and amendments, objective values. The agent cannot edit the evidence block; it cannot be made to say more than the engine measured.
 
-## The parts (fig 5)
+## The model contract (until the ifcopenshell rung)
 
-All tools run in the serve container, in Python (with numpy), outside the task container and outside the agent's own code. The engine is ours: it cannot be told to skip a pair, and the agent's belief about joints cannot enter it.
+`solution.py` exposes `model_items()`: a list of `{id, kind, group, aabb: [x0, y0, z0, x1, y1, z1], attrs}` in millimetres (the boxes it would extrude into IFC solids). The engine tests the plan, not the built solids (finding 3 of the failure analysis); when the agent may run ifcopenshell, the engine reads the produced IFC and the contract disappears. Roles the checker names are bound to kinds by the designer; the engine lists any role with no kind and any kind in no role.
 
-1. **Requirements ledger** `requirements_submit`. Each entry: `id`, `quote` (a sentence or phrase from the task), `kind` (constraint, objective, deliverable), `applies_to` (kinds of item, or all), `metric`, `threshold`, `assumption` (true if the agent is adding something the task does not say).
-   - Rejected if the quote is not a word-for-word substring of the task (whitespace aside).
-   - Reports every **number with a unit** and every sentence with *zero, every, all, no, must, at least, at most* in the task that no quote covers, so a dropped requirement is visible.
-2. **Check declaration** `checks_declare`, geometry pack first. Checks are JSON bound to a requirement id: `no_overlap` (kinds A against kinds B, tolerance, exemptions with quotes), `min_clearance`, `z_range` (items of a kind must lie in a range), `connected` (items of a group form one network and reach a point), `coverage_along` (a group serves a line over a fraction of its length within a distance), `length` (sum over a group). Unknown kinds or an exemption without a verbatim quote are rejected with the reason.
-3. **Evaluate** `evaluate`. The harness runs the agent's `solution.py` in the task container through a fixed runner, reads the items, runs the engine, and returns one report:
-   - per requirement: pass or fail, count, **worst offenders with identifiers and margins in the task's units**;
-   - exempted groups: their overlaps, counted separately;
-   - the coverage matrix and the list of uncovered kinds;
-   - the self-test: which checks caught which injected violation;
-   - the objective: values, change, best so far;
-   - a READY flag with the reasons it is not set.
-4. **Finalize** `finalize`. Builds the final message from the ledger and the last evaluation.
+## General and specific
 
-**The model contract (until the later rung with ifcopenshell).** The agent's `solution.py` exposes `model_items()`: a list of `{id, kind, group, aabb: [x0, y0, z0, x1, y1, z1], attrs}` in millimetres, the same boxes it would extrude into IFC solids. This tests the *plan* (see finding 3 of the failure analysis); the writer is not exercised. When the agent may run ifcopenshell, the engine reads the produced IFC instead and the contract goes away.
-
-## What is general and what is not
-
-- **General, any task:** the requirements ledger (quote validation, number coverage), the exemption rule, the final message from the ledger, the workflow gating.
-- **Geometry pack, tasks with a spatial model:** the check types and the engine. Other packs (numeric calculations, documents) are separate and later; this one is built first because the evidence is here.
-- **Nothing task-specific is built in:** no thresholds, kinds, names or dimensions of this task; the numbers come from the agent's requirements and quotes. The primitives are textbook geometry. No grader knowledge is used.
+- **General:** the engine's strictness rules, scope facts, self-test, objective tracker, evidence block, the checker/designer split.
+- **Geometry pack:** the library's check types (this task needs them first; other tasks need other packs: numeric formulas, documents).
+- **Nothing of this task is built in:** no thresholds, kinds, names or dimensions. The numbers reach the engine through the checker's configuration, read from the task text.
 
 ## What it will not do
 
-It does not read the grader, does not know the real score, and cannot find a requirement the task does not state (two of the grader's rules are not in the task text). It cannot make the agent read a drawing correctly. It tests the plan, not the built solids. An agent that declares a weak check is caught only where the coverage matrix, the quote rule and the self-test reach.
+Know the real score, find a rule the task does not state (two grader rules are not in the task text), make the agent read a drawing correctly, test built solids, or stop a checker from sharing the designer's model-level prior. It narrows the ways a wrong check can survive; it does not close them.
 
 ## The experiment
 
-Rung 3 v1 against rung 2 v3 (same task, Neon, ifcopenshell blocked, six runs each). Read: pass rate; for each run, the report's account of why it stopped; whether the engine's last evaluation matched the grader (agreement is the test of the engine); calls, tokens and minutes (tools add calls: budget 60). After that, ablations one at a time: without the self-test, without the exemption rule.
+Rung 3 v1 (checker + engine + review) against rung 2 v3 (same task, Neon, ifcopenshell blocked, six runs each). Read: pass rate; whether the checker's configuration compares same-service pieces (the central test); whether the engine's final report agrees with the grader; amendments the designer made and whether any narrowed a check; calls, tokens, minutes. Then one ablation at a time: the engine with strict defaults but **no checker** (the designer configures its own checks), to separate the two effects; and without the self-test.
 
 ## Risks
 
-1. **The engine disagrees with the grader** (different tolerance, exact geometry against boxes). Mitigation: report both the margin and the count; compare to the grader per run.
-2. **More tools, more calls, a distracted agent.** Mitigation: tool descriptions short, the report ordered by what to fix first.
-3. **Over-fitting to this task.** Mitigation: the core stays task-free, and a second spatial task of the development set is the test.
-4. **The contract (`model_items`) drifts from the solids** until the IFC is read directly.
+1. **The engine disagrees with the grader** (boxes against exact solids; tolerance). Report the margin and the count, compare per run.
+2. **The checker repeats the designer's prior.** Then the strict default and the self-test carry the result; the experiment shows it.
+3. **The checker's roles do not fit the designer's kinds.** The binding step shows the gaps; budget a round to resolve them.
+4. **More tools, more calls.** Budget 60; short tool descriptions; report ordered by what to fix first.
+5. **Over-fitting to this task.** Core and packs stay task-free; a second spatial task of the development set is the test.
 
 ## Decisions needed before building
 
-1. Geometry pack first, with the general core (ledger, exemptions, finalize), then generalise: yes or no?
-2. The `model_items()` contract until the ifcopenshell rung: yes or no?
-3. Call budget 60 for this rung: yes or no?
-4. The final message written by the harness from the ledger, the agent adding a note only: yes or no?
+1. The checker runs once, before the design, from the task text only (recommended), or again after the design with the item list?
+2. The designer may amend checks, with every amendment and narrowing logged and shown (recommended), or is the checker's configuration fixed?
+3. Library plus a custom-check escape hatch (recommended), or library only?
+4. Call budget 60?

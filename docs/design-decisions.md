@@ -766,10 +766,11 @@ Reading: not the main cause (70-number cross-run consensus; position-dependent g
 tests the plan, not the built solids). Adaptation: fine when a check fails, but the work ends at the first all-pass and no check was ever shown to fail.
 Four candidate changes listed there (independent checker, negative controls, scope audit, print the excluded group); none run yet.
 
-## Rung 3 proposed: the structured workflow, the initial idea (2026-11-27, user: now is the right time)
+## Rung 3 proposed: robust engine, an independent checker, a designer who reviews (2026-11-27, revised after user feedback)
 
-Design in `docs/architecture-rung3.md`, figures 4 and 5. Tools we provide: a requirements ledger (quotes checked word for word, every number in the task covered),
-a check declaration (checks as data, exemptions need a quoted source), an evaluation engine (all-pairs overlap, clearance, ranges, connectivity, coverage, length;
-coverage matrix, self-test, objective tracker; runs outside the task container) and a finalizer that writes the final message from the ledger. Each feature answers one
-observed failure (same-service exclusion, headroom scope, checks that never fail, stopping at the first all-pass, overclaiming). Four decisions are open (geometry pack
-first, the `model_items()` contract, call budget 60, harness-written final message). Not built.
+First draft (requirements ledger with quote validation; exemptions needing a quoted source) **rejected by the user: quotes can be fabricated.** Revised design in
+`docs/architecture-rung3.md`, figures 4 and 5: (1) an engine with a prepopulated check library (plus custom checks), strict defaults (all pairs, nothing excluded unless
+declared), scope facts, an injected-fault self-test and an objective tracker; (2) a **checker**, a separate model call that sees only the task text and the library, writes
+the check configuration before the design exists; (3) the **designer** (main agent) binds roles to its item kinds, evaluates and reviews, may amend checks, with every
+narrowing logged and shown; the harness appends an evidence block to the final message. Nothing depends on the agent being truthful about itself. Four decisions open;
+not built.
