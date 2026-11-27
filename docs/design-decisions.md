@@ -531,3 +531,25 @@ thoughts.
   (`research/task_resources.json`: this task 2 CPUs and 4,096 MB). So each trial's containers are already limited
   individually; the 32-CPU machine only decides how many trials run side by side (5). **Not verified:** that the
   limits are enforced inside the container; the environment audit prints `cpu.max` and `memory.max` from inside it.
+
+## Rung 2 definition (2026-11-27, user decision) and its build
+
+- **What changes from rung 1:** (1) the agent gets the `read` tool and **the data is not in the first message**: the
+  message is the task instruction plus a plain list of the input files (paths and sizes); (2) no input guard; (3) the
+  system note explicitly asks for the method: write the requirements as a numbered list quoting the instruction
+  (no narrowing; assumptions listed apart), read the files one by one and note what was taken from each, check the
+  ingestion and re-read when unsure, define a check per requirement from the requirement text before building, build a
+  first version early, run the checks, double-check at the end, and report which checks were run and what each covered
+  ("do not claim more than you tested"). The checks are the agent's own and requested by prompt: no harness-run check.
+- **Unchanged, so the comparison with rung 1 isolates this change:** Pi loop, tools write/edit/bash (read added),
+  reasoning effort low, images at original size, the Neon thinking-level patch, the call budget mechanism.
+- **Call budget 40 (rung 1 used 20):** reading 7 drawings alone takes 7 calls; 20 is too few for this method. 40 is a
+  guess to be revisited after the first run; `PI_MAX_CALLS` overrides it. Neon needed 10 calls in rung 1, Flash did not
+  finish in 20.
+- **Found while testing the `read` tool against a mock task container:** the extension's own `read` tool shrank a
+  3000 x 2000 image to 2000 x 1333, because Pi's `images.autoResize: false` setting does not apply to a tool the
+  extension creates. `task-tools.ts` now passes `autoResizeImages: false` to `createReadToolDefinition`; verified:
+  the model receives 3000 x 2000. (Without it rung 2 would have compared a downscaled read with rung 1's originals.)
+- **Logged for the report:** `pi: TOOLS` now has `reads` (path to times opened, so re-reads are visible) and `written`
+  (paths written or edited, in order, which shows whether requirements.md, data.md and the checks were created).
+- **Entry:** `harnesses/pi-rung2`; VM script `infra/gcp-vm/rung2.sh`; label `rung 2 v1`.

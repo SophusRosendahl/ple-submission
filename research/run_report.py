@@ -98,7 +98,7 @@ def parse_log(text):
             else:
                 summaries[m.group(1)] = data
             continue
-        t = re.search(r"pi: (bash|write|edit) (\{.*)", line)
+        t = re.search(r"pi: (read|bash|write|edit) (\{.*)", line)
         if t:
             try:
                 args = json.loads(t.group(2))
@@ -176,10 +176,16 @@ def run_section(run, headline, runs_by_id):
                 ("  of which thinking", f"{s.get('reasoning_tokens') if s.get('reasoning_tokens') is not None else 'not reported'}"),
                 ("Wall time", f"{secs / 60:.1f} min" if secs else "?")]
         if tools:
+            reads = tools.get("reads") or {}
+            if reads:
+                rows.append(("Files opened with the read tool", f"{len(reads)} distinct, {sum(reads.values())} reads, "
+                             f"{sum(1 for n in reads.values() if n > 1)} re-read (opened more than once)"))
+            if tools.get("written"):
+                rows.append(("Files written or edited, in order", esc("; ".join(tools["written"])[:400])))
             rows += [("Tool calls", esc(json.dumps(tools.get("counts", {})))),
                      ("Ran its own deliverable", "yes" if tools.get("ran_deliverable") else "no"),
                      ("Commands that re-opened an input file", f"{reread} (of {n_inputs} input file names)"),
-                     ("Input guard refusals", str(tools.get("input_guard_refusals", "not in this version")))]
+                     ("Input guard refusals", str(tools.get("input_guard_refusals", "not in this version")))] if "reads" not in tools else rows
         if summ.get("BUDGET"):
             b = summ["BUDGET"]
             rows.append(("Call budget", f"{b.get('replies')} of {b.get('max_calls')} used; stopped by budget: {'yes' if b.get('stopped_by_budget') else 'no'}"))
@@ -205,7 +211,7 @@ def run_section(run, headline, runs_by_id):
            ("Grader report: full detail (artifacts.json)", read(d / "verifier" / "artifacts.json", 400000)),
            ("Grader summary (metrics.json)", read(d / "verifier" / "metrics.json", 60000)),
            ("Grader console output (eval.stdout.txt)", read(d / "verifier" / "eval.stdout.txt", 60000)),
-           ("Harness log (tagged call, tool and image lines)", "\n".join(l[:600] for l in log_text.splitlines() if re.search(r": (CALLS|CALL|TOOLS|BUDGET|GUARD|IMAGES) |pi: (bash|write|edit) ", l)) or None)]
+           ("Harness log (tagged call, tool and image lines)", "\n".join(l[:600] for l in log_text.splitlines() if re.search(r": (CALLS|CALL|TOOLS|BUDGET|GUARD|IMAGES) |pi: (read|bash|write|edit) ", l)) or None)]
     try:
         traj = json.loads((d / "agent" / "trajectory.json").read_text(encoding="utf-8"))
         first = next((s_ for s_ in traj["steps"] if s_.get("source") == "user"), None)
