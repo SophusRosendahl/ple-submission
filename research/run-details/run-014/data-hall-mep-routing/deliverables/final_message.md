@@ -1,0 +1,7 @@
+I have delivered the coordinated IFC4 model generator and drawing reconciliation log:
+
+- **`output/solution.py`**: Self-contained Python script using `ifcopenshell` and `numpy` that rebuilds Data Hall 1 (`hall_seed000_d000`) from the seven drawing sheets (`A-101`, `A-301`, `A-601`, `A-602`, `E-101`, `F-101`, `M-101`)—including the 27 × 21 m access floor, 6 full-height structural columns, 128 server cabinets across 6 rows with exact bay sequences and facings, 18 in-row CRAHs, 4 perimeter CRAHs, 6 PDUs, cold-aisle containment roofs, and all 79 sprinkler heads (63 ceiling + 16 in-aisle)—and routes all three MEP services clash-free:
+  - **Power Busway (`BW-1`, 128 × 147 mm)**: Overhead at `z = 2900 mm` (maintaining 226.5 mm above the 2600 mm minimum clear height and 601.1 mm below ceiling sprinkler deflectors), serving all 6 rows via 3 hot-aisle branches (`Y = 4500, 9900, 15300 mm`).
+  - **Telecom Cable Tray (`CT-1`, 683 × 127 mm)**: Under-floor plenum at `z = -250 mm` (providing > 3000 mm vertical separation from busway everywhere and 131.5 mm clear below the `-55 mm` under-panel limit).
+  - **Chilled-Water Pipe (`CHW-1`, insulated OD 168.3 mm)**: Under-floor plenum at `z = -600 mm` (clear of the 1800 mm dedicated space above PDUs and > 200 mm clear below the cable tray), serving all 6 cabinet rows and all 4 perimeter CRAHs via an additional South branch at `Y = 1500 mm`.
+- **`output/reconciliation.json`**: Side log documenting the numeric dimensions, clearances, and elevations extracted from the seven sheets and how each was applied.

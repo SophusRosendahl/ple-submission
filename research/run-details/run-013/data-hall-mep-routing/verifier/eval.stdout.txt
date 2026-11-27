@@ -1,0 +1,14 @@
+{
+  "combined_score": 0.0,
+  "valid": 0.0,
+  "script_seconds": 0.5,
+  "exec_status": "ERR_EXEC",
+  "reason": "script exited 1: Traceback (most recent call last):\n  File \"/tmp/dcgrade_p8bky5k7/solution.py\", line 582, in <module>\n    create_model()\n  File \"/tmp/dcgrade_p8bky5k7/solution.py\", line 154, in create_model\n    col.Representation = model.createIfcProductDefinitionShape(None, None, [col_shape.Representations[0]])\n                                                                            ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/ifcopenshell/entity_instance.py\", line 263, in __getattr__\n    raise AttributeError(\nAttributeError: entity instance of type 'IFC4.IfcShapeRepresentation' has no attribute 'Representations'. Did you mean: 'RepresentationMap'?\n"
+}{
+  "combined_score": 0.0,
+  "valid": 0.0,
+  "script_seconds": 0.5,
+  "exec_status": "ERR_EXEC",
+  "reason": "script exited 1: Traceback (most recent call last):\n  File \"/tmp/dcgrade_p8bky5k7/solution.py\", line 582, in <module>\n    create_model()\n  File \"/tmp/dcgrade_p8bky5k7/solution.py\", line 154, in create_model\n    col.Representation = model.createIfcProductDefinitionShape(None, None, [col_shape.Representations[0]])\n                                                                            ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/ifcopenshell/entity_instance.py\", line 263, in __getattr__\n    raise AttributeError(\nAttributeError: entity instance of type 'IFC4.IfcShapeRepresentation' has no attribute 'Representations'. Did you mean: 'RepresentationMap'?\n"
+}
+evaluator exit: 0

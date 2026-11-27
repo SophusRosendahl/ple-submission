@@ -1,0 +1,222 @@
+{
+  "combined_score": 0.0,
+  "valid": 1.0,
+  "script_seconds": 2.3,
+  "recovery_confusion": {},
+  "semantics": {},
+  "violation_rate": 0.12218649517684887,
+  "clash_count": 33,
+  "routed_length": {
+    "total_mm": 425048.0,
+    "by_service": {
+      "cable_tray": 131298.0,
+      "busway": 133800.0,
+      "chw_pipe": 159950.0
+    },
+    "l_opt_mm": 260601.59999999998
+  },
+  "objective": null,
+  "gates": {
+    "gate_1_no_hard_clash": false,
+    "gate_2_connectivity": {
+      "passed": true,
+      "unserved_rows": {},
+      "disconnected": {},
+      "unreached_consumers": [],
+      "n_rows": 6,
+      "n_chw_consumers": 22,
+      "coverage": {
+        "A": {
+          "cable_tray": 1.0,
+          "busway": 1.0,
+          "chw_pipe": 1.0
+        },
+        "B": {
+          "cable_tray": 1.0,
+          "busway": 1.0,
+          "chw_pipe": 1.0
+        },
+        "C": {
+          "cable_tray": 1.0,
+          "busway": 1.0,
+          "chw_pipe": 1.0
+        },
+        "D": {
+          "cable_tray": 1.0,
+          "busway": 1.0,
+          "chw_pipe": 1.0
+        },
+        "E": {
+          "cable_tray": 1.0,
+          "busway": 1.0,
+          "chw_pipe": 1.0
+        },
+        "F": {
+          "cable_tray": 1.0,
+          "busway": 1.0,
+          "chw_pipe": 0.989
+        }
+      },
+      "reach_mm": 2500.0,
+      "min_coverage": 0.8,
+      "joint_tolerance_mm": 250.0
+    }
+  },
+  "secondary": {
+    "length_detail": {
+      "service_share_of_l_opt": {
+        "cable_tray": 0.5038,
+        "busway": 0.5134,
+        "chw_pipe": 0.6138
+      },
+      "over_length_pct": 63.103,
+      "total_mm": 425048.0,
+      "l_opt_mm": 260601.59999999998
+    },
+    "coverage_quality": {
+      "per_service": {
+        "cable_tray": {
+          "min": 1.0,
+          "mean": 1.0
+        },
+        "busway": {
+          "min": 1.0,
+          "mean": 1.0
+        },
+        "chw_pipe": {
+          "min": 0.989,
+          "mean": 0.9982
+        }
+      },
+      "rows_below_90pct": 0,
+      "n_rows": 6
+    },
+    "network_complexity": {
+      "segments_per_service": {
+        "cable_tray": 14,
+        "busway": 8,
+        "chw_pipe": 10
+      },
+      "components_per_service": {
+        "cable_tray": 1,
+        "busway": 1,
+        "chw_pipe": 1
+      },
+      "total_segments": 32
+    },
+    "clash_density": {
+      "clash_count": 33,
+      "per_100m_route": 7.7638
+    },
+    "violation_detail": {
+      "distinct_violating_rules": 3,
+      "worst_rule": "clear_height",
+      "worst_rule_count": 16,
+      "rule_counts": {
+        "clear_height": 16,
+        "tray_stack_headroom": 8,
+        "power_telecom_separation": 14
+      }
+    },
+    "extended": {
+      "achieved_clearances": {
+        "min_sprinkler_clearance_mm": {
+          "cable_tray": 486.5,
+          "busway": null,
+          "chw_pipe": null
+        },
+        "min_pdu_chw_clearance_mm": null,
+        "min_tray_busway_separation_mm": 113.0
+      },
+      "underfloor_overhead_split": {
+        "cable_tray": {
+          "under_floor_mm": 0.0,
+          "overhead_mm": 131298.0,
+          "total_mm": 131298.0
+        },
+        "busway": {
+          "under_floor_mm": 0.0,
+          "overhead_mm": 133800.0,
+          "total_mm": 133800.0
+        },
+        "chw_pipe": {
+          "under_floor_mm": 157950.0,
+          "overhead_mm": 2000.0,
+          "total_mm": 159950.0
+        }
+      },
+      "elevation_bands": {
+        "cable_tray": {
+          "in_clear_height_band_mm": 0.0,
+          "above_band_mm": 131298.0,
+          "under_floor_mm": 0.0,
+          "fraction_in_band": 0.0
+        },
+        "busway": {
+          "in_clear_height_band_mm": 0.0,
+          "above_band_mm": 133800.0,
+          "under_floor_mm": 0.0,
+          "fraction_in_band": 0.0
+        },
+        "chw_pipe": {
+          "in_clear_height_band_mm": 2000.0,
+          "above_band_mm": 0.0,
+          "under_floor_mm": 157950.0,
+          "fraction_in_band": 0.0125
+        }
+      },
+      "support_and_drops": {
+        "drop_count": 0,
+        "support_count": 0,
+        "drops": [],
+        "supports": []
+      },
+      "reconciliation": {
+        "log_present": true,
+        "log": {
+          "hall_dimensions": {
+            "length_mm": 27000,
+            "width_mm": 21000
+          },
+          "floor_grid": {
+            "tile_size_mm": 600,
+            "total_tiles_x": 45,
+            "total_tiles_y": 35
+          },
+          "vertical_budget": {
+            "top_of_slab_mm": -900,
+            "under_floor_plenum_clear_mm": [
+              -865,
+              -35
+            ],
+            "finished_floor_mm": 0,
+            "cabinet_height_mm": 2000,
+            "containment_roof_underside_mm": 2000,
+            "min_headroom_clear_mm": 2600,
+            "overhead_pathway_zone_mm": [
+              2600,
+              3115
+            ],
+            "sprinkler_standoff_zone_mm": [
+              3115,
+              3575
+            ],
+            "ceiling_soffit_mm": 3600
+          },
+          "routing_elevations": {
+            "busway_bw1_cl_mm": 2700,
+            "cable_tray_ct1_cl_mm": 2950,
+            "chw_pipe_cl_mm": -500
+          },
+          "clearances_achieved": {
+            "tray_to_busway_horizontal_separation_mm": 400,
+            "chw_to_pdu_separation": "Under-floor routing eliminates all CHW from PDU dedicated zones",
+            "overhead_headroom_clearance_mm": 26
+          }
+        }
+      }
+    }
+  },
+  "exec_status": "ERR_CLASH",
+  "reason": "ERR_CLASH"
+}
