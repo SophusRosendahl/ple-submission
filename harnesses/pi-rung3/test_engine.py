@@ -92,6 +92,58 @@ class JointsAndExclusions(unittest.TestCase):
     self.assertEqual((r["violations"], r["excluded"]), (0, 1))
 
 
+class Diagnosis(unittest.TestCase):
+  """The report has to say what to change, with numbers."""
+
+  def diag(self, a, b):
+    d = E.overlap_depths(E.boxes([a, b], [0]), E.boxes([a, b], [1]))[0, 0]
+    return E.diagnose_overlap(a, b, d)
+
+  def test_branch_end_into_a_trunk_says_shorten_by_half_the_width(self):
+    trunk = box("TRUNK", "tray", "CT", 815, 0, 0, 985, 5000, 127)     # 170 wide, long along y
+    branch = box("BRANCH", "tray", "CT", 900, 1915, 0, 3000, 2085, 127)  # starts at the trunk's centre line
+    r = self.diag(trunk, branch)
+    self.assertEqual((r["relation"], r["mover_id"], r["from"], r["to"]), ("end into side", "BRANCH", 900.0, 985.0))
+    self.assertIn("shorten its min end by 85 mm", r["fix"])
+
+  def test_elbow_where_both_ends_run_to_the_centre_line(self):
+    a = box("A", "pipe", "CHW", 0, 916, 0, 1000, 1084, 168)     # along x, ends at x=1000 (the centre of the corner)
+    b = box("B", "pipe", "CHW", 916, 0, 0, 1084, 1000, 168)     # along y, ends at y=1000
+    r = self.diag(a, b)
+    self.assertEqual(r["relation"], "corner")
+    self.assertAlmostEqual(r["depth"], 84.0)
+    self.assertIn("touch face to face", r["fix"])
+
+  def test_stacked_pieces_overlapping_by_a_thickness(self):
+    rack = box("RACK", "rack", "", 0, 0, 0, 600, 1200, 2000)
+    plate = box("PLATE", "plate", "", 0, 0, 1950, 600, 1200, 2050)
+    r = self.diag(rack, plate)
+    self.assertEqual(r["relation"], "partial")
+    self.assertIn("overlap along z between 1950 and 2000", r["fix"])
+    self.assertIn("from 2000 down to 1950", r["fix"])
+
+  def test_roof_end_running_into_a_door_says_shorten_the_roof(self):
+    roof = box("ROOF", "roof", "", 0, 0, 2000, 2400, 1200, 2055.5)
+    door = box("DOOR", "door", "", 2340, 0, 0, 2400, 1200, 2055.5)
+    r = self.diag(roof, door)
+    self.assertEqual((r["relation"], r["mover_id"]), ("end into side", "ROOF"))
+    self.assertIn("shorten its max end by 60 mm", r["fix"])
+
+  def test_same_cause_is_reported_once_with_a_count(self):
+    items = []
+    for i in range(5):
+      y = 1000.0 * (i + 1)
+      items.append(box(f"T{i}", "tray", "CT", 815, y - 85, 0, 985, y + 85, 127))
+      items.append(box(f"B{i}", "tray", "CT", 900, y - 85, 0, 3000, y + 85, 127))
+    # make the trunk long so each branch end is inside it
+    items.append(box("TRUNK", "tray", "CT", 815, 0, 0, 985, 7000, 127))
+    items = [it for it in items if not it["id"].startswith("T") or it["id"] == "TRUNK"]
+    rep = run(items, [{"id": "c", "type": "no_overlap"}])["results"]["c"]
+    self.assertEqual(rep["violations"], 5)
+    self.assertEqual(len(rep["patterns"]), 1)
+    self.assertIn("5 overlap(s) with one cause", rep["patterns"][0][0])
+
+
 class SelfTestAgreesWithTheCheck(unittest.TestCase):
   """Property test: for random models and random configurations, the self-test's prediction for a pair of kinds is exactly what the
   real check does with two deeply overlapping items of those kinds."""

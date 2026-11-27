@@ -112,6 +112,110 @@ def exclusion_of(p, q, exclude, roles):
   return None
 
 
+AX = "xyz"
+
+
+def _sizes(b):
+  return [b[3] - b[0], b[4] - b[1], b[5] - b[2]]
+
+
+def _long_axis(b):
+  sz = _sizes(b)
+  k = int(np.argmax(sz))
+  rest = sorted(sz)[:2]
+  return k, (sz[k] / max(rest[1], 1e-9))
+
+
+def diagnose_overlap(p, q, depth) -> dict:
+  """Why two boxes overlap and the smallest change that separates them, in the units of the model.
+
+  Relations: 'end into side' (an elongated piece whose end runs into the body of another, the classic joint made centre to
+  centre), 'collinear' (two pieces along one line overlapping in length), 'crossing' (elongated pieces at an angle passing
+  through each other), 'contained' (one inside the other), 'partial' (anything else).
+  """
+  a, b = p["aabb"], q["aabb"]
+  d = [float(v) for v in depth]
+  sa, sb = _sizes(a), _sizes(b)
+  la, ra = _long_axis(a)
+  lb, rb = _long_axis(b)
+
+  def end_into_side(box, size, L, ratio, other):
+    # elongated, only its end penetrates (depth along L is less than its length), cross-section inside the other's extent
+    if ratio < 2.0 or d[L] >= size[L] - 1e-6:
+      return None
+    if any(d[k] < size[k] - 1e-6 for k in range(3) if k != L):
+      return None
+    mid_other = (other[L] + other[L + 3]) / 2
+    end = "max" if (box[L] + box[L + 3]) / 2 < mid_other else "min"  # the end that points toward the other piece
+    coord = box[L + 3] if end == "max" else box[L]
+    new = coord - d[L] if end == "max" else coord + d[L]
+    return {"relation": "end into side", "mover": box, "axis": AX[L], "end": end, "depth": d[L], "from": coord, "to": new}
+
+  for item, box, size, L, ratio, other, other_item in ((p, a, sa, la, ra, b, q), (q, b, sb, lb, rb, a, p)):
+    r = end_into_side(box, size, L, ratio, other)
+    if r:
+      who = item["id"]
+      return {**r, "mover_id": who, "other_id": other_item["id"], "signature": ("end into side", AX[L], round(d[L])),
+              "fix": f"end {who} at {AX[L]} = {r['to']:.0f} instead of {r['from']:.0f} (shorten its {r['end']} end by {d[L]:.0f} mm) so it butts against {other_item['id']} instead of entering it"}
+  inside = lambda u, v: all(u[i] >= v[i] - 1e-6 and u[i + 3] <= v[i + 3] + 1e-6 for i in range(3))
+  if inside(a, b) or inside(b, a):
+    k = int(np.argmin(d))
+    inner, outer = (p, q) if inside(a, b) else (q, p)
+    return {"relation": "contained", "depth": min(d), "signature": ("contained",), "fix": f"{inner['id']} lies inside {outer['id']}: remove it or move it out"}
+  # a corner: two elongated pieces at an angle, each running into the other (both ends meet at the centre lines)
+  if ra >= 2.0 and rb >= 2.0 and la != lb and d[la] < sa[la] - 1e-6 and d[lb] < sb[lb] - 1e-6:
+    mover, L, dep, box, other = (p, la, d[la], a, b) if d[la] <= d[lb] else (q, lb, d[lb], b, a)
+    mid_other = (other[L] + other[L + 3]) / 2
+    end = "max" if (box[L] + box[L + 3]) / 2 < mid_other else "min"
+    coord = box[L + 3] if end == "max" else box[L]
+    new = coord - dep if end == "max" else coord + dep
+    return {"relation": "corner", "depth": dep, "signature": ("corner", AX[L], round(dep)),
+            "fix": f"{p['id']} and {q['id']} meet at a corner and each runs into the other: end {mover['id']} at {AX[L]} = {new:.0f} instead of {coord:.0f} (shorten its {end} end by {dep:.0f} mm) so the two touch face to face"}
+  if la == lb and ra >= 2.0 and rb >= 2.0 and d[la] > 0:
+    return {"relation": "collinear", "depth": d[la], "signature": ("collinear", AX[la], round(d[la])),
+            "fix": f"{p['id']} and {q['id']} run along {AX[la]} and overlap by {d[la]:.0f} mm in length: trim one of them by that amount"}
+  if ra >= 2.0 and rb >= 2.0 and la != lb:
+    k = int(np.argmin(d))
+    return {"relation": "crossing", "depth": d[k], "signature": ("crossing", AX[k], round(d[k])),
+            "fix": f"{p['id']} and {q['id']} pass through each other: separate them along {AX[k]} by at least {d[k]:.0f} mm (move one of them, for example to another elevation)"}
+  k = int(np.argmin(d))
+  lo = max(a[k], b[k])
+  hi = min(a[k + 3], b[k + 3])
+  below, above = (p, q) if (a[k] + a[k + 3]) <= (b[k] + b[k + 3]) else (q, p)
+  bb, ab = (a, b) if below is p else (b, a)
+  return {"relation": "partial", "depth": d[k], "signature": ("partial", AX[k], round(d[k])),
+          "fix": f"{p['id']} and {q['id']} overlap along {AX[k]} between {lo:.0f} and {hi:.0f} ({d[k]:.0f} mm): "
+                 f"either move the {AX[k]} maximum of {below['id']} from {bb[k + 3]:.0f} down to {lo:.0f}, or move the {AX[k]} minimum of {above['id']} from {ab[k]:.0f} up to {hi:.0f}"}
+
+
+def cluster(pairs):
+  """Group diagnosed overlaps that have the same cause, largest group first."""
+  groups: dict = {}
+  for p, q, diag in pairs:
+    key = (p["kind"], q["kind"], p["group"], q["group"]) + tuple(diag["signature"])
+    g = groups.setdefault(key, {"count": 0, "examples": [], "diag": diag, "kinds": (p["kind"], q["kind"]), "groups": (p["group"], q["group"])})
+    g["count"] += 1
+    if len(g["examples"]) < 3:
+      g["examples"].append((p["id"], q["id"], diag))
+  out = sorted(groups.values(), key=lambda g: -g["count"])
+  return out
+
+
+def pattern_text(g) -> list[str]:
+  d = g["diag"]
+  ka, kb = g["kinds"]
+  ga, gb = g["groups"]
+  who = f"{ka}" if ka == kb else f"{ka} and {kb}"
+  grp = f" of group {ga}" if ga and ga == gb else (f" (groups {ga} and {gb})" if ga or gb else "")
+  head = f"{g['count']} overlap(s) with one cause: {who}{grp}, relation '{d['relation']}', typical depth {d['depth']:.0f} mm"
+  lines = [head]
+  for a_id, b_id, dg in g["examples"][:2]:
+    lines.append(f"      e.g. {dg['fix']}")
+  if g["count"] > 1:
+    lines.append("      the same change applies to all " + str(g["count"]) + " (the others differ only in position)")
+  return lines
+
+
 def check_no_overlap(items, roles, spec) -> dict:
   """Strict by default: every pair of the selected items is examined; an exclusion is a declared rule, counted and reported."""
   tol = float(spec.get("tol", 2.0))
@@ -155,14 +259,18 @@ def check_no_overlap(items, roles, spec) -> dict:
   shadow_mask = valid & hit & (label >= 0)
   rows, cols = np.nonzero(viol_mask)
   viol = sorted(((items[ia[r]]["id"], items[ib[c]]["id"], d[r, c].tolist()) for r, c in zip(rows, cols)), key=lambda v: -min(v[2]))
+  by_id = {it["id"]: it for it in items}
+  patterns = cluster([(by_id[x], by_id[y], diagnose_overlap(by_id[x], by_id[y], dd)) for x, y, dd in viol])
   srows, scols = np.nonzero(shadow_mask)
   shadow = sorted(((items[ia[r]]["id"], items[ib[c]]["id"], float(d[r, c].min()), names[label[r, c]]) for r, c in zip(srows, scols)), key=lambda v: -v[2])
+  shadow_patterns = cluster([(items[ia[r]], items[ib[c]], diagnose_overlap(items[ia[r]], items[ib[c]], d[r, c])) for r, c in zip(srows, scols)])
   excluded_by = {names[k]: int(((label == k) & valid).sum()) for k in range(len(names)) if ((label == k) & valid).sum()}
   return {"status": "fail" if viol else "pass", "violations": len(viol),
           "offenders": [f"{x[0]} x {x[1]}: overlap {', '.join(f'{v:.0f}' for v in x[2])} mm (x, y, z)" for x in viol[:TOP]],
           "examined": int(valid.sum()), "excluded": int(excl.sum()), "excluded_by": excluded_by,
           "shadow_overlaps": len(shadow),
           "shadow_examples": [f"{s[0]} x {s[1]}: {s[2]:.0f} mm, excluded by '{s[3]}'" for s in shadow[:TOP]],
+          "patterns": [pattern_text(g) for g in patterns], "shadow_patterns": [pattern_text(g) for g in shadow_patterns],
           "tol": tol, "narrowed": bool(exclude) or spec.get("roles", ["*"]) != ["*"]}
 
 
@@ -459,6 +567,9 @@ def render(report: dict) -> str:
   for cid, r in order:
     flag = {"fail": "FAIL", "pass": "pass", "error": "ERROR", "info": "info"}[r["status"]]
     L.append(f"  [{flag}] {cid} {r['type']} {r['title']}: {r['violations']} violation(s), {r['examined']} examined")
+    for pat in r.get("patterns", []):
+      L.append("        CAUSE: " + pat[0])
+      L.extend(pat[1:])
     for o in r["offenders"]:
       L.append(f"        - {o}")
     if r["type"] == "no_overlap":
@@ -468,7 +579,10 @@ def render(report: dict) -> str:
       L.append(f"        scope: {scope}")
       if r["shadow_overlaps"]:
         L.append(f"        INSIDE THE EXCLUDED PAIRS: {r['shadow_overlaps']} overlap(s) deeper than {r['tol']} mm that this check does not count:")
-        for s in r["shadow_examples"]:
+        for pat in r.get("shadow_patterns", []):
+          L.append("          cause: " + pat[0])
+          L.extend("  " + x for x in pat[1:])
+        for s in r["shadow_examples"][:2]:
           L.append(f"          . {s}")
     for i in r.get("info", []):
       L.append(f"        {i}")

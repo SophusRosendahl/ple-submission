@@ -53,7 +53,11 @@ def to_items(raw):
     m = re.match(r"(CHW|BW|CT)", r["name"], re.I)
     group = (m.group(1).upper() if m else "")
     kind = r["cls"] + ("/" + r["otype"] if r["otype"] else "")
-    items.append({"id": r["guid"], "kind": kind, "group": group, "aabb": r["aabb"], "name": r["name"]})
+    items.append({"id": r["name"] or r["guid"], "kind": kind, "group": group, "aabb": r["aabb"], "name": r["name"]})
+  names = [i["id"] for i in items]
+  for it in items:
+    if names.count(it["id"]) > 1:
+      it["id"] = it["id"] + "~" + it.get("guid", str(id(it)))[:6]
   return items, skipped
 
 
