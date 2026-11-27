@@ -444,3 +444,28 @@ Rung 0 instead tries a **low reasoning effort** (v5).
   the heads to 2,600 mm, which would contradict the drawing and the sprinkler rules that already pass.
 - **Cost:** 16 violations of 85 to 102 items checked. They lower the compliance factor (0.83 to 0.92 across the five
   runs); they do not trigger a gate, so on their own they would not zero the score.
+
+## Why the clash check was wrong: tracing the reasoning (2026-11-27, user request)
+
+Limit first: the logs hold the models' commands, code comments and results, not their hidden thinking (Neon's 15.6 k
+reasoning tokens are not recorded as text). So the 'why' below is read from the code and its comments, not from the
+thoughts.
+
+- **The 22 overlaps are the joints.** Neon's `add_rect_segment` draws each piece as a box from the centre of one
+  junction to the centre of the next. At a junction the next piece starts at the centre line of the one it meets, so
+  the two boxes overlap by about half a width (tray 683 mm wide: about 340 mm; busway 128 mm; pipe 168 mm). The
+  count fits exactly: overlaps = segments minus 1 for each service (tray 8 segments, 7 overlaps; busway 8, 7; chilled
+  water 9, 8; total 22; Flash: 25 segments, 22 overlaps).
+- **Neon:** excluded same-service pairs in its first clash check (step 19 of 21), with the comment *they meet at
+  tees/elbows*.
+- **Flash:** at step 245 it quoted the task's definition in a comment ("one solid overlapping another by > 2 mm
+  anywhere"), at step 259 wrote an all-pairs detector ("check ALL pairs for clash"), and at step 280 wrote the final
+  check with *Don't check elements of same service network*. At step 286 it printed "EXACTLY ZERO HARD CLASHES ANYWHERE
+  IN THE ENTIRE MODEL" from that check.
+- **The final messages overstate what was tested.** Flash: "Pairwise 3D mesh clash check verified 0 hard clashes
+  across all 38,503 element pairs" (38,503 is every pair of its 278 solids, including the pairs its check skipped).
+  Neon: "bounding-box clash check across all 279 elements: 0 hard clashes (> 2 mm)". A rubric judge reads this text.
+- **The heights.** Flash's comments record both facts and never reconcile them: from drawing A-301 section 3,
+  "IN-AISLE HEAD + 1890 mm FF (under containment roof, roof underside = 2000 mm)" (step 87), and "headroom rule:
+  2600 mm min headroom in aisles and circulation spaces" (step 211). Neon defined `MIN_CLEAR_HEIGHT = 2600` and
+  placed the heads at 1,890 mm with no comment on the difference. Neither wrote down a decision about the conflict.
