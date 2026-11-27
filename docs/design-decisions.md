@@ -774,3 +774,11 @@ declared), scope facts, an injected-fault self-test and an objective tracker; (2
 the check configuration before the design exists; (3) the **designer** (main agent) binds roles to its item kinds, evaluates and reviews, may amend checks, with every
 narrowing logged and shown; the harness appends an evidence block to the final message. Nothing depends on the agent being truthful about itself. Four decisions open;
 not built.
+
+### Rung 3 decisions taken (2026-11-27, user)
+
+The sub-agent is the **check-builder** (it programs the checks); it runs **once**, before the design, from the task text and the library; the checks are **fixed** afterwards (the
+designer reviews and may record a concern, shown in the evidence block); library **plus custom checks**; designer budget **40** calls (check-builder calls counted
+separately); **sub-agents always run on a different model** from the designer. Open: the competition says the declared `model_api` must match the model the harness calls, so
+a submitted entry may not be allowed a second model; a read-only lookup of the organizers' `docs/rules.md` is running. Local experiments may use a different model; the
+setting is one line.

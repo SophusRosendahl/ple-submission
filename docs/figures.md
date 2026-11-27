@@ -33,10 +33,10 @@ finish, stops the agent, and sends an honest note as the final message. Either w
 
 ![The structured workflow](figures/fig4-structured-workflow.png)
 
-A checker (a separate model call that sees only the task) turns the requirements into checks from a prepopulated library before the design exists. The designer builds, binds the checker's roles to its own item kinds, evaluates, and reviews. The engine's report is made of facts it computed: failures, what was examined, which kinds no check touches, which checks missed an injected fault. Any narrowing of a check by the designer is logged and shown.
+A check-builder (a sub-agent on a different model that sees only the task) programs the checks once, from a prepopulated library, before the design exists. The designer builds, binds the check-builder's roles to its own item kinds, evaluates, and reviews; the checks stay as built. The engine's report is made of facts it computed: failures, what was examined, which kinds no check touches, which checks missed an injected fault. The designer's concerns are recorded and shown with the engine's evidence.
 
 ## Figure 5. The parts of the structured workflow (proposed)
 
 ![The parts of the structured workflow](figures/fig5-structured-architecture.png)
 
-The engine (check library and evaluation) runs in the serve container, outside the task container and outside the agent's code. Strict defaults, scope facts, an injected-fault self-test and an objective tracker; the designer cannot make it skip a pair unseen, and the checker never sees the design.
+The engine (check library and evaluation) runs in the serve container, outside the task container and outside the agent's code. Strict defaults, scope facts, an injected-fault self-test and an objective tracker; the designer cannot make it skip a pair, and the check-builder never sees the design.

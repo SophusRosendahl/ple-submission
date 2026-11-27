@@ -1,13 +1,13 @@
 flowchart LR
-  CK["CHECKER<br/>separate model call<br/>sees only the task and the library<br/>never sees the design"]
+  CB["CHECK-BUILDER<br/>sub-agent, a different model<br/>sees only the task and the library<br/>never sees the design<br/>programs the checks once"]
   DS["DESIGNER<br/>the main agent, Pi loop<br/>builds, reviews, fixes"]
   subgraph ENG["ENGINE WE PROVIDE (serve container, deterministic, tested)"]
-    LB["Check library<br/>all-pairs overlap, clearance, ranges,<br/>connectivity, coverage, counts, length<br/>plus a place for custom checks"]
-    EV["Evaluation<br/>strict defaults, nothing excluded unless declared<br/>scope facts, injected-fault self-test, objective"]
+    LB["Check library<br/>all-pairs overlap, clearance, ranges,<br/>connectivity, coverage, counts, length<br/>plus custom checks"]
+    EV["Evaluation<br/>strict defaults, nothing excluded unless declared<br/>what was examined, injected-fault self-test, objective"]
   end
   TC["TASK CONTAINER<br/>solution.py exposes its items"]
-  CK <-->|"reads the library, returns a check configuration"| LB
-  DS <-->|"tags items, asks to evaluate, amends checks"| EV
+  CB <-->|"reads the library, returns the checks"| LB
+  DS <-->|"tags items, asks to evaluate"| EV
   EV <-->|"report: what fails, by how much, what is not checked"| DS
   LB --> EV
   EV <-->|"runs solution, reads the items"| TC

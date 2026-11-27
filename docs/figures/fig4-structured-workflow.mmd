@@ -1,10 +1,10 @@
 stateDiagram-v2
   [*] --> Specify: task arrives
-  Specify --> Design: the checker, a separate model call that sees only the task, turns its requirements into checks from the library
+  Specify --> Design: the check-builder, a sub-agent on a different model that sees only the task, programs the checks once, from the library
   Design --> Bind: the designer writes the solution and tags its items by kind
-  Bind --> Evaluate: engine maps the checker's roles onto the designer's kinds
-  Evaluate --> Review: report with failures, scope facts, kinds no check touches, faults the checks missed
-  Review --> Fix: the designer reviews checks and report, may add checks, any narrowing is logged
+  Bind --> Evaluate: engine maps the check-builder's roles onto the designer's kinds
+  Evaluate --> Review: report with failures, what was examined, kinds no check touches, faults the checks missed
+  Review --> Fix: the designer reviews checks and report and notes any concern, the checks stay as built
   Fix --> Evaluate
   Review --> Finish: nothing violated, every kind covered, every check caught its injected fault
-  Finish --> [*]: final message plus the engine's evidence
+  Finish --> [*]: final message plus the engine's evidence and the designer's concerns
