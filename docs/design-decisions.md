@@ -292,3 +292,14 @@ Rung 0 instead tries a **low reasoning effort** (v5).
   ifcopenshell installed in the `install` step and the model fetched with `read_file`.
 - Same placement as "Run the deliverable": the first structured self-check of the next rung, with the check
   results logged (`CHECK` lines) so the write-up can show what each check caught.
+
+### Where ifcopenshell can run in the competition (2026-11-27, answer to a user question)
+
+- **Serve container (our harness): yes.** `install` runs at build time as root with internet, so ifcopenshell can be
+  installed into `/opt/harness` (pinned version) and ships in the bundle (limit 2 GiB compressed). No download is
+  needed at run time. The harness can fetch the produced model with `read_file` and validate it there.
+- **Task container: probably, not verified.** No network, so nothing can be installed there. The grader's traceback
+  shows ifcopenshell in the task image's `python3.11/site-packages`, so the task image likely has it. If so, `exec`
+  can run `solution.py` where the inputs are, with the grader's library version.
+- **Fair play:** public library, no grader files read: allowed.
+- **Open check (not run):** `python -c "import ifcopenshell"` and its version in the task image, one read-only VM job.
