@@ -62,6 +62,27 @@ Google's own agent) scores **0.507** on the 56 hidden tasks: about half the avai
 its own graders, the same protocol. That needs Docker with real memory (some tasks run app
 servers and need up to 16 GB), and a model endpoint for both the harness and the judge.
 
+**The idea in one sentence.** Every run happens in a cloud environment we built to look like the evaluation
+environment as closely as we could, so that what we measure on the development tasks is what the evaluation would
+measure.
+
+**Where it matches** (checked against the organizers' own files and our run records):
+
+* The runner, graders and task images are the organizers' own, from their repository at one recorded commit with no
+  local changes. Each run record stores that commit.
+* Each task runs in its own container with the CPUs and memory the task declares, no network, and our harness in a
+  separate container, talking to it over the competition's protocol.
+* The models are reached through the organizers' own proxy configuration, with the same model names, backed by
+  Vertex AI, and the default reasoning level is the models' highest, as in the evaluation.
+
+**Where it does not match** (stated so the numbers are read correctly):
+
+* Judged tasks use Gemini 4 Neon as judge, the leaderboard uses Claude Opus 5.5 (below). The task this write-up
+  studies is graded by plain code, so its scores are not affected.
+* Our machine is far larger (32 CPUs); it only decides how many trials run side by side.
+* The backend behind the real sponsored model endpoint is not documented; ours is Vertex AI in our own project.
+* We have only the 29 development tasks, not the hidden test set.
+
 **What we set up**
 
 * One VM (`ple-runner`, spot `n2-standard-32`, 250 GB, Docker + Harbor) in our own Google Cloud
