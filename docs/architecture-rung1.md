@@ -31,40 +31,49 @@ script with bash if it chooses to, nothing more.
 
 ## 1. Deployment: who runs where
 
+How to read the arrows: a **solid double-headed** arrow is a channel where a request goes one way and the
+answer comes back (the label names both). A **dotted** arrow is control or reading: "starts", "uses", "reads".
+The model proxy is the one on our VM for our own runs; in the real evaluation the evaluation server provides
+its own, with the same behaviour.
+
 ```mermaid
-flowchart LR
-  subgraph EV["Evaluator (Harbor)"]
-    H["Trial runner"]
-    G["Grader"]
-  end
-  subgraph TC["Task container, no network"]
-    FS["Task files and the seven drawing sheets"]
-    OUT["Deliverables, for example output/solution.py"]
-    SCR["Scratch notes, kept outside graded paths"]
-  end
-  subgraph SC["Serve container, our harness"]
-    SV["serve.py and taskbridge: WebSocket server"]
-    HA["harness.py: solve, configure, system note"]
-    RL["Relay: local HTTP bridge"]
-    PI["Pi agent process: the agent loop"]
-    EXT["task-tools.ts: read, write, edit, bash"]
-  end
-  subgraph MP["Model proxy, LiteLLM"]
-    CB["Callbacks: effort default, judge fallback, request log"]
+flowchart TB
+  subgraph VM["Run machine: one VM in our project"]
+    subgraph EV["Evaluator: Harbor and the grader"]
+      H["Trial runner"]
+      G["Grader"]
+    end
+    subgraph TC["Task container, no network"]
+      FS["Task files and the seven drawing sheets"]
+      OUT["Deliverables, for example output/solution.py"]
+      SCR["Scratch notes outside graded paths, new"]
+    end
+    subgraph SC["Serve container: our harness"]
+      subgraph PY["Python process: serve.py and harness.py"]
+        SV["taskbridge: WebSocket server and Session"]
+        HA["harness.py: solve, model config, system note"]
+        RL["Relay: local HTTP bridge"]
+      end
+      subgraph PN["Node process: Pi"]
+        PI["Pi agent loop"]
+        EXT["task-tools.ts: read, write, edit, bash"]
+      end
+    end
+    MP["Model proxy, LiteLLM: effort default, judge fallback, request log"]
   end
   VX["Vertex AI: Gemini models"]
-  H <-->|"WebSocket, protocol 1"| SV
-  SV --> HA
-  HA -->|"starts Pi, task text on stdin"| PI
-  HA --> RL
-  PI --> EXT
-  EXT -->|"HTTP: read_file, write_file, exec"| RL
-  RL -->|"actions via the session"| SV
-  H -->|"performs actions"| TC
-  PI -->|"model calls"| MP
-  MP --> VX
-  G -->|"reads deliverables"| OUT
-  G -->|"judge calls on rubric tasks"| MP
+  H <-->|"task, actions, results, done"| SV
+  SV <-->|"actions and results"| RL
+  RL <-->|"HTTP request and response"| EXT
+  EXT <-->|"tool call and tool result"| PI
+  H <-->|"performs an action, returns its result"| TC
+  PI <-->|"model request and reply"| MP
+  MP <-->|"API request and response"| VX
+  G <-->|"judge request and reply, rubric tasks"| MP
+  G -.->|"reads deliverables"| OUT
+  HA -.->|"starts, instruction on stdin; reads JSON events from stdout"| PI
+  HA -.->|"starts"| RL
+  HA -.->|"uses"| SV
 ```
 
 Pi never touches the task container directly: `task-tools.ts` replaces Pi's own four tools with versions
@@ -92,19 +101,27 @@ sequenceDiagram
     M-->>P: reply, a tool call or text, with usage
     opt the model calls a tool
       P->>X: read, write, edit or bash
-      X->>S: HTTP to the Relay
+      X->>S: HTTP request to the Relay
       S->>E: read_file, write_file or exec
       E->>T: perform the action
       T-->>E: result
       E-->>S: result
-      S-->>X: result
+      S-->>X: HTTP response
       X-->>P: tool result, text or image
     end
   end
   Note over P,M: the system note asks the model to review its work before finishing, using the same tools to re-read its scratch notes and deliverables
-  P-->>S: final reply
-  S->>E: done with the final message
-  E->>G: grade the deliverables
+  alt Pi finishes
+    P-->>S: final reply on stdout
+    S->>E: done with the final message
+  else the evaluator cancels at the time limit
+    E->>S: cancel
+    S->>P: stop
+    S->>E: done with the best summary so far
+  end
+  E->>G: grade
+  G->>T: read the deliverables
+  T-->>G: files
   G-->>E: score and the check reports
 ```
 
@@ -184,11 +201,12 @@ classDiagram
   Harness --> Run : parses Pi events
   Run --> RunLog : feeds
   PiProcess --> TaskTools : loads extension
-  TaskTools --> Relay : HTTP
-  Relay --> Session : forwards actions
-  PiProcess --> ModelProxy : model calls
+  TaskTools --> Relay : HTTP request, response comes back
+  Relay --> Session : action, result comes back
+  PiProcess ..> ModelProxy : model request and reply
   <<changed>> SystemNote
   <<changed>> ModelConfig
+  <<external>> ModelProxy
   <<new>> RunLog
 ```
 
