@@ -1,0 +1,251 @@
+{
+  "combined_score": 0.0,
+  "valid": 1.0,
+  "script_seconds": 1.8,
+  "recovery_confusion": {},
+  "semantics": {},
+  "violation_rate": 0.09740259740259741,
+  "clash_count": 38,
+  "routed_length": {
+    "total_mm": 401200.0,
+    "by_service": {
+      "cable_tray": 125200.0,
+      "busway": 124200.0,
+      "chw_pipe": 151800.0
+    },
+    "l_opt_mm": 260601.59999999998
+  },
+  "objective": null,
+  "gates": {
+    "gate_1_no_hard_clash": false,
+    "gate_2_connectivity": {
+      "passed": true,
+      "unserved_rows": {},
+      "disconnected": {},
+      "unreached_consumers": [],
+      "n_rows": 6,
+      "n_chw_consumers": 22,
+      "coverage": {
+        "A": {
+          "cable_tray": 0.989,
+          "busway": 0.989,
+          "chw_pipe": 1.0
+        },
+        "B": {
+          "cable_tray": 0.989,
+          "busway": 0.989,
+          "chw_pipe": 0.989
+        },
+        "C": {
+          "cable_tray": 1.0,
+          "busway": 1.0,
+          "chw_pipe": 1.0
+        },
+        "D": {
+          "cable_tray": 0.989,
+          "busway": 0.989,
+          "chw_pipe": 0.989
+        },
+        "E": {
+          "cable_tray": 1.0,
+          "busway": 1.0,
+          "chw_pipe": 1.0
+        },
+        "F": {
+          "cable_tray": 0.989,
+          "busway": 0.989,
+          "chw_pipe": 0.989
+        }
+      },
+      "reach_mm": 2500.0,
+      "min_coverage": 0.8,
+      "joint_tolerance_mm": 250.0
+    }
+  },
+  "secondary": {
+    "length_detail": {
+      "service_share_of_l_opt": {
+        "cable_tray": 0.4804,
+        "busway": 0.4766,
+        "chw_pipe": 0.5825
+      },
+      "over_length_pct": 53.951,
+      "total_mm": 401200.0,
+      "l_opt_mm": 260601.59999999998
+    },
+    "coverage_quality": {
+      "per_service": {
+        "cable_tray": {
+          "min": 0.989,
+          "mean": 0.9927
+        },
+        "busway": {
+          "min": 0.989,
+          "mean": 0.9927
+        },
+        "chw_pipe": {
+          "min": 0.989,
+          "mean": 0.9945
+        }
+      },
+      "rows_below_90pct": 0,
+      "n_rows": 6
+    },
+    "network_complexity": {
+      "segments_per_service": {
+        "cable_tray": 13,
+        "busway": 13,
+        "chw_pipe": 15
+      },
+      "components_per_service": {
+        "cable_tray": 1,
+        "busway": 1,
+        "chw_pipe": 1
+      },
+      "total_segments": 41
+    },
+    "clash_density": {
+      "clash_count": 38,
+      "per_100m_route": 9.4716
+    },
+    "violation_detail": {
+      "distinct_violating_rules": 2,
+      "worst_rule": "clear_height",
+      "worst_rule_count": 16,
+      "rule_counts": {
+        "clear_height": 16,
+        "tray_stack_headroom": 14
+      }
+    },
+    "extended": {
+      "achieved_clearances": {
+        "min_sprinkler_clearance_mm": {
+          "cable_tray": null,
+          "busway": null,
+          "chw_pipe": null
+        },
+        "min_pdu_chw_clearance_mm": null,
+        "min_tray_busway_separation_mm": 2856.5
+      },
+      "underfloor_overhead_split": {
+        "cable_tray": {
+          "under_floor_mm": 125200.0,
+          "overhead_mm": 0.0,
+          "total_mm": 125200.0
+        },
+        "busway": {
+          "under_floor_mm": 0.0,
+          "overhead_mm": 124200.0,
+          "total_mm": 124200.0
+        },
+        "chw_pipe": {
+          "under_floor_mm": 151800.0,
+          "overhead_mm": 0.0,
+          "total_mm": 151800.0
+        }
+      },
+      "elevation_bands": {
+        "cable_tray": {
+          "in_clear_height_band_mm": 0.0,
+          "above_band_mm": 0.0,
+          "under_floor_mm": 125200.0,
+          "fraction_in_band": 0.0
+        },
+        "busway": {
+          "in_clear_height_band_mm": 0.0,
+          "above_band_mm": 124200.0,
+          "under_floor_mm": 0.0,
+          "fraction_in_band": 0.0
+        },
+        "chw_pipe": {
+          "in_clear_height_band_mm": 0.0,
+          "above_band_mm": 0.0,
+          "under_floor_mm": 151800.0,
+          "fraction_in_band": 0.0
+        }
+      },
+      "support_and_drops": {
+        "drop_count": 0,
+        "support_count": 0,
+        "drops": [],
+        "supports": []
+      },
+      "reconciliation": {
+        "log_present": true,
+        "log": {
+          "project": "Meridian Data Center - Phase 1 - Data Hall 1 (hall_seed000_d000)",
+          "sheets_reconciled": [
+            "A-101",
+            "A-301",
+            "A-601",
+            "A-602",
+            "E-101",
+            "F-101",
+            "M-101"
+          ],
+          "notes": [
+            {
+              "sheet": "A-101",
+              "item": "Room footprint",
+              "value_mm": [
+                27000,
+                21000
+              ],
+              "applied": "Access floor 0..27000 x 0..21000"
+            },
+            {
+              "sheet": "A-101",
+              "item": "Cross aisle east edge",
+              "value_mm": 11200,
+              "applied": "Common east edge of CA for all 6 rows"
+            },
+            {
+              "sheet": "A-301",
+              "item": "Access floor panel",
+              "value_mm": 35,
+              "applied": "z = -35 to 0; plenum below to -900"
+            },
+            {
+              "sheet": "A-301",
+              "item": "Under-floor clearance",
+              "value_mm": 20,
+              "applied": "Tray top at -236.5 mm (201.5 mm below panel)"
+            },
+            {
+              "sheet": "A-301",
+              "item": "Minimum clear height",
+              "value_mm": 2600,
+              "applied": "Busway bottom at 2620 mm"
+            },
+            {
+              "sheet": "A-301/F-101",
+              "item": "Sprinkler standoff",
+              "value_mm": 460,
+              "applied": "Busway top at 2767 mm (807.6 mm below deflector)"
+            },
+            {
+              "sheet": "A-602/E-101",
+              "item": "Tray-busway separation",
+              "value_mm": 300,
+              "applied": "Busway overhead (2693.5), Tray under-floor (-300.0): 2856.5 mm clear"
+            },
+            {
+              "sheet": "E-101/M-101",
+              "item": "PDU dedicated space",
+              "value_mm": 1800,
+              "applied": "CHW routed under-floor (-650.0), zero piping above PDUs"
+            },
+            {
+              "sheet": "M-101",
+              "item": "CHW insulated OD",
+              "value_mm": 168.3,
+              "applied": "Modelled at full 168.3 mm OD for clash coordination"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "exec_status": "ERR_CLASH",
+  "reason": "ERR_CLASH"
+}

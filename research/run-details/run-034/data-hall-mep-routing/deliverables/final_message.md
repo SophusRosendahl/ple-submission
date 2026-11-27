@@ -1,0 +1,11 @@
+Delivered the coordinated IFC4 data-hall modelling and MEP routing script and reconciliation log:
+
+- **`output/solution.py`**: Self-contained Python script (using `ifcopenshell==0.8.4` and `numpy` only, no runtime image reading) that writes one IFC4 model in millimetre project units (with SI metre placement-matrix translations and 2D profile extrusions) to `sys.argv[1]` (default `output/model.ifc`), plus `output/reconciliation.json`.
+  - **Architectural & equipment background**: `27000 × 21000` mm access floor (`z = -35..0` mm), 6 full-height structural columns (`400 × 400` mm on grids A–C × 1–2, `z = 0..3600` mm), 128 server cabinets (`IfcFurniture`/`USERDEFINED`/`"Rack"`) across rows A–F with exact bay sequences and facings, 4 perimeter + 18 in-row CRAH units (`IfcUnitaryEquipment`), 6 PDUs (`IfcElectricDistributionBoard`) flush with their served row fronts, cold-aisle containment `CAC-BC` and `CAC-DE` (4 roof panels + 8 end doors), and 79 sprinkler heads (63 ceiling at `z = 3574.6` mm + 16 in-aisle at `z = 1890` mm), all with `Pset_DCM_*` property sets.
+  - **Clash-free, code-compliant MEP routing** from the `(0, 9900)` West-wall service entry:
+    - **Telecom cable tray (`CT-1`, `683 × 127` mm)**: Under-floor plenum at `z = -200` mm (`101.5` mm below the `-35` mm floor panel underside, `125.10` m total length), giving `2746.5` mm vertical separation from `BW-1` (≥ 300 mm required).
+    - **Power busway (`BW-1`, `128 × 147` mm)**: Overhead Tier 1 at `z = 2683.5` mm (`z = 2610..2757` mm, ≥ `2600` mm clear height, `126.60` m total length), offset `-450` mm from row centrelines to clear all structural columns.
+    - **Chilled-water pipe (`CHW-1`, insulated OD `168.3` mm)**: Overhead Tier 2 at `z = 2934.15` mm (`z = 2850..3018.3` mm, `93` mm above `BW-1` and `96.3` mm below the `3114.6` mm sprinkler standoff, `152.55` m total length), serving all 6 rows, all 18 in-row CRAHs, and all 4 perimeter CRAHs (`CRAH-01`–`CRAH-04`) while staying completely outside every PDU dedicated electrical space.
+- **`output/reconciliation.json`**: Drawing-note reconciliation log summarizing extracted dimensions, clearances, and applied pathway elevations.
+
+Verified via geometry/AABB clash checking and `py_compile`: 0 hard clashes (> 2 mm), 0 code violations, and valid Python syntax.

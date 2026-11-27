@@ -1,0 +1,30 @@
+{
+  "combined_score": 0.0,
+  "valid": 1.0,
+  "script_seconds": 1.7,
+  "recovery_confusion": {},
+  "semantics": {},
+  "violation_rate": null,
+  "clash_count": null,
+  "routed_length": {},
+  "objective": null,
+  "gates": {},
+  "secondary": {},
+  "exec_status": "ERR_VALIDATE",
+  "reason": "8 schema/EXPRESS violations, first: (sizeof(self.OfProductRepresentation) == 1) ^ (sizeof(self.RepresentationMap) == 1) ^ (sizeof(ofshapeaspect) == 1)\n\nViolated by:\n    ((6 == 1 ^ 0 == 1) ^ 0 == 1)\n     +  where 6 = sizeof((#38=IfcProdu"
+}{
+  "combined_score": 0.0,
+  "valid": 1.0,
+  "script_seconds": 1.7,
+  "recovery_confusion": {},
+  "semantics": {},
+  "violation_rate": null,
+  "clash_count": null,
+  "routed_length": {},
+  "objective": null,
+  "gates": {},
+  "secondary": {},
+  "exec_status": "ERR_VALIDATE",
+  "reason": "8 schema/EXPRESS violations, first: (sizeof(self.OfProductRepresentation) == 1) ^ (sizeof(self.RepresentationMap) == 1) ^ (sizeof(ofshapeaspect) == 1)\n\nViolated by:\n    ((6 == 1 ^ 0 == 1) ^ 0 == 1)\n     +  where 6 = sizeof((#38=IfcProdu"
+}
+evaluator exit: 0
