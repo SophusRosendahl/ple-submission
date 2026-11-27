@@ -69,7 +69,8 @@ UNKNOWN_MODEL = {"input": ["text", "image"], "contextWindow": 1000000, "maxToken
 NOTE = (
     "You are working on an engineering task. Everything the task provides is already in this conversation: the"
     " instruction, the text of every input file and every image. You have no tool to read the input files again,"
-    " so study them carefully now. Your tools write, edit and bash act on the task's Linux container, whose"
+    " so study them carefully now: they are given once, and a command that tries to open an input file again is"
+    " refused. Your tools write, edit and bash act on the task's Linux container, whose"
     " working directory is {workdir}; it has no internet access. Put every deliverable exactly where and in the"
     " format the instruction asks. Keep notes and partial results in /tmp/scratch, never in a deliverable folder."
     " Before you finish, review and consider your work: look at what you wrote, compare it with the instruction,"
@@ -185,11 +186,12 @@ class Run:
                   "output_tokens": 0, "reasoning_tokens": 0}
     self.tools = {}
     self.ran_deliverable = False
+    self.blocked = 0  # commands the input guard refused (the agent tried to open an input file again)
 
   async def finish(self) -> None:
     """Logs the per-task summaries the tracker reads."""
     await self.session.log("pi: CALLS " + json.dumps(self.calls))
-    await self.session.log("pi: TOOLS " + json.dumps({"counts": self.tools, "ran_deliverable": self.ran_deliverable}))
+    await self.session.log("pi: TOOLS " + json.dumps({"counts": self.tools, "ran_deliverable": self.ran_deliverable, "input_guard_refusals": self.blocked}))
 
   async def on_event(self, event: dict[str, Any]) -> None:
     """Processes a parsed JSON event from Pi, updating final message and usage.
@@ -233,6 +235,10 @@ class Run:
           output_tokens=u.get("output", 0),
           cache_read_tokens=u.get("cacheRead", 0),
       )
+    elif kind == "tool_execution_end":
+      if "INPUT_GUARD" in json.dumps(event.get("result"), default=str):
+        self.blocked += 1
+        await self.session.log("pi: input guard refused a command")
     elif kind == "tool_execution_start":
       name, args = event.get("toolName"), event.get("args") or {}
       self.tools[name] = self.tools.get(name, 0) + 1
@@ -299,7 +305,8 @@ async def solve(session: taskbridge.Session) -> str:
           configure, agent_dir, relay, session, env
       )
       # Rung 1: the files are fed as context (text in the prompt, images attached), not read by a tool.
-      text_block, image_args = await inputs.stage(session, work / "inputs")
+      text_block, image_args, guard = await inputs.stage(session, work / "inputs")
+      env["TASK_INPUT_GUARD"] = json.dumps(guard)
       prompt = session.instruction + "\n\n" + text_block
       argv = [
           PI,

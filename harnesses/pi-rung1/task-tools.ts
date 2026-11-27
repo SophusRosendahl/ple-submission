@@ -32,6 +32,22 @@ import path from 'node:path';
 const RELAY = process.env.TASK_RELAY_URL ?? "";
 const WORKDIR = process.env.TASK_WORKDIR ?? "/";
 const MAX_EXEC_SEC = 600;
+// Rung 1 feeds the input files once, as initial context; a command that names one of them again is refused.
+// The harness lists the file names and folders in TASK_INPUT_GUARD (a JSON array of substrings).
+const GUARD: string[] = (() => {
+	try {
+		const v = JSON.parse(process.env.TASK_INPUT_GUARD ?? "[]");
+		return Array.isArray(v) ? v.filter((x) => typeof x === "string" && x.length > 0) : [];
+	} catch {
+		return [];
+	}
+})();
+export function guardedBy(command: string, guard: string[]): string | undefined {
+	return guard.find((g) => command.includes(g));
+}
+const GUARD_MESSAGE =
+	"INPUT_GUARD: refused. The input files were given to you once, as the first message of this conversation, " +
+	"and cannot be opened again. Work from what you already have in context; your own files are still available.\n";
 const IMAGES: Record<string, string> = {
 	".png": "image/png",
 	".jpg": "image/jpeg",
@@ -175,6 +191,10 @@ export default function registerTaskTools(pi: ExtensionAPI) {
 			operations: {
 				exec: async (command, cwd, { onData, signal, timeout }) => {
 					if (signal?.aborted) throw new Error("aborted");
+					if (guardedBy(command, GUARD) !== undefined) {
+						onData(Buffer.from(GUARD_MESSAGE));
+						return { exitCode: 1 };
+					}
 					const limit = execLimit(timeout, MAX_EXEC_SEC);
 					const run = relay("exec", { command: `cd ${quote(cwd)} || exit 1\n${command}`, timeout_sec: limit });
 					// The relay cannot cancel an exec: an abort stops the wait, and the command runs on to its time limit.

@@ -342,3 +342,22 @@ Rung 0 instead tries a **low reasoning effort** (v5).
   containing `dc_model` or `mep`). They returned only the task's own `solution.py` stub; nothing from the grader
   was visible in the task container. Kept as a standing check: every rung 1 trajectory is scanned for reads
   outside the task folder and `/tmp`.
+
+## Input files are read once, as initial context (2026-11-27, user decision)
+
+- **What the Flash run did (run-017):** besides the initial context it re-opened the drawings through `bash` and
+  Python (it built `/tmp/A-601_clean.npy` from an input sheet and re-read details of it). That is a second way to
+  read the inputs, so rung 1 was not "files as context only".
+- **Rule:** in rung 1 the input files reach the model once, in the first message. **Input guard:** the harness
+  lists the input file names and folders (`pi: GUARD`), and `task-tools.ts` refuses any `bash` command that names
+  one (`INPUT_GUARD`, exit code 1, with a message). The agent's own files, including the deliverable stub in the
+  output folder, stay available. Refusals are counted (`pi: TOOLS ... input_guard_refusals`).
+- **Limits, stated plainly:** it is a string match on the command, so it stops the natural ways of re-reading (a
+  file name or an input path in a command) but not a determined workaround (for example a glob). We do not
+  touch the task container's files (moving or hiding inputs would be tampering with the evaluation container).
+  Text inputs longer than the per-file limit (60,000 characters) are cut in the context and cannot be re-read;
+  the drawings, which carry this task, are not affected. A task whose deliverable code must read the inputs when
+  it runs is unaffected: only the agent's commands are guarded, not the grader's run.
+- **Versions:** rung 1 v1 = no guard (run-017 Flash; Neon rerun in progress when this was decided); rung 1 v2 =
+  guard, both models. Verified locally against a mock endpoint: the model's `cat input/A-101.png` came back as
+  `INPUT_GUARD: refused`.

@@ -30,8 +30,29 @@ def input_roots(workdir: str) -> list[str]:
   return roots + [r for r in ("/filesystem", "/app/files") if r not in roots]
 
 
-async def stage(session: taskbridge.Session, folder: pathlib.Path) -> tuple[str, list[str]]:
-  """Returns (the text block for the prompt, the image paths to pass to Pi as @files)."""
+DELIVERABLE_DIRS = {"output", "outputs"}  # the agent must be able to open its own deliverables
+
+
+def guard_list(files: list[dict], workdir: str) -> list[str]:
+  """Substrings that identify the task's input files: names, folders, and the folder relative to workdir.
+
+  Files inside an output folder are not inputs (the agent edits its own deliverable stub there).
+  """
+  names, dirs = set(), set()
+  for f in files:
+    parts = pathlib.PurePosixPath(f["path"])
+    if DELIVERABLE_DIRS & set(parts.parent.parts):
+      continue
+    if len(parts.name) >= 4:
+      names.add(parts.name)
+    dirs.add(str(parts.parent))
+    if workdir not in ("", "/") and str(parts.parent).startswith(workdir.rstrip("/") + "/"):
+      dirs.add(str(parts.parent)[len(workdir.rstrip("/")) + 1:] + "/")
+  return sorted(names) + sorted(d for d in dirs if len(d) > 4)
+
+
+async def stage(session: taskbridge.Session, folder: pathlib.Path) -> tuple[str, list[str], list[str]]:
+  """Returns (the text block for the prompt, the image paths to pass to Pi as @files, the input guard list)."""
   folder.mkdir(parents=True, exist_ok=True)
   script, out = f"{REMOTE_DIR}/extract_inputs.py", f"{REMOTE_DIR}/inputs.json"
   try:
@@ -42,11 +63,11 @@ async def stage(session: taskbridge.Session, folder: pathlib.Path) -> tuple[str,
         timeout_sec=600)
     await session.log(f"pi: extractor exit {res.get('exit_code')}: {(res.get('output') or '')[-300:]}")
     if res.get("exit_code") != 0:
-      return "(The harness could not convert the project files to text.)", []
+      return "(The harness could not convert the project files to text.)", [], []
     data = json.loads(await session.read_file(out))
   except (taskbridge.TaskError, ValueError) as exc:
     await session.log(f"pi: input extraction failed: {type(exc).__name__}: {exc}")
-    return "(The harness could not convert the project files to text.)", []
+    return "(The harness could not convert the project files to text.)", [], []
   seen, files = set(), []
   for f in data["files"]:  # the roots overlap (workdir sits inside /app/files): each file was listed twice
     if f["path"] not in seen:
@@ -83,4 +104,6 @@ async def stage(session: taskbridge.Session, folder: pathlib.Path) -> tuple[str,
       parts.append(f"({f['note']})")
   for s in data.get("skipped", []):
     parts.append(f"\n--- {s['path']} --- ({s['note']})")
-  return "\n".join(parts), args
+  guard = guard_list(files, session.workdir)
+  await session.log("pi: GUARD " + json.dumps(guard))
+  return "\n".join(parts), args, guard
