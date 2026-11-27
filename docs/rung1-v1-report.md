@@ -24,6 +24,19 @@
 3. **Three things are constant across all five runs:** the 16 `clear_height` violations (items with their underside at 1,890 mm; by the models' own notes these are the in-aisle sprinkler heads hung under the containment roofs, which we have not confirmed item by item), the two rules that checked nothing, and a route length of 0.61 to 0.69 of the reference. They do not depend on model or rung, which fits the hidden naming-contract hypothesis for the first two (unproven).
 4. **More calls did not mean a better result here.** Flash needed 287 calls and 42.6 M prompt tokens, Neon 10 calls and 0.3 M, for the same outcome.
 
+## The models wrote their own checks, unprompted, and one was wrong
+
+We gave rung 1 tools and a note asking it to review its work. We did not ask for checks, and the harness has none. Both models wrote them anyway:
+
+| | Flash (run-017) | Neon (run-019) |
+|---|---|---|
+| commands run | 295 | 21 |
+| schema validation of its own model | 6 | 3 |
+| pairwise geometry clash checks | 10 | 2 |
+| of those, skipping same-service pairs | 4 | 2 |
+
+The validation was right (the grader's schema gate passed). The clash checks were wrong in scope: both skipped pairs from the same service, which is exactly where the grader found its 22 overlaps. Counts are keyword matches over the agents' commands; one run per model.
+
 ## How to improve from rung 1, ranked by what the evidence supports
 
 Each is one change for one rung, so its effect can be measured. Score gains are what the grader formula allows, not predictions.

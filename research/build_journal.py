@@ -32,7 +32,7 @@ Status: `todo` / `draft` / `done`. Update the table in `research/build_journal.p
 
 | # | Criterion (points) | What judges look for | What we have / still need | Status |
 |---|---|---|---|---|
-| 1 | **Insight & failure analysis** (25) | Something non-obvious; real dev-set failures; controlled ablations ("we added X, score went A to B"); ideas that failed | Near miss in section 5; lab log. Need: one-change-at-a-time ladder runs, failures read task by task, failed ideas written down | draft |
+| 1 | **Insight & failure analysis** (25) | Something non-obvious; real dev-set failures; controlled ablations ("we added X, score went A to B"); ideas that failed | Near miss in section 5; lab log; **rung 1: the model writes its own checks unprompted and gets one wrong (section 6a)**. Need: one-change-at-a-time ladder runs, repeats, failures read task by task, failed ideas written down | draft |
 | 2 | **Engineering reasoning** (25) | One concrete dev task walked through, our agent's trajectory against a licensed engineer's workflow: where it held up, where it took shortcuts, which domain skills separated pass from fail | Need: keep the full trajectory of each run (not just scores) and pick one task | todo |
 | 3 | **Cross-model generalizability** (15) | All 29 dev tasks with at least two models, ideally across families; which changes help every model, which only one; how model choice shifts accuracy and token cost; comparison table in the write-up; one target `google-cloud/<id>` committed in `submission.yaml` for Stage 2 | Rung 0 runs two models on half A only. Need: every rung on 2+ models, a final pass over all 29 (half B needs a stated reason), and the single target model chosen | todo |
 | 4 | **Efficiency & scaling** (20) | Dev score against compute budget (calls, tokens, runtime or parallel verification attempts); where accuracy plateaus; remaining headroom | The harness now counts model calls exactly (section 4); tracker stores tokens and seconds per task. Need: read the call counts into the tracker, a score-vs-budget chart per rung, and one budget knob to vary (for example verification attempts) | draft |
@@ -462,6 +462,38 @@ half A.
 
 Rung 1 is chosen after we have read rung 0's failures task by task."""),
 
+    md("""### 6a. Rung 1: the model starts writing its own checks, and gets one wrong
+
+**We never asked for self-checks. Rung 1 only gave the model tools and a note to review its work. Both models
+wrote their own checks anyway, and the check that mattered used the wrong definition.** (One run per model, task
+`data-hall-mep-routing`, rung 1 v1; keyword counts over the agents' commands.)
+
+| | Gemini 3.8 Flash (run-017) | Gemini 4 Neon (run-019) |
+|---|---|---|
+| commands the agent ran | 295 | 21 |
+| schema validation of its own model (`ifcopenshell.validate`) | 6 | 3 |
+| pairwise geometry clash checks | 10 | 2 |
+| of those, checks that skip pairs of the same service | 4 | 2 |
+| first clash check (step of its run) | 245 of 295 | 19 of 21 |
+
+What it got right: schema validation (the grader's schema gate passed in both runs), and Neon's first clash check
+found 8 overlaps in its own room rebuild, which the final model does not have (rung 0 had 2 to 10 such overlaps in
+every run).
+
+What it got wrong: both clash checks skipped same-service pairs, with a comment saying why (Neon: *they meet at
+tees/elbows*; Flash: *don't check elements of same service network*). The task defines a hard clash as one solid
+overlapping another by more than 2 mm **anywhere**, and the grader reports 22 same-service overlaps in both runs,
+the only gate that failed. The check agreed with the model's belief, not with the task.
+
+**Why this matters for the write-up.**
+1. **The behaviour is real and appears with the loop, not before.** Rung 0 (one call, no tools) had no chance to
+   check anything; with tools both models started verifying their output without being told.
+2. **A self-check is only as good as the definition it encodes.** A check built from the model's own reading of
+   the requirement can pass while the requirement fails. More checking is not enough; the check has to come from
+   the requirement as written.
+3. **It motivates the next rung** (structured self-check against the task's own words) with a failure we
+   observed, rather than a guess. Whether it works is for the next measurement; one run per model so far."""),
+
     md("""## Lab log
 
 Dated, honest notes, including what went wrong. Newest last.
@@ -524,6 +556,7 @@ Dated, honest notes, including what went wrong. Newest last.
   connectivity gates and failed the clash gate (30 clashes). Score 0.0 each, for reasons a run-and-check
   loop would catch. Lowering the effort cut Neon's output from 65,536 hidden-thinking tokens to 25,954.
 * **2026-11-27.** Rung 0 v5 repeated three times (run-011 to run-016): all six scored 0.0; with run-009/010, eight observations. Three deliveries (all Flash) failed when the grader ran the script (wrong ifcopenshell arguments, an attribute that does not exist), two were invalid IFC, three had clashes. **The agent did not crash: it finished and delivered a file that does not run.** Trying the file is the first thing an agent must do; the harness must do it too (design-decisions, 'Run the deliverable').
+* **2026-11-27.** Rung 1 v1, run-017 (Flash, 287 calls) and run-019 (Neon, 10 calls): both deliver a script that runs and a valid model; both fail the clash gate on the same 22 same-service overlaps. **Both models wrote their own checks unprompted, and both clash checks skipped same-service pairs** (section 6a). Input re-reads by Flash: 10 commands (baseline for the input guard); the v2 job was cancelled when the 20-call budget was decided; v3 runs.
 * **2026-11-26.** Looked at the grader's checks one by one (`research/check_table.py`). Neon at low effort:
   schema and connectivity pass; 30 clashes (22 are consecutive segments of the same service overlapping at
   their joints, 8 are the model's own background); 16 sprinkler heads at 1,890 mm (needs 2,600) and 8

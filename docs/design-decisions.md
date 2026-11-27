@@ -411,3 +411,16 @@ Rung 0 instead tries a **low reasoning effort** (v5).
   **cancelled** after 16 minutes when the budget was decided, never recorded; v3 = input guard + 20-call budget.
 - **Why 20 is also a finding:** the efficiency criterion asks for score against calls; a capped run shows what the
   loop can do inside a fixed budget, and a task that is not finished in 20 calls is itself a result.
+
+## Finding to write up: the model writes its own checks, unprompted, and one is wrong (2026-11-27, user observation)
+
+- **Observed:** in rung 1 v1 both models verified their output with checks they wrote themselves, although the
+  harness asks only for a review in the system note and offers no check. Flash: 6 schema validations, 10 pairwise
+  geometry clash checks (first at step 245 of 295). Neon: 3 validations, 2 clash checks (the first at step 19 of 21).
+  Counts are keyword matches over the commands (`ifcopenshell.validate`; `clash` with `bbox`/`geom`/`overlap`).
+- **Right:** schema validation (gate 0 passed in both); Neon's first clash check found 8 overlaps in its room rebuild
+  and the final model has none.
+- **Wrong:** the clash checks skip same-service pairs (4 of Flash's 10, both of Neon's), contradicting the task's
+  "overlapping another by > 2 mm anywhere"; the grader found 22 same-service overlaps in each run.
+- **Use in the write-up:** insight and failure analysis (criterion 1). Journal section 6a; the report page
+  (`docs/rung1-v1-report.md`). Caveat to state there: one run per model, keyword counts, no repeats yet.
