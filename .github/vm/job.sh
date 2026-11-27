@@ -1,16 +1,10 @@
 # stop: idle
-# pull: research/runner-limits.txt
-# Read-only. (1) What do the organizers' docs say about the sponsored model endpoints (Vertex AI or Gemini API)?
-# (2) Does the runner (kit/ and eval/run.py) already cap each container to 2 CPUs and 4 GB? Only docs and runner settings are searched.
+# pull: research/runs.jsonl research/run-details
+# Environment audit: what can a model see and reach inside the task container? Read-only listing, no model calls
+# (harnesses/audit). Recorded as a diagnostic run, not a measurement.
 cd ~/ple-submission && git log -1 --oneline
-P=$(ls -d ~/ple /home/*/ple 2>/dev/null | head -1)
-{
-  echo "== docs and README: lines on Vertex / Gemini API / AI Studio / endpoint / proxy"
-  grep -n -i -H "vertex\|gemini api\|ai studio\|generativelanguage\|endpoint\|litellm\|sponsored" "$P"/docs/models.md "$P"/docs/local-models.md "$P"/docs/rules.md "$P"/README.md 2>/dev/null | cut -c1-280 | head -60
-  echo; echo "== runner (kit/*.py, kit/model_proxy files, eval/run.py): cpu / memory / pids settings"
-  grep -n -i -H "cpus\|nano_cpus\|mem_limit\|memory\|pids" "$P"/kit/*.py "$P"/eval/run.py 2>/dev/null | cut -c1-240 | head -40
-  echo; echo "== kit/model_proxy: model entries and backends (file names, first lines naming vertex or gemini)"
-  ls "$P"/kit/model_proxy 2>/dev/null | head -20
-  grep -n -i -H "vertex_ai\|gemini/\|api_base\|litellm_params" "$P"/kit/model_proxy/*.yaml "$P"/kit/model_proxy/*.yml 2>/dev/null | cut -c1-200 | head -20
-} > research/runner-limits.txt 2>&1
-cut -c1-200 research/runner-limits.txt | head -60
+MODELS=gemini-3.8-flash TASKS=data-hall-mep-routing EFFORT=low bash infra/gcp-vm/audit.sh 2>&1 | tr '\r' '\n' | grep -v '^Fetching' | tail -12 | cut -c1-200
+IDS=$(python3 -c "
+import json
+print(' '.join(r['run_id'] for r in map(json.loads, open('research/runs.jsonl')) if r['label'].startswith('environment audit')))")
+echo "audit runs: $IDS"; [ -n "$IDS" ] && python3 research/collect_details.py $IDS
