@@ -74,8 +74,13 @@ def rows(run_id, task="data-hall-mep-routing"):
     out.append(("Gate 2: connectivity / row coverage", "pass" if g2.get("passed") else "FAIL", detail))
     for name, r in (report.get("violations_by_rule") or {}).items():
         sample = (r.get("violations") or [{}])[0].get("detail", "")
-        out.append((f"Rule: {name} ({r.get('threshold')})", "pass" if not r.get("n_violations") else "FAIL",
-                    f"{r.get('n_violations')} of {r.get('n_checkable')} checked" + (f"; e.g. {sample[:110]}" if sample else "")))
+        n_chk, n_bad = r.get("n_checkable") or 0, r.get("n_violations") or 0
+        if n_chk == 0:   # the rule found nothing in the model to apply to: it passes by default, which proves nothing
+            out.append((f"Rule: {name} ({r.get('threshold')})", "n/a",
+                        "nothing to check in this model, so it passes by default (not evidence of compliance)"))
+            continue
+        out.append((f"Rule: {name} ({r.get('threshold')})", "pass" if not n_bad else "FAIL",
+                    f"{n_bad} violations in {n_chk} items checked" + (f"; e.g. {sample[:110]}" if sample else "")))
     rl = metrics.get("routed_length") or {}
     if rl.get("l_opt_mm"):
         out.append(("Efficiency: route length vs reference", "info", f"{rl['total_mm'] / 1000:.1f} m against {rl['l_opt_mm'] / 1000:.1f} m (factor {min(1, rl['l_opt_mm'] / rl['total_mm']):.3f})"))
