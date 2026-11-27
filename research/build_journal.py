@@ -315,12 +315,13 @@ for rid in ("run-004", "run-009", "run-010"):
   1,890 mm above the floor where 2,600 mm is needed (an elevation misread), and 8 cable-tray runs leave
   only 166 mm of access underneath where 300 mm is needed.
 * **Efficiency:** the route is 402 m against a 261 m reference (factor 0.648, 54 % too long).
-* **Two rules checked nothing and pass by default** (`wide_obstruction_needs_sprinkler`,
-  `tray_below_tile`: 0 items checked, in this run and in the blind one). The grader only checks what is in
-  the submitted model, so a rule whose trigger is absent passes without testing anything. These two passes
-  are not evidence of compliance. (Run-010's cable tray ran entirely under the floor, yet `tray_below_tile`
-  checked nothing, which hints that the access floor was not modelled the way the rule looks for it. We cannot
-  confirm that without opening the grader's own files, which the fair-play rules rule out.)
+* **Two rules checked nothing, and count as NOT PASSED** (`wide_obstruction_needs_sprinkler`,
+  `tray_below_tile`: 0 items checked, in this run and in the blind one). The grader lets a rule through when
+  the submitted model has nothing it applies to, but a compliance check that tested nothing does not show
+  compliance, so we count it as not passed. Run-010's tally is **6 of 11 passed, 3 failed, 2 not passed**.
+  (Run-010's cable tray ran entirely under the floor and its script says the tray clears the floor panel
+  "by 88 mm, more than the 20 mm required", yet `tray_below_tile` checked nothing. The script models the
+  access floor as one hall-wide slab, not as 600 mm tiles, which may be why the rule found no tile.)
 * **If every gate had passed, the score would have been 0.593** (compliance 0.915 x efficiency 0.648).
   That is the real distance to a usable answer.
 

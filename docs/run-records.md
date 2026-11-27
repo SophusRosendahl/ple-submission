@@ -19,7 +19,7 @@ reconstruct *what went wrong, task by task, check by check*. Four layers; nothin
   input, output and reasoning tokens.
 * `CHECK {...}`: **one per self-check the harness runs on its own work**, as it runs it:
   `{"name": str, "kind": "self-check", "passed": bool, "detail": str, "step": int, "t": float}`.
-  A check that is skipped or errors is logged too (`passed: null`). Harnesses from rung 1 on
+  A check that is skipped, errors, or found nothing to check is logged too (`passed: null`) and counts as **not passed**. Harnesses from rung 1 on
   must log every check through this line, including the ones that pass and the fixes that follow
   a failure (`"action": "fixed" | "ignored"`), so we can compare self-checks with the grader's.
 

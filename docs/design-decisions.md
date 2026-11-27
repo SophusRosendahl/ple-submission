@@ -238,3 +238,15 @@ Rung 0 instead tries a **low reasoning effort** (v5).
 - **Reasoning effort is now a recorded, switchable setting** (`run_dev.py --effort`), so it can be varied as an
   ablation (low / medium / high) rather than left at the proxy's default.
 
+## A check that tested nothing is not a pass (2026-11-26, user decision)
+
+- The grader reports some compliance rules with "0 items checked" (the submitted model had nothing the rule
+  applies to) and lets them through. **We count those as NOT PASSED**: no evidence of compliance. Tables and
+  tallies (`research/check_table.py`) show `NOT PASSED`, and the tally reads "N of M passed, F failed, U not
+  passed". Run-010: 6 of 11 passed, 3 failed, 2 not passed.
+- **The same rule applies to our own harness's self-checks** (rung 1 on): a self-check that found nothing to
+  check, skipped, or errored is logged as `passed: null` and is treated as not passed, never as a pass. A
+  check must prove it looked at something.
+- Why it matters: the grader only checks what is in the submitted model, so leaving elements out (or modelling
+  them in a form the grader does not recognise) hides violations. An empty check is a warning sign, not good news.
+

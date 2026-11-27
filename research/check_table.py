@@ -76,8 +76,9 @@ def rows(run_id, task="data-hall-mep-routing"):
         sample = (r.get("violations") or [{}])[0].get("detail", "")
         n_chk, n_bad = r.get("n_checkable") or 0, r.get("n_violations") or 0
         if n_chk == 0:   # the rule found nothing in the model to apply to: it passes by default, which proves nothing
-            out.append((f"Rule: {name} ({r.get('threshold')})", "n/a",
-                        "nothing to check in this model, so it passes by default (not evidence of compliance)"))
+            out.append((f"Rule: {name} ({r.get('threshold')})", "NOT PASSED",
+                        "nothing was checked: the model has nothing this rule applies to. The grader lets it through, "
+                        "but compliance is not shown, so it counts as not passed"))
             continue
         out.append((f"Rule: {name} ({r.get('threshold')})", "pass" if not n_bad else "FAIL",
                     f"{n_bad} violations in {n_chk} items checked" + (f"; e.g. {sample[:110]}" if sample else "")))
@@ -92,6 +93,13 @@ def table(run_id, task="data-hall-mep-routing"):
     lines = [f"**{run_id}** · score {metrics.get('combined_score')} · exec_status {metrics.get('exec_status')}", "",
              "| Check | Result | Detail |", "|---|---|---|"]
     lines += [f"| {c} | {s} | {d} |" for c, s, d in out]
+    counted = [(c, st) for c, st, _ in out if c.startswith(("Gate", "Rule"))]
+    n_pass = sum(1 for _, st in counted if st == "pass")
+    n_fail = sum(1 for _, st in counted if st == "FAIL")
+    n_untested = sum(1 for _, st in counted if st == "NOT PASSED")
+    lines.append("")
+    lines.append(f"**Compliance tally: {n_pass} of {len(counted)} passed, {n_fail} failed, {n_untested} not passed (nothing was checked).** "
+                 "A check that tested nothing does not show compliance.")
     vr, rl = metrics.get("violation_rate"), metrics.get("routed_length") or {}
     if vr is not None and rl.get("l_opt_mm"):
         compliance, eff = 1 - vr, min(1, rl["l_opt_mm"] / rl["total_mm"])
