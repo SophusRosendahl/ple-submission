@@ -369,6 +369,42 @@ for those; and the first capability to add is *seeing the inputs*, before any ru
 loop. (Our first note here said the missing piece was a run-and-check loop; reading the
 trajectory showed that was premature, and it is kept in the lab log as a correction.)"""),
 
+    md("""### Rung 0 findings (run-009 to run-016: 8 observations, 4 per model, one task)
+
+**Headline: a single call never produced a model that passes the gates. All 8 observations scored 0.0, and
+four different things stopped them.** One task (`data-hall-mep-routing`), one call, files and the seven drawing
+sheets attached, reasoning effort low, judge Gemini 4 Neon. Each run is one trial; the label says repeat n.
+
+| Model | Calls | Input tokens | Output tokens | Time | What the grader found, per observation |
+|---|---|---|---|---|---|
+| Gemini 3.8 Flash | 1 | 10,043 | 11,404 to 13,809 | about 1.3 min | script failed to run (3), clash gate failed (1) |
+| Gemini 4 Neon | 1 | 10,076 | 25,066 to 50,422 | 3.6 to 5.2 min | clash gate failed (2), invalid IFC (2) |
+
+**What the failures are**
+
+1. **The delivered script does not run (3 of 8, all Flash).** The agent did not crash: it finished and
+   delivered `output/solution.py`, and the grader's run of that file failed within one second on a wrong
+   ifcopenshell call: `pset.edit_pset(product=...)` (no such argument), `aggregate.assign_object(product=...)`
+   (the argument is `products`), and `col_shape.Representations[0]` (no such attribute). For two of these,
+   ifcopenshell's own message prints the correct signature: one run of the script would have shown it.
+2. **The script runs but writes an invalid IFC file (2 of 8, both Neon).** The grader reports 7 to 8 schema
+   violations (for example 6 shape representations where exactly 1 is allowed).
+3. **Valid model, clash gate fails (3 of 8).** Only here do the compliance rules run. Two of the rules checked
+   nothing in any of these runs (`wide_obstruction_needs_sprinkler`, `tray_below_tile`), so we count them not
+   passed. Of the rules that did run, `clear_height` and `tray_stack_headroom` failed every time. Had the gates
+   passed, the two runs we read would have scored 0.538 (Flash) and 0.612 (Neon), mostly route length:
+   425 m and 389 m against 261 m.
+4. **Nothing in the run can tell the model any of this.** One call has no way to execute what it wrote.
+
+**Reading it.** The weak point is not understanding the task: a model that gets through the gates scores about
+0.5 to 0.6 before any rule fix. It is that the deliverable is a program the model wrote blind. Cost is small and
+exact: one call, about 10,000 input tokens, 11,000 to 50,000 output tokens. Effort at low cut Neon's output from
+65,536 tokens (all spent thinking) to about 25,000.
+
+**What we deliberately did not do.** We did not add a run-and-check step to rung 0; that would no longer be a
+single call. Running the delivered file, and validating the model it writes with ifcopenshell, are recorded as
+requirements for a later rung (design-decisions: Run the deliverable). Rung 1 does not include them."""),
+
     md("""## 5. A reference point, and what it taught us
 
 ### The official template on half A
@@ -421,7 +457,7 @@ half A.
 | Rung | Harness | Question it answers |
 |---|---|---|
 | 0 | **one model call**: files pasted in as plain text, deliverables written from the reply | how far does one careful read of the project get? |
-| 1 | a tool loop: read files, run commands, write files | how much does access to the project add? |
+| 1 | Pi agent loop; files fed as context (not read by tool); write, edit, bash; a review-your-work instruction; no structured checks, no ifcopenshell | how much does a loop that can look at its own work add? |
 | ... | each next capability is chosen from what rung *n* got wrong | |
 
 Rung 1 is chosen after we have read rung 0's failures task by task."""),
@@ -487,7 +523,7 @@ Dated, honest notes, including what went wrong. Newest last.
   wrote a script. Flash's delivered script failed when the grader ran it (a wrong ifcopenshell argument); Neon's ran, passed the schema and
   connectivity gates and failed the clash gate (30 clashes). Score 0.0 each, for reasons a run-and-check
   loop would catch. Lowering the effort cut Neon's output from 65,536 hidden-thinking tokens to 25,954.
-* **2026-11-27.** Rung 0 v5 repeated three times (run-011 to run-016): all six scored 0.0; with run-009/010, eight observations. Four deliveries (all Flash but one) failed when the grader ran the script (wrong ifcopenshell arguments, an attribute that does not exist), two were invalid IFC, three had clashes. **The agent did not crash: it finished and delivered a file that does not run.** Trying the file is the first thing an agent must do; the harness must do it too (design-decisions, 'Run the deliverable').
+* **2026-11-27.** Rung 0 v5 repeated three times (run-011 to run-016): all six scored 0.0; with run-009/010, eight observations. Three deliveries (all Flash) failed when the grader ran the script (wrong ifcopenshell arguments, an attribute that does not exist), two were invalid IFC, three had clashes. **The agent did not crash: it finished and delivered a file that does not run.** Trying the file is the first thing an agent must do; the harness must do it too (design-decisions, 'Run the deliverable').
 * **2026-11-26.** Looked at the grader's checks one by one (`research/check_table.py`). Neon at low effort:
   schema and connectivity pass; 30 clashes (22 are consecutive segments of the same service overlapping at
   their joints, 8 are the model's own background); 16 sprinkler heads at 1,890 mm (needs 2,600) and 8

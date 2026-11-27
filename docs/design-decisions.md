@@ -268,9 +268,9 @@ Rung 0 instead tries a **low reasoning effort** (v5).
 
 ## Run the deliverable (2026-11-27, user decision)
 
-- **What happened:** in 8 rung-0 v5 observations (run-009 to run-016) four deliveries were scripts that failed when
-  the grader ran them (wrong ifcopenshell arguments, a non-existent attribute), each within 1 second; two more
-  wrote invalid IFC and three had clashes. **The agent did not crash.** It finished, sent `done`, and delivered a
+- **What happened:** in 8 rung-0 v5 observations (run-009 to run-016) three deliveries (all Flash) were scripts that failed when
+  the grader ran them (wrong ifcopenshell arguments, a non-existent attribute), each within 1 second; two
+  wrote invalid IFC (both Neon) and three had clashes. **The agent did not crash.** It finished, sent `done`, and delivered a
   file that does not work. The process that failed was the grader running `output/solution.py`.
 - **Requirement:** trying to run the delivered file is the first thing an agent must do, and **the harness must do
   it too**: execute the deliverable in the task container and see whether it runs and writes the model, before
@@ -285,7 +285,7 @@ Rung 0 instead tries a **low reasoning effort** (v5).
 
 - After the harness runs `solution.py`, it opens the model the script wrote with ifcopenshell and validates it
   against the IFC schema. This is the public library's own check, not the grader's code, so it is allowed.
-- **What it would have caught:** the 2 `ERR_VALIDATE` observations (invalid IFC) and the 4 `ERR_EXEC` ones (the
+- **What it would have caught:** the 2 `ERR_VALIDATE` observations (invalid IFC) and the 3 `ERR_EXEC` ones (the
   script fails at the run step). **What it cannot catch:** clashes, rule violations, efficiency, and the hidden
   naming contract; those need other checks.
 - **Where it runs:** in the task container if ifcopenshell is there (to verify), else in the serve container with
@@ -303,3 +303,13 @@ Rung 0 instead tries a **low reasoning effort** (v5).
   can run `solution.py` where the inputs are, with the grader's library version.
 - **Fair play:** public library, no grader files read: allowed.
 - **Open check (not run):** `python -c "import ifcopenshell"` and its version in the task image, one read-only VM job.
+
+## Rung 1 definition (2026-11-27, user decision)
+
+- **Pi agent loop. The input files are fed as context** (option A: pre-attached text and drawing images, as in
+  rung 0); the agent does not read inputs with a tool. It can write and read its own work (scratch and
+  deliverables), edit, and use `bash`; it is asked to review and consider its work. **No structured checks,
+  and no ifcopenshell checks from us** (the 'Run the deliverable' and ifcopenshell validation ideas wait for a
+  later rung). Reasoning effort low, as rung 0 v5.
+- **What we log:** every tool call, whether the agent ran `solution.py` on its own, calls and tokens from the
+  proxy request log.
