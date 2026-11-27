@@ -16,8 +16,8 @@ import tracker
 
 # whether the agent could run ifcopenshell in that version (rung 0 has no tools at all)
 IFC_ALLOWED = {"rung 0 v5": "no tools", "rung 1 v1": "yes", "rung 1 v3": "yes", "rung 2 v1": "yes",
-               "rung 1 v4": "no (blocked)", "rung 2 v2": "no (blocked)"}
-ORDER = ["rung 0 v5", "rung 1 v1", "rung 1 v3", "rung 2 v1", "rung 1 v4", "rung 2 v2"]
+               "rung 1 v4": "no (blocked)", "rung 2 v2": "no (blocked)", "rung 2 v3": "no (blocked)"}
+ORDER = ["rung 0 v5", "rung 1 v1", "rung 1 v3", "rung 2 v1", "rung 1 v4", "rung 2 v2", "rung 2 v3"]
 
 
 def rows(model):

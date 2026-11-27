@@ -746,3 +746,9 @@ unprompted checks were generic sweeps over all solids and found the roof-and-doo
 pieces (run-028 reported them as a separate category, run-032 swept the real built solids through a stand-in for ifcopenshell). Both rungs test the plan, not the
 built solids, because ifcopenshell is blocked. Rung 2's better validity (0 of 6 invalid, against 2 of 6) fits invalid scripts reusing one shape representation
 across products; hypothesis only.
+
+## Rung 2 v3: one sentence to test why the clash checks were narrow (2026-11-27, user decision)
+
+- **Question** (from `docs/why-rung2-struggles.md`): did rung 2's wording ("define a check for each requirement") cause clash checks scoped to the agent's design, or is leaving same-service pieces out the model's own prior?
+- **Change, v2 to v3, nothing else:** one sentence in step 3: *where a requirement is about every item or every pair of items (for example that no two items overlap, or that every item meets a limit), write that check as one sweep over every item or every pair, with nothing excluded; if you leave anything out, say what and why in the check's own output.* The example is deliberately generic, not the task's own wording ("anywhere"), so this tests the principle, not a hint about this task.
+- **How to read the result** (six runs, Neon, ifcopenshell blocked, compared with the six of v2): same-service pieces now compared in the checks and the clash gate cleared more often = the wording was a cause; the checks still skip same-service pairs, or say they are left out because they are joints = the exclusion is the model's prior, and a different lever is needed (a check against the built solids, or an example of the failure). Read each run's `checks.py` (logged) for the scope, not only the grade.
