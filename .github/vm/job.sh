@@ -1,38 +1,19 @@
-# stop: yes
-# Round 2: the other five sheets (task INPUTS, never the grader's tests/): where is the IFC class / property-set contract?
-up() { curl -s -o /dev/null -m 5 http://172.17.0.1:4000/health/liveliness; }
-if ! up; then
-  VERTEXAI_PROJECT=ple-submission bash infra/local/start_proxy.sh >/dev/null 2>&1
-  for i in $(seq 40); do up && break; sleep 5; done
+# stop: idle
+# pull: research/runs.jsonl research/run-details
+# Rung 0 v5 repeated 3 times (more observations of the same setup): one task, both models, single call, images attached, effort low.
+cd ~/ple-submission && git log -1 --oneline
+if tmux has-session -t rung0 2>/dev/null; then echo "rung0 already running: waiting for it"; else
+  tmux new -d -s rung0 "for REP in 1 2 3; do TASKS=data-hall-mep-routing EFFORT=low REP=\$REP bash ~/ple-submission/infra/gcp-vm/rung0.sh; done 2>&1 | tee ~/rung0.log"
 fi
-python3 - <<'PY'
-import base64, glob, json, os, urllib.request, urllib.error
-env = dict(l.split("=", 1) for l in open(os.path.expanduser("~/ple/local.env")).read().splitlines() if "=" in l)
-url, key = env["MODEL_PROXY_URL"].rstrip("/"), env["MODEL_PROXY_KEY"]
-root = os.path.expanduser("~/.cache/plebench/tasks")
-def sheet(name):
-    hits = [p for p in glob.glob(f"{root}/**/{name}", recursive=True) if "data-hall-mep-routing" in p and "/tests/" not in p and "evaluator" not in p]
-    return hits[0] if hits else None
-QUESTION = ("This is a sheet from a data-hall drawing set. Transcribe VERBATIM and completely every note, legend, table or callout on it "
-            "that concerns any of: (1) an IFC class, ObjectType, PredefinedType, property-set name or property name/value required or named for ANY element "
-            "(racks, CRAH, PDU, columns, sprinkler heads, containment roof or door, access floor or floor tiles, cable tray, busway, pipe); "
-            "(2) the access floor or floor tiles (size, thickness, whether tiles are separate elements); "
-            "(3) sprinkler heads under the containment roof or any wide obstruction (the head line); "
-            "(4) any modelling contract, naming or tagging rule. Quote exactly, keep numbers and units, and write 'none on this sheet' for an item with nothing. No commentary.")
-for name in ("A-601.png", "F-101.png", "A-301.png", "M-101.png", "E-101.png"):
-    p = sheet(name)
-    print(f"\n=================== {name}: {p}")
-    if not p: continue
-    b64 = base64.b64encode(open(p, "rb").read()).decode()
-    body = {"model": "gemini-4-neon", "reasoning_effort": "low", "max_completion_tokens": 30000,
-            "messages": [{"role": "user", "content": [{"type": "text", "text": QUESTION},
-                                                       {"type": "image_url", "image_url": {"url": "data:image/png;base64," + b64}}]}]}
-    req = urllib.request.Request(url + "/v1/chat/completions", data=json.dumps(body).encode(),
-                                 headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=900) as r:
-            d = json.loads(r.read()); print(d["choices"][0]["message"].get("content") or "(empty)")
-    except urllib.error.HTTPError as e:
-        print("HTTP", e.code, e.read().decode(errors="replace")[:400])
-PY
+sleep 30
+for i in $(seq 280); do tmux has-session -t rung0 2>/dev/null || break; sleep 15; done
+if tmux has-session -t rung0 2>/dev/null; then echo "STILL RUNNING after 70 min: left running, VM stays on"; tr '\r' '\n' < ~/rung0.log | grep -v '^Fetching' | tail -6 | cut -c1-200; exit 0; fi
+echo "runs ended"
+IDS=$(python3 -c "
+import json
+print(' '.join(r['run_id'] for r in map(json.loads, open('research/runs.jsonl')) if 'repeat' in r['label']))")
+echo "repeat runs: $IDS"; python3 research/collect_details.py $IDS
+N=$(gcloud projects describe ple-submission --format='value(projectNumber)' 2>/dev/null | tail -1); B="gs://ple-runs-$N"
+gcloud storage rsync --recursive runs "$B/runs" 2>&1 | tail -1
+gcloud storage cp ~/ple-proxy-requests.jsonl "$B/ple-proxy-requests.jsonl" 2>&1 | tail -1
 true
