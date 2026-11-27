@@ -695,3 +695,13 @@ Full write-up: `docs/rung1v4-rung2v2-report.md` and the report page. In short, o
 - **No batching** in any of the four runs although rung 2 v2's note asks for it: 0 of 180 agent steps held more than one tool call.
 - The block held: 0 refusals for Neon, 1 and 2 for Flash.
 - **Caveat:** n = 1 per cell. The pass could be luck; the repeats decide. Do not describe rung 1 as better than rung 2 from this.
+
+## Neon only for now (2026-11-27, user decision)
+
+- **Decision:** continue with Gemini 4 Neon alone. Flash delivered nothing in rung 1 v4 and rung 2 v2 (both budget-limited, mostly
+  exploration and reading) and scored 0 in every rung it ran, so it is parked as probably a poor fit for this task; it stays in the
+  record (runs 001 to 027) and in the write-up as the cross-model observation made so far.
+- **Not forgotten:** the competition's cross-model criterion asks for at least two models on all 29 development tasks and a single
+  committed `google-cloud/<id>`. That is a later step: choose the second model then (not necessarily Flash).
+- **Next run:** five repeats each of rung 1 v4 and rung 2 v2 on Neon (labels end `repeat 1` to `repeat 5`), on top of run-028 and
+  run-029, to measure how often a run passes and to compare the two rungs on more than one observation each. About 1 USD per run.

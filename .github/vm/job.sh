@@ -1,22 +1,21 @@
 # stop: idle
 # pull: research/runs.jsonl research/run-details
-# Rung 1 v4 (v3 + ifcopenshell unavailable to the agent) and rung 2 v2 (v1 + ifcopenshell unavailable + batching + scratch logging),
-# both models, one task, effort low. Two tmux sessions in parallel, each with its own process group.
+# Neon only: five repeats each of rung 1 v4 and rung 2 v2 (ifcopenshell not available to the agent), one task, effort low.
+# Each rung runs its repeats one after the other in its own tmux session; the two rungs run side by side.
 cd ~/ple-submission && git log -1 --oneline
 for R in 1 2; do
   if tmux has-session -t rung$R 2>/dev/null; then echo "rung$R already running"; else
-    tmux new -d -s rung$R "TASKS=data-hall-mep-routing EFFORT=low bash ~/ple-submission/infra/gcp-vm/rung$R.sh 2>&1 | tee ~/rung$R.log"
+    tmux new -d -s rung$R "for REP in 1 2 3 4 5; do MODELS=gemini-4-neon TASKS=data-hall-mep-routing EFFORT=low REP=\$REP bash ~/ple-submission/infra/gcp-vm/rung$R.sh; done 2>&1 | tee ~/rung$R-repeats.log"
   fi
 done
 sleep 30
-for i in $(seq 280); do tmux has-session -t rung1 2>/dev/null || tmux has-session -t rung2 2>/dev/null || break; sleep 15; done
-if tmux has-session -t rung1 2>/dev/null || tmux has-session -t rung2 2>/dev/null; then echo "STILL RUNNING after 70 min: left running, VM stays on"; exit 0; fi
-for R in 1 2; do echo "== rung$R log"; tr '\r' '\n' < ~/rung$R.log | grep -v '^Fetching' | tail -6 | cut -c1-200; done
+for i in $(seq 480); do tmux has-session -t rung1 2>/dev/null || tmux has-session -t rung2 2>/dev/null || break; sleep 15; done
+if tmux has-session -t rung1 2>/dev/null || tmux has-session -t rung2 2>/dev/null; then echo "STILL RUNNING after 120 min: left running, VM stays on"; exit 0; fi
 IDS=$(python3 -c "
 import json
 rs=[json.loads(l) for l in open('research/runs.jsonl') if l.strip()]
-print(' '.join(r['run_id'] for r in rs if r['label'].startswith(('rung 1 v4','rung 2 v2'))))")
-echo "new runs: $IDS"; [ -n "$IDS" ] && python3 research/collect_details.py $IDS
+print(' '.join(r['run_id'] for r in rs if r['label'].startswith(('rung 1 v4','rung 2 v2')) and 'repeat' in r['label']))")
+echo "repeat runs: $IDS"; [ -n "$IDS" ] && python3 research/collect_details.py $IDS
 N=$(gcloud projects describe ple-submission --format='value(projectNumber)' 2>/dev/null | tail -1); B="gs://ple-runs-$N"
 gcloud storage rsync --recursive runs "$B/runs" 2>&1 | tail -1
 gcloud storage cp ~/ple-proxy-requests.jsonl "$B/ple-proxy-requests.jsonl" 2>&1 | tail -1
