@@ -313,3 +313,16 @@ Rung 0 instead tries a **low reasoning effort** (v5).
   later rung). Reasoning effort low, as rung 0 v5.
 - **What we log:** every tool call, whether the agent ran `solution.py` on its own, calls and tokens from the
   proxy request log.
+
+## Rung 1 first VM run (2026-11-27)
+
+- **Flash (run-017) worked end to end:** 287 model calls (284 `bash`, 2 `write`), the agent ran `solution.py` on
+  its own, and the result was a valid model that failed the clash gate (`ERR_CLASH`). Score 0.0. The failure
+  mode moved from "script does not run" (3 of 4 rung 0 Flash observations) to the clash gate.
+- **Neon (run-018) is invalid:** the first call returned HTTP 400, "Thinking budget is not supported for this
+  model. Use thinking level instead". Pi decides the wire format from the model id (`usesGoogleThinkingLevel`)
+  and does not know Gemini 4, so it sends `thinkingBudget`. `harnesses/pi-rung1/patch_pi.py` adds `gemini-4` to
+  that rule in both installed copies at build time and fails the build if Pi changes. Verified against a mock
+  endpoint (request now carries `thinkingLevel: LOW`). Neon is rerun as a new run.
+- **Lesson for the write-up (engineering reasoning):** a harness that is off-the-shelf for one model family is
+  not automatically valid for another; here the proxy, not the model, reported it, on the first call.

@@ -25,7 +25,8 @@ TASK_ARGS=(); [[ -n "${TASKS:-}" ]] && TASK_ARGS=(--tasks "$TASKS")
 # EFFORT=low|medium|high|max sets the reasoning level of the harness's model calls (default: the proxy's highest)
 EFFORT_ARGS=(); [[ -n "${EFFORT:-}" ]] && EFFORT_ARGS=(--effort "$EFFORT")
 
-for MODEL in gemini-3.8-flash gemini-4-neon; do
+# MODELS="name name" limits the run to those models (default: both)
+for MODEL in ${MODELS:-gemini-3.8-flash gemini-4-neon}; do
   echo "=== rung 1 with $MODEL ($(date -u +%FT%TZ)) ==="
   python3 research/run_dev.py --ple "$HOME/ple" --entry harnesses/pi-rung1 \
       --model "$MODEL" --judge dev --trials 5 --env-file "$ENV_FILE" "${TASK_ARGS[@]}" "${EFFORT_ARGS[@]}" \
