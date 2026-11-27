@@ -326,3 +326,19 @@ Rung 0 instead tries a **low reasoning effort** (v5).
   endpoint (request now carries `thinkingLevel: LOW`). Neon is rerun as a new run.
 - **Lesson for the write-up (engineering reasoning):** a harness that is off-the-shelf for one model family is
   not automatically valid for another; here the proxy, not the model, reported it, on the first call.
+
+### Rung 1 Flash run (run-017): what the agent did, and two facts it settled (2026-11-27)
+
+- **Effort:** 287 model calls (284 `bash`, 2 `write`), 42.6 M input tokens of which 41.4 M (97.1 %) were served from
+  the prompt cache, 183.5 k output tokens. Rung 0 used 1 call and about 10 k input tokens on the same task.
+- **Outcome:** valid model, clash gate failed (22 clashes of 299 pairs, all between pieces of the same service);
+  connectivity gate passed; rules passed 4 of 11, failed 5, 2 not checked (the same two as in rung 0). If the gate
+  had passed: compliance 0.826 x efficiency 0.689 = 0.569. Score 0.0.
+- **The agent ran its own deliverable and used ifcopenshell.validate on its output, unprompted.** Its first command
+  printed the ifcopenshell version. This settles an open item: **the task container has ifcopenshell 0.8.4.post1
+  on Python 3.11**, so running the script there is representative of the grader's run (the grader uses the same
+  Python 3.11 site-packages).
+- **Audit (fair play):** two filesystem searches (`os.walk('/app')` for .py/.sh/.json/.md; `os.walk('/')` for names
+  containing `dc_model` or `mep`). They returned only the task's own `solution.py` stub; nothing from the grader
+  was visible in the task container. Kept as a standing check: every rung 1 trajectory is scanned for reads
+  outside the task folder and `/tmp`.
