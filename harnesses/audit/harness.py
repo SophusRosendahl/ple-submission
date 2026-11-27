@@ -27,7 +27,30 @@ CHECKS = [
     ("writable_dirs", f"find / -xdev -writable -type d {SKIP} 2>/dev/null | head -30"),
     ("env_variable_names", "env | sed 's/=.*//' | sort | tr '\\n' ' '"),
     ("processes", "ps -eo user,pid,args 2>/dev/null | head -20"),
-    ("network", "cat /etc/resolv.conf 2>&1 | head -3; python3 -c \"import socket\ntry:\n socket.create_connection(('1.1.1.1',53),3); print('CONNECT 1.1.1.1 OK')\nexcept Exception as e: print('CONNECT 1.1.1.1 failed:', type(e).__name__, e)\""),
+    ("network", """cat /etc/resolv.conf 2>&1 | grep -v '^#' | head -5; echo ROUTES; cat /proc/net/route 2>&1 | head -6; echo DEV; cat /proc/net/dev 2>&1 | awk 'NR>2{print $1}' | tr '\\n' ' '; echo
+python3 - <<'PY'
+import socket, urllib.request
+def t(name, f):
+    try:
+        print(name, 'OK:', f())
+    except Exception as e:
+        print(name, 'FAILED:', type(e).__name__, str(e)[:80])
+t('dns example.com', lambda: socket.gethostbyname('example.com'))
+def http():
+    return urllib.request.urlopen('http://example.com', timeout=6).read(60)
+t('http GET example.com', http)
+def tcp80():
+    c = socket.create_connection(('1.1.1.1', 80), 4); c.sendall(b'HEAD / HTTP/1.0\\r\\n\\r\\n'); c.settimeout(4); r = c.recv(60); c.close(); return r
+t('tcp 1.1.1.1:80 request', tcp80)
+def tcp53():
+    c = socket.create_connection(('1.1.1.1', 53), 4); c.settimeout(3)
+    try: r = c.recv(10)
+    except Exception as e: r = type(e).__name__
+    c.close(); return 'connected; read ' + repr(r)
+t('tcp 1.1.1.1:53 connect and read', tcp53)
+t('tcp 10.255.255.1:80 (nothing there)', lambda: socket.create_connection(('10.255.255.1', 80), 3) and 'connected')
+t('tcp 8.8.8.8:443', lambda: socket.create_connection(('8.8.8.8', 443), 3) and 'connected')
+PY"""),
     ("python_packages", "pip list 2>/dev/null | wc -l; pip list 2>/dev/null | head -40"),
     ("home_and_root", "ls -la /home /root 2>&1 | head -20"),
 ]

@@ -625,3 +625,15 @@ What a model can see and reach in the task container, listed from inside it by a
 - **Flash spent its whole budget reading.** 8 input reads, then 13 reads of crops it made of the drawings with bash (zooming
   on schedules and notes), 18 bash calls, and one file written. No batching. It never reached the deliverable: the batching line
   of rung 2 v2 and the budget are the two levers; the crops show the model chose to look closely at the drawings.
+
+### Correction: the "no network" mismatch is NOT established (2026-11-27, same day)
+
+- **What the organizers' own configuration says** (`research/network-settings.txt`): the task's `task.toml` sets
+  `network_mode = "no-network"` (3 times, including its `[environment]`), and Harbor 0.20 enforces network policies through
+  an egress-control sidecar (`harbor-docker-egress-control-sidecar`, `docker-compose-no-network.yaml`). `eval/run.py` itself
+  sets no network option; it rewrites `task.toml` only to allow the judge host for verifier networks.
+- **So my statement above, that the audit's `CONNECT 1.1.1.1 OK` shows the task container has the Docker default network, is
+  withdrawn as unproven.** A TCP connect can succeed through a transparent proxy or sidecar that accepts the connection and
+  carries nothing. (Tested here in the cloud session: even a connect to an address with nothing behind it succeeds.)
+- **Audit v2** replaces the connect test with requests that need a reply: DNS lookup, an HTTP GET, a TCP request to
+  `1.1.1.1:80`, a connect to an unroutable address, plus the routing table and network devices. Only its result decides.
