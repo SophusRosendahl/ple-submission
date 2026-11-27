@@ -752,3 +752,9 @@ across products; hypothesis only.
 - **Question** (from `docs/why-rung2-struggles.md`): did rung 2's wording ("define a check for each requirement") cause clash checks scoped to the agent's design, or is leaving same-service pieces out the model's own prior?
 - **Change, v2 to v3, nothing else:** one sentence in step 3: *where a requirement is about every item or every pair of items (for example that no two items overlap, or that every item meets a limit), write that check as one sweep over every item or every pair, with nothing excluded; if you leave anything out, say what and why in the check's own output.* The example is deliberately generic, not the task's own wording ("anywhere"), so this tests the principle, not a hint about this task.
 - **How to read the result** (six runs, Neon, ifcopenshell blocked, compared with the six of v2): same-service pieces now compared in the checks and the clash gate cleared more often = the wording was a cause; the checks still skip same-service pairs, or say they are left out because they are joints = the exclusion is the model's prior, and a different lever is needed (a check against the built solids, or an example of the failure). Read each run's `checks.py` (logged) for the scope, not only the grade.
+
+## Rung 2 v3 results (2026-11-27; runs 040 to 045, Neon, six runs): the wording explains the scope, not the belief
+
+0 of 6 passed (same as v2). Own-room overlaps fell from 4 of 6 to 1 of 6, so the narrow background scope was caused by the wording. All six runs still leave same-service
+pieces out of the sweep, and now say so (in the check's output and in the final message), giving the reason they already believed. Details and the next candidate in
+`docs/why-rung2-struggles.md`. Table of all versions: `docs/ladder-results.md`.

@@ -46,3 +46,20 @@ With ifcopenshell blocked, every agent split its script into a data builder (cen
 2. **Finding 3:** a version where the check is run against the built solids (the later rung with ifcopenshell, or the stand-in of run-032 offered as a tool).
 3. **Finding 4:** a rung 1 variant with the schema sentence from the task text repeated in the note, to see whether the invalid-IFC rate follows it.
 4. **More runs:** six each cannot separate a 33% from a 0% pass rate with confidence (Fisher exact about 0.45); repeats on the same task, then other tasks.
+
+## Test of the wording: rung 2 v3 (one sentence added; six Neon runs; 2026-11-27)
+
+The added sentence: where a requirement is about every item or every pair, write that check as one sweep over every item or pair, with nothing excluded, and say in the check's output what is left out and why.
+
+| | rung 2 v2 | rung 2 v3 |
+|---|---|---|
+| passed the gates | 0 of 6 | 0 of 6 |
+| clash gate failed on same-service overlaps | 6 of 6 (8 to 22 pairs) | 6 of 6 (13 to 22 pairs) |
+| overlaps inside the model's own room rebuild | 4 of 6 | **1 of 6** |
+| clash check compares same-service pieces | 0 of 6 | **0 of 6** (all six leave them out) |
+| final message says what the check excluded | no | **yes in 6 of 6** (4 say "same-service junctions excluded", 2 say "cross-service pairs") |
+
+- **The sentence fixed one thing and left the other.** The room-against-room sweeps are now complete (own-room overlaps 4 of 6 down to 1 of 6): the narrow *scope* came from the wording. The same-service exclusion did not move: in all six runs the agent writes the sweep, leaves out same-service pairs, and does what the sentence asks for the exclusion: it says so, with the reason the agent already believed ("they meet at elbows/tees", "same-service junctions"; run-044 even counts the 45 pairs it skipped and prints them). An exclusion with a stated reason satisfied the instruction; the reason itself was never questioned.
+- **So there are two causes.** (1) Scope narrowed by category: caused by the wording, fixed by the sentence. (2) A belief that overlaps at joints between pieces of one service are acceptable: held by the model in 12 of 12 rung 2 runs (v2 and v3) and in the rung 1 runs that failed the gate, not changed by wording; the two runs that passed are the two whose checks reported those pairs (run-028) or tested the built solids (run-032).
+- **A gain in transparency:** the final messages now say what the check left out, where v2's said "zero clashes" without the qualification. It does not raise the score, but it stops a reader (or a judge) from taking an unqualified "zero" at face value.
+- **What would address the belief:** the checks must put the evidence in front of the agent. Run-028 passed because its check printed `Same-service T-junction overlaps (>2mm): 20` as a separate category; the agent saw a number it could not call zero. Candidate next change, one sentence: when a check leaves a group of pairs out because the agent believes they are exempt, it must still compute and print the overlaps for that group separately, and the agent may only call the requirement met if that count is zero or a quoted sentence of the instruction grants the exemption.
