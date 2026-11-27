@@ -3,7 +3,7 @@
 # infra/gcp-vm/github_bridge_setup.sh). Job options are comment lines in job.sh:
 #   # start: no            don't start the VM first (default: start it)
 #   # stop: yes            stop the VM afterwards
-#   # stop: idle           stop the VM afterwards unless the rung0 tmux session is still running
+#   # stop: idle           stop the VM afterwards unless a rung tmux session (rung0, rung1) is still running
 #   # sync: no            don't copy this branch to the VM first (default: copy it)
 #   # pull: a b            paths under ~/ple-submission on the VM to copy back and commit here
 # The job runs as the VM's owner in ~/ple-submission, after this branch is copied there.
@@ -74,7 +74,7 @@ jobs:
           mode="$(sed -n 's/^# stop: *//p' .github/vm/job.sh | head -1)"
           if [[ "$mode" == "idle" ]]; then
             if gcloud compute ssh "$NAME" --zone "$ZONE" --quiet --strict-host-key-checking=no \
-                 --command 'sudo -u "$(sudo sh -c "stat -c %U /home/*/ple/local.env" | head -1)" tmux has-session -t rung0' 2>/dev/null; then
+                 --command 'sudo -u "$(sudo sh -c "stat -c %U /home/*/ple/local.env" | head -1)" sh -c "tmux ls | grep -q ^rung"' 2>/dev/null; then
               echo "a run is still going: leaving the VM on"; exit 0
             fi
             mode=yes

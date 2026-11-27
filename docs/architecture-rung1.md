@@ -1,6 +1,6 @@
 # Rung 1: the architecture (UML)
 
-Status: **proposal, for agreement.** Nothing here is built yet. The diagrams are Mermaid, so they render on
+Status: **built as `harnesses/pi-rung1` (2026-11-27), with the changes in 'Rung 1 as built' at the end.** The diagrams below are the earlier proposal: the model there reads files with a `read` tool; as built, the files are fed as context and there is no `read` tool. The diagrams are Mermaid, so they render on
 GitHub and in the report page. The structure is the official template's Pi agent harness (`harness.py`,
 `task-tools.ts`, `serve.py`, `taskbridge.py`), which we read; boxes marked **new** or **changed** are our
 rung 1 changes.
@@ -277,3 +277,24 @@ request log is the ground truth for calls and tokens; Pi's own usage events are 
    every step.
 6. **Reasoning level `low`** is assumed, for a like-for-like comparison with rung 0 v5. The template uses the
    highest.
+
+## Rung 1 as built (2026-11-27)
+
+Differences from the proposal above, all from the user's decisions or from checks of Pi itself:
+
+1. **Inputs are fed, not read.** `inputs.py` converts text files in the task container and fetches the drawings
+   with `read_file`; the text goes into the prompt (stdin) and the images are passed to Pi as `@file` arguments.
+   Tools offered: `write`, `edit`, `bash` (`--tools write,edit,bash`; verified against a mock endpoint: the
+   request carries exactly those three). `bash` can still print any file; every tool call is logged.
+2. **Pi's catalogue knows `gemini-3.8-flash` (images, 65.5K output) but not `gemini-4-neon`.** Without a fix,
+   Neon would have been text only with 16,384 output tokens. `UNKNOWN_MODEL` now has images, 65,536 output and
+   `reasoning: true`, so `--thinking low` takes effect. Whether the proxy honours that for Neon is checked in the
+   first run's request log.
+3. **Pi shrinks images to 2000 x 2000 by default**, rung 0 sent the originals. `images.autoResize: false` in
+   Pi's settings; verified: a 3000 x 2000 image arrives as 3000 x 2000.
+4. **Thinking level** comes from `REASONING_EFFORT` (default low), like rung 0 v5.
+5. **Logging:** `pi: CALL {...}` per model reply and `pi: CALLS {...}` totals in the same shape as rung 0
+   (Pi's usage includes a `reasoning` count), `pi: TOOLS {counts, ran_deliverable}` (did the agent run
+   `solution.py` on its own), `pi: IMAGES {...}`.
+6. **Unverified until the first VM run:** that the local proxy serves Pi's native Gemini route
+   (`GOOGLE_GEMINI_BASE_URL`), and that the evaluator's environment sets it for these models.
