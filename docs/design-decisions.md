@@ -232,7 +232,7 @@ Rung 0 instead tries a **low reasoning effort** (v5).
 ## Rung 0 first valid result (2026-11-26)
 
 - **Rung 0 v5 = one call, images attached once, reasoning effort low.** It is the first rung-0 configuration that
-  produces output on `data-hall-mep-routing`. Flash: script crashed (wrong ifcopenshell argument). Neon: valid
+  produces output on `data-hall-mep-routing`. Flash: the delivered script failed when the grader ran it (wrong ifcopenshell argument). Neon: valid
   model, connectivity gate passed, 30 clashes. Both 0.0 (run-009, run-010).
 - **The failures are of the kind a run-and-check loop finds**, which is the case for rung 1 (the agent loop).
 - **Reasoning effort is now a recorded, switchable setting** (`run_dev.py --effort`), so it can be varied as an
@@ -265,3 +265,18 @@ Rung 0 instead tries a **low reasoning effort** (v5).
   assumed in the final message).
 - **Open:** whether the public competition docs or the dataset card state the convention. Look there only.
 
+
+## Run the deliverable (2026-11-27, user decision)
+
+- **What happened:** in 8 rung-0 v5 observations (run-009 to run-016) four deliveries were scripts that failed when
+  the grader ran them (wrong ifcopenshell arguments, a non-existent attribute), each within 1 second; two more
+  wrote invalid IFC and three had clashes. **The agent did not crash.** It finished, sent `done`, and delivered a
+  file that does not work. The process that failed was the grader running `output/solution.py`.
+- **Requirement:** trying to run the delivered file is the first thing an agent must do, and **the harness must do
+  it too**: execute the deliverable in the task container and see whether it runs and writes the model, before
+  `done`. Where the task's deliverable is code, this is the cheapest check there is.
+- **Placement in the ladder:** rung 1 stays unstructured (the agent may run the file with `bash` if it chooses); we
+  log whether it did. The harness-driven step is the first structured self-check of the next rung, and is
+  general (any code deliverable), not specific to this task.
+- **To verify:** that the task container has the libraries the grader uses (ifcopenshell), so a run there is
+  representative of the grader's run.

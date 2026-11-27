@@ -276,7 +276,7 @@ the grader runs it.
 |---|---|---|
 | output tokens (thinking) | 11,506 (0) | 25,954 (14,730) |
 | files written | `solution.py`, `reconciliation.json` | `solution.py`, `reconciliation.json` |
-| grader | `ERR_EXEC`: the script crashed | valid model; **connectivity gate passed**, **clash gate failed** |
+| grader | `ERR_EXEC`: the delivered script failed when the grader ran it | valid model; **connectivity gate passed**, **clash gate failed** |
 | the failure | `pset.edit_pset(product=...)`: no such argument (an ifcopenshell API mistake) | 30 hard clashes, 8.5 % rule violations, route 402 m against an optimum of 261 m |
 | score | 0.0 | 0.0 |
 
@@ -294,7 +294,7 @@ The reasoning level is therefore a design knob to measure (low / medium / high),
 
 The grader runs many checks and a single failed *gate* zeroes the score, so the score hides the rest.
 `research/check_table.py` lists every check of a trial next to the score. Below: the blind v2 attempt
-(run-004), Flash at low effort (run-009, crashed before any check) and Neon at low effort (run-010)."""),
+(run-004), Flash at low effort (run-009, its delivered script failed when run, so no check ran) and Neon at low effort (run-010)."""),
 
     code("""import check_table
 from IPython.display import Markdown, display
@@ -484,9 +484,10 @@ Dated, honest notes, including what went wrong. Newest last.
   thinking can't be fed back, so for Neon it degenerates into a retry. The output ceiling is simply 65,536
   for both Gemini models. Rung 0 v5 = the single call at **low reasoning effort** instead.
 * **2026-11-26.** Rung 0 v5 (low effort), run-009 and run-010: **the first valid rung-0 result.** Both
-  wrote a script. Flash's crashed (a wrong ifcopenshell argument); Neon's ran, passed the schema and
+  wrote a script. Flash's delivered script failed when the grader ran it (a wrong ifcopenshell argument); Neon's ran, passed the schema and
   connectivity gates and failed the clash gate (30 clashes). Score 0.0 each, for reasons a run-and-check
   loop would catch. Lowering the effort cut Neon's output from 65,536 hidden-thinking tokens to 25,954.
+* **2026-11-27.** Rung 0 v5 repeated three times (run-011 to run-016): all six scored 0.0; with run-009/010, eight observations. Four deliveries (all Flash but one) failed when the grader ran the script (wrong ifcopenshell arguments, an attribute that does not exist), two were invalid IFC, three had clashes. **The agent did not crash: it finished and delivered a file that does not run.** Trying the file is the first thing an agent must do; the harness must do it too (design-decisions, 'Run the deliverable').
 * **2026-11-26.** Looked at the grader's checks one by one (`research/check_table.py`). Neon at low effort:
   schema and connectivity pass; 30 clashes (22 are consecutive segments of the same service overlapping at
   their joints, 8 are the model's own background); 16 sprinkler heads at 1,890 mm (needs 2,600) and 8
