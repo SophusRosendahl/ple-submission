@@ -1,0 +1,1 @@
+Stopped by the harness: the budget of 20 model calls was used up. Whatever the deliverables held at that moment is what was delivered; it was not reviewed afterwards.
