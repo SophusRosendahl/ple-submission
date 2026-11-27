@@ -564,7 +564,19 @@ thoughts.
   behaviour, supported by these logs, not a limit of the system.
 - **Effect of batching:** fewer calls and less wall time, not fewer tokens (every image still enters the context once).
   It also lowers the call-budget pressure that stopped Flash in rung 1 v3.
+- **Decision (user): ask for batching by default.** Done in rung 2 v2 (below); rung 1 is left as measured. The original plan follows for the record.
 - **Plan:** let rung 2 v1 finish as the baseline (does it batch on its own? almost certainly not), then rung 2 v2 adds one
   line to the system note: make independent tool calls together in one reply, for example reading several files at once,
   since every reply counts against the budget. One change, measured against v1. The call and tool counts per reply are
   already in the logs, so the report can show it.
+
+### Rung 2 v2 = rung 2 v1 plus batching (2026-11-27, user decision)
+
+- The system note now says: when tool calls do not depend on each other, make them together in one reply (read all the
+  files needed at once; put several commands into one bash call), because every reply counts against the budget. The
+  step 'read the input files one by one' became 'read every input file you need, several at once if you like'.
+- Pi bash makes the command side easy (chained commands in one call); reading the drawings still needs the `read` tool
+  (only it returns images to the model), several `read` calls in one reply run in parallel.
+- `VERSION` is `rung 2 v2`; `infra/gcp-vm/rung2.sh` labels runs `rung 2 v2`. The VM is running rung 2 v1 (baseline);
+  v2 is queued behind it, so the pair measures exactly this change. What to look at in the results: replies with more
+  than one tool call, total calls, wall time, and whether the 40-call budget still binds.

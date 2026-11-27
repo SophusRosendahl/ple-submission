@@ -22,6 +22,7 @@ NOTES = """
 | rung 1 v2 | v1 plus the input guard | started on the VM, cancelled after 16 minutes, never recorded |
 | rung 1 v3 | v2 plus a 20-call budget guard | |
 | rung 2 v1 | Pi loop, read tool, data not in the first message, requirements and checks requested, 40-call budget | |
+| rung 2 v2 | rung 2 v1 plus the instruction to batch independent tool calls in one reply (several reads at once, several commands in one bash call) | one change: the batching line, and \"one by one\" reworded to \"several at once if you like\" |
 | environment audit v1 | read-only listing of what a model can see in the task container, no model calls | a diagnostic, not a measurement |
 
 Where to look: `harnesses/<entry>/VERSION` is the label; `harness.version`, `harness.commit` and `harness.files_sha256`
