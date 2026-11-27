@@ -469,3 +469,36 @@ thoughts.
   "IN-AISLE HEAD + 1890 mm FF (under containment roof, roof underside = 2000 mm)" (step 87), and "headroom rule:
   2600 mm min headroom in aisles and circulation spaces" (step 211). Neon defined `MIN_CLEAR_HEIGHT = 2600` and
   placed the heads at 1,890 mm with no comment on the difference. Neither wrote down a decision about the conflict.
+
+## Rung 1 v3 results: input guard and 20-call budget (2026-11-27, run-020 Flash, run-021 Neon)
+
+| | Flash (run-020) | Neon (run-021) |
+|---|---|---|
+| model calls | 20 of 20, stopped by the budget | 10 of 20, finished by itself |
+| tools | bash 20, write 0 | bash 6, write 1, edit 2 |
+| input tokens (cached) | 243,918 (158,276) | 338,103 (275,093) |
+| output tokens (thinking) | 1,716 (not reported) | 36,140 (15,252) |
+| input guard refusals | 0 | 0 |
+| ran its own script | no | yes |
+| result | **no deliverable written** (`ERR_NO_SUBMISSION`, stub never replaced) | valid model; clash gate failed: 25 overlaps, all same-service (9 / 8 / 8) |
+| score if gates had passed | n/a | 0.586 |
+| actual score | 0.0 | 0.0 |
+
+- **The budget guard works as built** (counts, stops after the last reply's tools, writes an honest final message), and
+  it is the first time the cap changes an outcome: Flash needed 287 calls in v1; with 20 it never wrote the file.
+  Neon is unaffected: 10 calls in both versions, the same clash failure.
+- **Flash spent its 20 calls on reconnaissance, not on the task.** 12 of its commands probed the container: version
+  checks, `pip list`, `which tesseract`, importing cv2 and PIL (neither installed), and searches for the property-set
+  definitions and for grader files. One `grep -r "Pset_DCM" /` ran into the 600 s command limit. It wrote nothing,
+  although the system note says to put a first version of every deliverable in place early.
+- **Fair-play flag (write up, and fix in the harness):** its commands included
+  `find /app /home -name "*dc_model*" -o -name "*grader*"` and `find / -name "*mep_routing*"`, i.e. a search for grader
+  files. They returned only the task folder; no grader, test or reference file is visible in the task container (checked
+  in the results). The model was hunting for the `Pset_DCM_*` definitions that the task requires but never states, which
+  also bears on the naming-contract hypothesis. A submitted harness must not do this (rules: do not inspect grading
+  scripts), so rung 1 needs an explicit instruction against it, and the harness should log such commands.
+- **Candidate changes for v4 (not built, awaiting a decision):** (1) a line in the system note: do not search the
+  container for grading, test or reference files; the task and its files are all there is; (2) log a `SCAN` count of
+  commands that match grader/test/verifier/reward patterns; (3) budget awareness: the extension appends a line such as
+  "5 model calls left: write your deliverable now" to tool results near the limit, since the note alone did not make
+  Flash write early.
