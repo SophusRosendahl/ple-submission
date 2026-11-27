@@ -580,3 +580,48 @@ thoughts.
 - `VERSION` is `rung 2 v2`; `infra/gcp-vm/rung2.sh` labels runs `rung 2 v2`. The VM is running rung 2 v1 (baseline);
   v2 is queued behind it, so the pair measures exactly this change. What to look at in the results: replies with more
   than one tool call, total calls, wall time, and whether the 40-call budget still binds.
+
+## Environment audit results (2026-11-27, run-022, a diagnostic, marked invalid in the tracker)
+
+What a model can see and reach in the task container, listed from inside it by a harness that makes no model calls:
+
+- **Limits enforced, confirmed from inside:** cgroup `cpu.max 200000 100000` (2 CPUs), `memory.max 4294967296` (4 GiB),
+  `pids.max 4096`, although `nproc` still says 32. So each trial's task container is capped to its task's own limits.
+- **What is visible:** Debian 13, Python 3.11 with ifcopenshell, the task folder (`input/` with the 7 PNGs, `output/solution.py`
+  stub), `/filesystem` as a link to it, empty `/home`, a nearly empty `/root`. Environment variable names only: `GPG_KEY HOME
+  HOSTNAME LANG PATH PLEBENCH_EXEC_ID PWD PYTHON_SHA256 PYTHON_VERSION SHLVL`; no keys. No file named like a grader, test,
+  verifier, reward or answer outside Python packages. Three bind mounts from the host: `/logs/agent`, `/logs/artifacts`,
+  `/logs/verifier` (where the trial's logs and later the grader's reports go; nothing in them during the agent's run).
+  The agent runs as root and everything in the container is writable.
+- **MISMATCH:** the audit's connection test to `1.1.1.1:53` **succeeded**. The competition says the task container has no network
+  at all; on this VM it has the Docker default. No agent used it: none of 6 rung 1 and rung 2 runs has a command touching
+  curl, wget, pip install, apt, git clone or a URL. But a harness that relied on the network would pass here and fail in the
+  evaluation, so this is a fidelity gap to close. Where the setting lives is being looked up (`research/network-settings.txt`).
+- The journal's account of how closely our environment matches the evaluation must carry this item until it is fixed.
+
+## Rung 2 v1 results (2026-11-27, run-023 Flash, run-024 Neon)
+
+| | Flash (run-023) | Neon (run-024) |
+|---|---|---|
+| calls | 40 of 40, stopped by the budget | 12 of 40, finished |
+| tools | read 21, bash 18, write 1 | read 8, bash 4, write 4, edit 1 |
+| replies with more than one tool call | 0 | 0 |
+| input tokens (cached) | 612,534 (446,705) | 336,957 (277,681) |
+| output tokens (thinking) | 7,750 (not reported) | 37,046 (9,834) |
+| wrote requirements.md | yes (the only file it wrote) | yes, plus data.md, checks.py, solution.py |
+| ran its own checks | no | yes, twice |
+| result | no deliverable (`ERR_NO_SUBMISSION`) | valid model; clash gate failed: 27 clashes |
+| score if gates passed | n/a | **0.919** (compliance 0.919, route length factor 1.000: 227 m against 260.6 m) |
+
+- **Neon followed the method, and the method caught a real error.** Its first run of its checks printed `FAIL: Schema
+  validation found 8 errors` (the invalid-IFC failure seen twice in rung 0); it fixed the script and the second run printed
+  PASS on all checks. It still ended with an invalid-free but clashing model: its checks printed `PASS: Zero hard clashes
+  (> 2 mm)` while the grader found 27 (8 in its own room rebuild, 19 same-service). The requirement was written down and a
+  check existed; the check was still wrong. **The content of requirements.md and checks.py was not recorded**, so the reason
+  cannot be read: the task container is discarded and the trajectory logs only the byte count of a write. Fixed for rung 2 v2:
+  the harness now logs the text files in `/tmp/scratch` at the end (`pi: SCRATCH[...]`), and the report shows them.
+- **Route length improved sharply** (factor 1.000 against 0.65 to 0.69 in rung 1) with the same model; one run, so not yet a
+  finding. If it holds, it is the largest change so far and the clash gate is the only thing between this run and 0.919.
+- **Flash spent its whole budget reading.** 8 input reads, then 13 reads of crops it made of the drawings with bash (zooming
+  on schedules and notes), 18 bash calls, and one file written. No batching. It never reached the deliverable: the batching line
+  of rung 2 v2 and the budget are the two levers; the crops show the model chose to look closely at the drawings.

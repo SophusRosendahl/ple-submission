@@ -212,6 +212,16 @@ def run_section(run, headline, runs_by_id):
     final = read(d / "deliverables" / "final_message.md")
     parts += ["<h3>What the model said at the end</h3>", f"<pre>{esc(final)}</pre>" if final else "<p>No final message recorded.</p>"]
     sol = next(iter((d / "deliverables").rglob("solution.py")), None) if (d / "deliverables").is_dir() else None
+    scratch = {}
+    for m in re.finditer(r"pi: SCRATCH\[(.+?)\] (\d+)/(\d+): (\".*\")\s*$", log_text, re.M):
+        try:
+            scratch.setdefault(m.group(1), []).append((int(m.group(2)), json.loads(m.group(4))))
+        except ValueError:
+            pass
+    if scratch:
+        parts.append("<h3>Files the agent kept in its scratch folder</h3>")
+        for path, chunks in scratch.items():
+            parts.append(details(path, "".join(c for _, c in sorted(chunks))))
     raw = [("The script the model wrote (solution.py)", read(sol, 400000) if sol else None),
            ("Grader report: full detail (artifacts.json)", read(d / "verifier" / "artifacts.json", 400000)),
            ("Grader summary (metrics.json)", read(d / "verifier" / "metrics.json", 60000)),

@@ -1,24 +1,20 @@
 # stop: idle
-# pull: research/runs.jsonl research/run-details
-# 1) bring back the environment audit run (its first job was killed in the foreground before it could pull: run in tmux, which has its own process group);
-# 2) rung 2 v1 on both models, one task, effort low, 40-call budget.
+# pull: research/network-settings.txt
+# Read-only. The environment audit found that a task container on this VM can open an outside connection (CONNECT 1.1.1.1 OK),
+# while the evaluation's task container has no network. Where is the network setting made? Only runner and task CONFIGURATION is searched
+# (eval/run.py, kit/*.py, Harbor's docker environment code, the task's task.toml and environment/ folder); never the task's tests/ folder.
 cd ~/ple-submission && git log -1 --oneline
-IDS=$(python3 -c "
-import json
-print(' '.join(r['run_id'] for r in map(json.loads, open('research/runs.jsonl')) if r['label'].startswith('environment audit')))")
-echo "audit runs on the VM: $IDS"; [ -n "$IDS" ] && python3 research/collect_details.py $IDS
-if tmux has-session -t rung2 2>/dev/null; then echo "rung2 already running: waiting for it"; else
-  tmux new -d -s rung2 "TASKS=data-hall-mep-routing EFFORT=low bash ~/ple-submission/infra/gcp-vm/rung2.sh 2>&1 | tee ~/rung2.log"
-fi
-sleep 30
-for i in $(seq 280); do tmux has-session -t rung2 2>/dev/null || break; sleep 15; done
-if tmux has-session -t rung2 2>/dev/null; then echo "STILL RUNNING after 70 min: left running, VM stays on"; tr '\r' '\n' < ~/rung2.log | grep -v '^Fetching' | tail -6 | cut -c1-200; exit 0; fi
-echo "runs ended"; tr '\r' '\n' < ~/rung2.log | grep -v '^Fetching' | tail -12 | cut -c1-200
-IDS=$(python3 -c "
-import json
-print(' '.join(r['run_id'] for r in map(json.loads, open('research/runs.jsonl')) if r['label'].startswith('rung 2 v1')))")
-echo "rung 2 v1 runs: $IDS"; [ -n "$IDS" ] && python3 research/collect_details.py $IDS
-N=$(gcloud projects describe ple-submission --format='value(projectNumber)' 2>/dev/null | tail -1); B="gs://ple-runs-$N"
-gcloud storage rsync --recursive runs "$B/runs" 2>&1 | tail -1
-gcloud storage cp ~/ple-proxy-requests.jsonl "$B/ple-proxy-requests.jsonl" 2>&1 | tail -1
-true
+P=$(ls -d ~/ple /home/*/ple 2>/dev/null | head -1)
+H=$(ls -d ~/.local/share/uv/tools/harbor/lib/python3*/site-packages/harbor /home/*/.local/share/uv/tools/harbor/lib/python3*/site-packages/harbor 2>/dev/null | head -1)
+T=$(ls -d ~/ple-submission/runs/*/tasks/data-hall-mep-routing 2>/dev/null | tail -1)
+{
+  echo "== eval/run.py and kit/*.py: lines on network / internet"
+  grep -n -i -H "network\|internet\|no-network\|network_mode" "$P"/eval/run.py "$P"/kit/*.py 2>/dev/null | cut -c1-230 | head -40
+  echo; echo "== Harbor ($H): lines on allow_internet / network_mode in the docker environment code"
+  grep -rn -i -H "allow_internet\|network_mode\|network: none\|no-network" "$H"/environments "$H"/models 2>/dev/null | cut -c1-230 | head -30
+  echo; echo "== the task's own configuration ($T): task.toml and environment/ (not tests/)"
+  grep -n -i -H "internet\|network\|cpus\|memory" "$T"/task.toml 2>/dev/null | head -20
+  ls "$T"/environment 2>/dev/null | head -20
+  grep -n -i -H "network\|internet" "$T"/environment/docker-compose* "$T"/environment/Dockerfile 2>/dev/null | cut -c1-200 | head -20
+} > research/network-settings.txt 2>&1
+cut -c1-200 research/network-settings.txt | head -60

@@ -305,6 +305,27 @@ class Run:
       await self.on_event(event)
 
 
+async def dump_scratch(session: taskbridge.Session) -> None:
+  """Logs the text files the agent kept in /tmp/scratch (requirements, data notes, its checks).
+
+  The task container is thrown away after grading and only the deliverable folders are captured, so without this the
+  agent's own checks cannot be read afterwards. Text only, in chunks; a failure here never affects the run.
+  """
+  try:
+    res = await session.exec("find /tmp/scratch -maxdepth 2 -type f -size -300k 2>/dev/null | sort | head -40", timeout_sec=60)
+    for path in (res.get("output") or "").split():
+      raw = await session.read_file(path)
+      if b"\0" in raw[:2000]:
+        await session.log(f"pi: SCRATCH[{path}] 1/1: " + json.dumps(f"(binary file, {len(raw)} bytes)"))
+        continue
+      text = raw.decode("utf-8", "replace")
+      parts = [text[i:i + 1500] for i in range(0, len(text), 1500)] or [""]
+      for i, part in enumerate(parts, 1):
+        await session.log(f"pi: SCRATCH[{path}] {i}/{len(parts)}: " + json.dumps(part))
+  except Exception as exc:  # recording only
+    await session.log(f"pi: could not dump the scratch folder: {type(exc).__name__}: {exc}")
+
+
 async def solve(session: taskbridge.Session) -> str:
   """Runs Pi on a single task and returns the final response.
 
@@ -398,6 +419,7 @@ async def solve(session: taskbridge.Session) -> str:
                 " deliverables held at that moment is what was delivered; it was not reviewed afterwards.")
         session.final_message = note + (f"\n\nLast message from the agent: {session.final_message}"
                                         if session.final_message else "")
+  await dump_scratch(session)
   await run.finish()
   if not run.replies:
     raise RuntimeError(
