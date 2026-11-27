@@ -382,3 +382,15 @@ Rung 0 instead tries a **low reasoning effort** (v5).
   never did. This is the baseline for the v2 input guard. (The extractor command that the harness itself runs is
   not counted.)
 - Both rung 1 v1 runs are single observations; repeats are needed before any claim about the loop.
+
+### What "input tokens" means in the rung 1 numbers (2026-11-27, after a user question)
+
+- **The input figure is the sum, over every model call, of the whole prompt of that call**: the initial context, the
+  model's own earlier replies and every tool result the harness sent back, all re-sent each time. Flash run-017:
+  first call 11,110 tokens (the initial context), growing to 331,455 at call 287; sum 42,605,226 over 287 calls
+  (average 148,450). Neon run-019: 11,268 growing to 49,483; sum 335,329 over 10 calls.
+- **Three useful splits, to report side by side:** (1) the sum of all prompts (what the model processed),
+  (2) of which served from the prompt cache (Flash 41.35 M, Neon 237.7 k), and so (3) the new, uncached input
+  (Flash 1.25 M, Neon 97.6 k). A fourth, the context size at the last call, shows how large the conversation grew.
+- **Cross-check pending:** these are Pi's own usage figures, logged per reply. The proxy request log (in the
+  bucket, `ple-proxy-requests.jsonl`) is the ground truth and has not yet been compared for rung 1.
