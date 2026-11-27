@@ -63,7 +63,9 @@ jobs:
             git config user.name "vm job"; git config user.email "actions@github.com"
             if git add -A -- $PULL && git commit -qm "VM results: $PULL"; then
               for try in 1 2 3 4; do   # the branch may have moved while the job ran: rebase, then push
-                git pull -q --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && break
+                # -X theirs while rebasing keeps the VM's version of a file both sides changed (for example a repeated check)
+                git pull -q --rebase -X theirs origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && break
+                git rebase --abort 2>/dev/null || true
                 echo "push failed (try $try)"; sleep 5; [[ $try == 4 ]] && { echo "RESULTS NOT PUSHED"; exit 1; }
               done
             else echo "nothing to commit"; fi
