@@ -502,3 +502,15 @@ thoughts.
   commands that match grader/test/verifier/reward patterns; (3) budget awareness: the extension appends a line such as
   "5 model calls left: write your deliverable now" to tool results near the limit, since the note alone did not make
   Flash write early.
+
+## State of the organizers' repository on the VM (2026-11-27, read-only report `research/ple-state.txt`)
+
+- Clone at `~/ple`, origin `https://github.com/SophusRosendahl/ple.git` (the participant's own copy), commit `5cf736f`
+  of 2026-11-23, "Add Gemini 4 Carbon, Neon, and Hydrogen to the Google-sponsored models".
+- **No local changes:** `git status --porcelain` and `git diff --stat` are empty. So the grader, task images and
+  `eval/run.py` we run are exactly that commit, not edited by us. Ignored files: `.venv/`, `__pycache__/`, `local.env`,
+  `uv.lock` (none is grader code).
+- **Not verified:** that the commit equals the organizers' upstream at the same hash, or whether upstream has newer
+  commits. Check by comparing the hash against the organizers' repository. Run records written from now on store the
+  repository commit (`env.ple_commit`); earlier runs (up to run-021) do not.
+- Machine: 32 CPUs and 126 GB of memory, against 2 CPUs and 4 GB for the serve container in the real evaluation.
