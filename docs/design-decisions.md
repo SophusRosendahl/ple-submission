@@ -765,3 +765,11 @@ Reading: not the main cause (70-number cross-run consensus; position-dependent g
 (same-service pairs, headroom applied to routes only, never to the 16 heads). Check design: the main cause (9 of 12 first runs passed; same belief in design and check;
 tests the plan, not the built solids). Adaptation: fine when a check fails, but the work ends at the first all-pass and no check was ever shown to fail.
 Four candidate changes listed there (independent checker, negative controls, scope audit, print the excluded group); none run yet.
+
+## Rung 3 proposed: the structured workflow, the initial idea (2026-11-27, user: now is the right time)
+
+Design in `docs/architecture-rung3.md`, figures 4 and 5. Tools we provide: a requirements ledger (quotes checked word for word, every number in the task covered),
+a check declaration (checks as data, exemptions need a quoted source), an evaluation engine (all-pairs overlap, clearance, ranges, connectivity, coverage, length;
+coverage matrix, self-test, objective tracker; runs outside the task container) and a finalizer that writes the final message from the ledger. Each feature answers one
+observed failure (same-service exclusion, headroom scope, checks that never fail, stopping at the first all-pass, overclaiming). Four decisions are open (geometry pack
+first, the `model_items()` contract, call budget 60, harness-written final message). Not built.

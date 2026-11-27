@@ -1,0 +1,15 @@
+flowchart LR
+  AG["AGENT<br/>Pi loop, decides and designs"]
+  subgraph TOOLS["TOOLS WE PROVIDE (in the serve container)"]
+    RL["Requirements ledger<br/>quotes must be word for word<br/>every number in the task must be covered"]
+    CD["Check declaration<br/>checks are data, not free code<br/>exemptions need a quoted source"]
+    EN["Evaluation engine<br/>all-pairs overlap, clearance, ranges,<br/>connectivity, coverage, length<br/>coverage matrix, self-test, objective"]
+    FN["Finalize<br/>final message from the ledger"]
+  end
+  TC["TASK CONTAINER<br/>solution.py exposes its items"]
+  AG <-->|"submit requirements, declare checks, ask to evaluate"| RL
+  AG <--> CD
+  AG <-->|"precise report: what fails, by how much, what is not checked"| EN
+  AG <--> FN
+  EN <-->|"runs solution, reads the items"| TC
+  AG <-->|"read, write, edit, bash"| TC

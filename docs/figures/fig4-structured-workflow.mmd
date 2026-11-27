@@ -1,0 +1,11 @@
+stateDiagram-v2
+  [*] --> Requirements: task arrives
+  Requirements --> Requirements: ledger rejects a requirement it cannot find word for word in the task, or a number in the task that no requirement covers
+  Requirements --> Design: ledger accepted
+  Design --> Declare: solution written, exposes its items
+  Declare --> Declare: engine rejects an exemption with no quoted source
+  Declare --> Evaluate: checks declared as data
+  Evaluate --> Fix: violations, kinds of item no check covers, or checks that cannot fail
+  Fix --> Evaluate: design changed, evaluate again
+  Evaluate --> Finish: every requirement checked, every check able to fail, no violation
+  Finish --> [*]: final message written from the ledger

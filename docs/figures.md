@@ -28,3 +28,15 @@ rung 2. Versions are listed in `docs/harness-versions.md`.
 Each model reply is one call. A reply with a tool call runs the tool through the evaluator and returns the result; a
 reply with no tool call is the final answer. If the call budget runs out, the harness lets the last reply's tools
 finish, stops the agent, and sends an honest note as the final message. Either way the evaluator then grades the files.
+
+## Figure 4. The structured workflow (rung 3, proposed)
+
+![The structured workflow](figures/fig4-structured-workflow.png)
+
+The agent's one free-form step is Design. Requirements, checks and the report are structured: the harness rejects a requirement it cannot find in the task word for word, an exemption without a quoted source, and offers Finish only when every requirement is checked, every check can fail and nothing is violated.
+
+## Figure 5. The parts of the structured workflow (proposed)
+
+![The parts of the structured workflow](figures/fig5-structured-architecture.png)
+
+Four tools we provide, in the serve container: a requirements ledger, a check declaration, an evaluation engine (all-pairs overlap, clearances, ranges, connectivity, coverage, length, a coverage matrix, a self-test, an objective tracker) and a finalizer. The engine runs outside the task container and outside the agent's code.
