@@ -782,3 +782,15 @@ designer reviews and may record a concern, shown in the evidence block); library
 separately); **sub-agents always run on a different model** from the designer. Open: the competition says the declared `model_api` must match the model the harness calls, so
 a submitted entry may not be allowed a second model; a read-only lookup of the organizers' `docs/rules.md` is running. Local experiments may use a different model; the
 setting is one line.
+
+## Rung 3 engine built and validated; the second-model rule (2026-11-27)
+
+- **Built:** `harnesses/pi-rung3/engine.py` (check library: all-pairs overlap with strict defaults and declared exclusions, clearance incl. best-axis, z-range, nearest-within, connectivity and reach,
+  coverage along a line, counts, length sum, sandboxed custom checks; scope facts; injected-fault self-test; objective tracker; report rendering) and `test_engine.py` (28 tests, including a
+  property test that the self-test predicts exactly what the real check does, and a 2,400-item speed test: 0.6 s for the suite).
+- **Validated against the grader:** strict all-pairs `no_overlap` on the solids of 12 delivered models reproduces the grader's clash list pair for pair (20, 21, 21, 25, 13, 38, 30, 23, 23, 22
+  and 0, 0). `research/engine_vs_grader.py`. Details in `docs/architecture-rung3.md`.
+- **Rules:** `rules.md` "the model_api ... must match the model your harness actually calls"; `models.md` "Call only the model you declared"; the evaluation key works only for the declared model.
+  A sub-agent on a different model is therefore **research only**; the submittable harness uses the declared model with a fresh context. The check-builder's model is a setting.
+- **Tool bug found and fixed:** vertex data was read from a freed temporary (garbage values such as 6e284); the earlier cross-run geometry comparison was affected and was not used for any conclusion.
+- **Open:** Mode A (plan, `model_items()`) or Mode B (the harness runs the script with the real library and reads the IFC; the agent only sees the report).

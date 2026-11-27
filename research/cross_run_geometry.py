@@ -19,7 +19,8 @@ out = {}
 for p in m.by_type("IfcProduct"):
     if not p.Representation: continue
     try:
-        v = np.array(ifcopenshell.geom.create_shape(s, p).geometry.verts).reshape(-1, 3) * 1000.0
+        shape = ifcopenshell.geom.create_shape(s, p)  # keep the shape alive: its vertex buffer is freed with it
+        v = np.array(list(shape.geometry.verts), dtype=float).reshape(-1, 3) * 1000.0
     except Exception:
         continue
     lo, hi = v.min(0), v.max(0)

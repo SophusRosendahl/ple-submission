@@ -62,9 +62,29 @@ Rung 3 v1 (checker + engine + review) against rung 2 v3 (same task, Neon, ifcope
 5. **Budget: 40 calls for the designer** (as in rung 2) rather than 60; the check-builder's calls are counted and reported separately (expected 1 to 3).
 6. **Sub-agents always run on a different model from the designer.** Open point below.
 
-## Open point: a second model and the competition's rules
+## Settled: a second model, and the competition's rules (organizers' `docs/rules.md` and `docs/models.md`, read 2026-11-27)
 
-The competition states that the declared `model_api` must match the model the harness calls, and ranks "each harness + model pair together". A sub-agent on a different model may not be allowed in an entry that is submitted, even though the serve container reaches the whole sponsored-model endpoint with one key. Until the organizers' text is read (a read-only lookup of `docs/rules.md` is running), the design assumes: **experiments locally may use a different model for the check-builder; a submitted entry might have to use the same model with a fresh context.** The code takes the check-builder's model as a setting, so either is one line. Which different model: for a Neon designer, Gemini 3.1 Pro (preview) is the default (one short call, small cost); Gemini 3.8 Flash is the cheap ablation.
+- `rules.md`: "The `model_api` in `submission.yaml` must match the model your harness actually calls."
+- `models.md`: "Call only the model you declared. In evaluation, the key works for that model..." and `kit/README.md`: in evaluation a `google-cloud` entry's key "works only for its declared model", while the local proxy serves all eleven.
+- **So a sub-agent on a different model cannot be part of a submitted entry** (the call would be refused and the entry would break the rule). It can be used in **local research runs**, where our proxy serves every model.
+- **Consequence for the design:** the check-builder takes its model as a setting. The submittable harness uses the declared model with a **fresh context** (the independence comes from the context, not the model). A different model is a research ablation: it tells us whether independence of model adds anything beyond independence of context. The user's principle, sub-agents on a different model, is kept for those research runs.
+
+## Engine validated against the grader (2026-11-27)
+
+The engine's strict all-pairs `no_overlap` (2 mm tolerance, boxes) was run on the solids of 12 delivered models (built locally, each element's bounding box) and compared with the clash list in the grader's own report for that run, by element name:
+
+| runs | grader clashes | engine clashes | same pairs |
+|---|---|---|---|
+| 029, 031, 033, 034, 035, 036, 037, 039, 041, 043 | 20, 21, 21, 25, 13, 38, 30, 23, 23, 22 | the same numbers | all of them, no pair on one side only |
+| 028, 032 (the two that passed) | 0, 0 | 0, 0 | n/a |
+
+Pair for pair, in 12 of 12. On built solids the engine is a faithful clash oracle for this task. **This holds for the solids, not for a plan:** the numbers come from the IFC the script writes. That is the case for the next decision below. (Tool: `research/engine_vs_grader.py`. A first version of the extraction read vertex data from an object that had already been freed and produced garbage; the earlier cross-run geometry comparison suffered from the same bug and was never used for a conclusion. Fixed; `cross_run_geometry.py` carries the same fix.)
+
+## Decision to take: where the items come from
+
+- **Mode A, the plan (as designed above):** the agent's `solution.py` exposes `model_items()`; ifcopenshell stays blocked for the agent. Risk: the plan can differ from the solids the writer makes (the doors and joints that the data checks missed).
+- **Mode B, the product:** the harness itself runs the agent's `solution.py` in the task container **with the real library** (the harness's runner is not under the agent's block), reads the IFC, and builds the items in the serve container. The agent never runs ifcopenshell and sees only the engine's report: clashes, schema errors, scope facts. Fidelity is that of the table above, and the invalid-IFC failures (2 of 6 in rung 1) become visible. It does give the agent run-and-validate feedback, which the "later rung" was meant to introduce, so it relaxes the earlier rule in one controlled way.
+- Recommendation: B, with A kept as a fallback when the script cannot run. The evidence favours it; the choice is the user's.
 
 ## What gets built first
 
