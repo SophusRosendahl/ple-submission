@@ -280,3 +280,15 @@ Rung 0 instead tries a **low reasoning effort** (v5).
   general (any code deliverable), not specific to this task.
 - **To verify:** that the task container has the libraries the grader uses (ifcopenshell), so a run there is
   representative of the grader's run.
+
+### Candidate: validate the produced model with ifcopenshell (2026-11-27, user idea)
+
+- After the harness runs `solution.py`, it opens the model the script wrote with ifcopenshell and validates it
+  against the IFC schema. This is the public library's own check, not the grader's code, so it is allowed.
+- **What it would have caught:** the 2 `ERR_VALIDATE` observations (invalid IFC) and the 4 `ERR_EXEC` ones (the
+  script fails at the run step). **What it cannot catch:** clashes, rule violations, efficiency, and the hidden
+  naming contract; those need other checks.
+- **Where it runs:** in the task container if ifcopenshell is there (to verify), else in the serve container with
+  ifcopenshell installed in the `install` step and the model fetched with `read_file`.
+- Same placement as "Run the deliverable": the first structured self-check of the next rung, with the check
+  results logged (`CHECK` lines) so the write-up can show what each check caught.
