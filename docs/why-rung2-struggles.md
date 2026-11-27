@@ -7,8 +7,8 @@ Evidence read from the logs: the agents' commands and outputs, their scratch fil
 | | Rung 1 v4 | Rung 2 v2 |
 |---|---|---|
 | passed all gates | 2 of 6 | 0 of 6 |
-| what the agent's own clash check said at the end | 0 clashes in all 4 runs with a clash check; 2 of those 4 were right | "ALL CHECKS PASSED / zero hard clashes" in 6 of 6; none was right |
-| same-service pieces compared with each other | in the 2 passing runs, yes; in the failing ones, no | no, in 6 of 6 |
+| what the agent's own clash check said at the end | 0 clashes in all 6 runs that wrote one; in the 4 where the grader could judge clashes (the other 2 had invalid IFC), 2 were right | "ALL CHECKS PASSED / zero hard clashes" in 6 of 6; none was right |
+| same-service pieces compared with each other | in the 2 passing runs, yes; run-036 no (code seen); run-034 almost certainly no (its check printed 0 against the grader's 25; its code is cut off in the log) | no, in 6 of 6 (code or comments seen) |
 | roof against door compared | yes: found and fixed in 3 of 3 runs that had the overlap | no, in 3 of the runs that had it (033, 037, 039) |
 | invalid IFC | 2 of 6 | 0 of 6 |
 
@@ -24,7 +24,7 @@ Evidence read from the logs: the agents' commands and outputs, their scratch fil
 
 - **Run-028 (0.921):** its first verification printed `Same-service T-junction overlaps (>2mm): 20`, kept as a separate category. It rewrote the script so each branch starts at the face of its trunk instead of the centre line; the second verification printed 0. The check failed first, and the failure was the signal.
 - **Run-032 (0.612):** its first attempt to run the real script through its own checks failed; it then built a stand-in for ifcopenshell that records every element the real builder creates, and swept all 279 recorded solids (including same-service pairs): 0 clashes, which the grader agreed with. It is the only run, in either rung, that checked the solids the script actually builds.
-- **Every run that failed the clash gate had a check that did not compare same-service pairs** (rung 1: 034 and 036 as far as the logs show; rung 2: all six).
+- **Every run that failed the clash gate had a check that did not compare same-service pairs:** rung 2, all six (code or comments seen); rung 1, run-036 (code seen) and run-034 (inferred: its check printed 0 clashes while the grader found 25 same-service overlaps; the part of its script that holds the loop is truncated in the log).
 
 ## Finding 3: the checks test the plan, not the product (both rungs)
 
