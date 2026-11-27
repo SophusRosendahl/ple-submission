@@ -1,5 +1,8 @@
 # Rung 1: the architecture (UML)
 
+> **Update 2026-11-27:** the figures for the write-up are in `docs/figures.md` and match what is built (rungs 0, 1 and 2). The diagrams below are the earlier rung 1 proposal (the model reading files with a `read` tool) and are kept as a record; rung 1 as built feeds the files as context, and rung 2 has the `read` tool.
+
+
 Status: **built as `harnesses/pi-rung1` (2026-11-27), with the changes in 'Rung 1 as built' at the end.** The diagrams below are the earlier proposal: the model there reads files with a `read` tool; as built, the files are fed as context and there is no `read` tool. The diagrams are Mermaid, so they render on
 GitHub and in the report page. The structure is the official template's Pi agent harness (`harness.py`,
 `task-tools.ts`, `serve.py`, `taskbridge.py`), which we read; boxes marked **new** or **changed** are our

@@ -170,8 +170,21 @@ def harness_records(trial_dir: pathlib.Path) -> dict | None:
     return out if found else None
 
 
+def harness_version(run: dict) -> str | None:
+    """The harness version of a run: the recorded one, else the `rung N vK` / `environment audit` prefix of its label."""
+    v = (run.get("harness") or {}).get("version")
+    if v:
+        return v
+    label = (run.get("label") or "").strip().lower()
+    m = re.match(r"(rung \d+ v\d+|environment audit)", label)
+    if m:
+        return m.group(1)
+    return "rung 0 v1" if label.startswith("rung 0:") else None  # the first rung 0 runs carried no version number
+
+
 def import_results(run_dir: pathlib.Path, label: str, half: str, notes: str,
-                   harness_commit: str | None, holdout: str | None, env: dict | None = None) -> dict:
+                   harness_commit: str | None, holdout: str | None, env: dict | None = None,
+                   harness_extra: dict | None = None) -> dict:
     saved = json.loads((run_dir / "results.json").read_text(encoding="utf-8"))
     tasks = {}
     for row in saved.get("tasks", []):
@@ -193,7 +206,7 @@ def import_results(run_dir: pathlib.Path, label: str, half: str, notes: str,
         "label": label,
         "recorded": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": {"kind": "eval/run.py", "run_dir": str(run_dir), "run_date": saved.get("date")},
-        "harness": {"name": saved.get("submission"), "model": saved.get("model"), "commit": harness_commit},
+        "harness": {"name": saved.get("submission"), "model": saved.get("model"), "commit": harness_commit, **(harness_extra or {})},
         "judge_model": saved.get("judge_model"),
         "env": env,
         "half": half,

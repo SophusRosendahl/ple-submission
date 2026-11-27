@@ -158,6 +158,11 @@ def run_section(run, headline, runs_by_id):
     parts = [f'<h2 id="{run["run_id"]}">{esc(run["run_id"])}: {esc(model)}</h2>',
              f'<p class="lead">{esc(headline)}</p>' if headline else "",
              f"<p><code>{esc(label)}</code></p>"]
+    hv = run.get("harness") or {}
+    parts.append("<p>Harness version: <code>" + esc(tracker.harness_version(run) or "unknown") + "</code>, commit <code>"
+                 + esc(hv.get("commit") or "?") + "</code>"
+                 + (f", files hash <code>{esc(hv['files_sha256'])}</code>" if hv.get("files_sha256") else " (no files hash: recorded before hashes were added)")
+                 + "</p>")
     inv = run.get("invalid")
     if inv:
         parts.append(f'<p><span class="pill FAIL">INVALID</span> {esc(inv if isinstance(inv, str) else json.dumps(inv))}</p>')

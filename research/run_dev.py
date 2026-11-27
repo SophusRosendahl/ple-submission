@@ -109,6 +109,26 @@ def with_model(entry: pathlib.Path, model: str | None, effort: str | None = None
     return variant
 
 
+def harness_identity(entry: pathlib.Path) -> dict:
+    """Which harness produced a run: its VERSION label, a hash of its files, and (via git_commit) the repository commit.
+
+    The hash covers every file in the entry folder except caches, node_modules and tests, in path order, so two runs
+    with the same hash ran byte-identical harness code, whatever their commit says.
+    """
+    import hashlib
+    skip = {"__pycache__", "node_modules", ".venv", "artifacts"}
+    h = hashlib.sha256()
+    n = 0
+    for f in sorted(entry.rglob("*")):
+        rel = f.relative_to(entry)
+        if not f.is_file() or skip & set(rel.parts) or rel.name.startswith("test_") or rel.name == "VERSION":
+            continue
+        h.update(str(rel).encode() + b"\0" + f.read_bytes() + b"\0")
+        n += 1
+    version = (entry / "VERSION").read_text(encoding="utf-8").strip() if (entry / "VERSION").is_file() else None
+    return {"version": version, "files_sha256": h.hexdigest()[:16], "n_files": n}
+
+
 def run_environment(started, finished, trials, judge, model_override, effort=None, ple=None):
     """Where and how long a run took: what the efficiency plots and the VM-hours count need."""
     try:
@@ -200,6 +220,7 @@ def main(argv=None):
     partial = len(tasks) < len(half_tasks)
     notes = a.notes + (f" (subset: {len(tasks)} of {len(half_tasks)} tasks)" if partial else "")
     rec = tracker.import_results(out, a.label, a.half, notes.strip(), git_commit(entry), a.holdout,
+                                  harness_extra=harness_identity(entry),
                                  env=run_environment(started, finished, a.trials, judge, a.model, a.effort, a.ple))
     print()
     print(tracker.report(rec))

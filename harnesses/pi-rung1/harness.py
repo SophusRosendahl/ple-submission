@@ -352,6 +352,9 @@ async def solve(session: taskbridge.Session) -> str:
           "--tools",
           "write,edit,bash",
       ] + image_args
+      version = (HERE / "VERSION").read_text(encoding="utf-8").strip() if (HERE / "VERSION").is_file() else None
+      await session.log("pi: VERSION " + json.dumps({"harness": version, "model": model, "thinking": THINKING,
+                                                     "max_calls": MAX_CALLS}))
       run = Run(session, model)
       proc = asyncio.create_task(taskbridge.run_process(
           argv,
