@@ -1,0 +1,86 @@
+== docs and README: lines on Vertex / Gemini API / AI Studio / endpoint / proxy
+/home/sophusrosendahl/ple/docs/models.md:4:calls. Entries use one of the Google-sponsored `google-cloud/<id>` models and
+/home/sophusrosendahl/ple/docs/models.md:12:## Google-sponsored models (`google-cloud/<id>`)
+/home/sophusrosendahl/ple/docs/models.md:18:| `google-cloud/gemini-4-argon` | Gemini 4 Argon | OpenAI Chat Completions, Gemini API |
+/home/sophusrosendahl/ple/docs/models.md:19:| `google-cloud/gemini-4-carbon` | Gemini 4 Carbon | OpenAI Chat Completions, Gemini API |
+/home/sophusrosendahl/ple/docs/models.md:20:| `google-cloud/gemini-4-neon` | Gemini 4 Neon | OpenAI Chat Completions, Gemini API |
+/home/sophusrosendahl/ple/docs/models.md:21:| `google-cloud/gemini-4-hydrogen` | Gemini 4 Hydrogen | OpenAI Chat Completions, Gemini API |
+/home/sophusrosendahl/ple/docs/models.md:22:| `google-cloud/gemini-3.8-flash` | Gemini 3.8 Flash | OpenAI Chat Completions, Gemini API |
+/home/sophusrosendahl/ple/docs/models.md:23:| `google-cloud/gemini-3.1-pro-preview` | Gemini 3.1 Pro (preview) | OpenAI Chat Completions, Gemini API |
+/home/sophusrosendahl/ple/docs/models.md:35:For local runs, you need a proxy that serves the same model names. [`kit/model_proxy/start.sh`](../kit/model_proxy/start.sh) starts a LiteLLM proxy backed by Vertex AI in your own Google Cloud project (billed to that project):
+/home/sophusrosendahl/ple/docs/models.md:39:export VERTEXAI_PROJECT=<your-gcp-project> MODEL_PROXY_KEY=$(openssl rand -hex 24)
+/home/sophusrosendahl/ple/docs/models.md:48:Any other LiteLLM or OpenAI-compatible proxy that serves those names works too
+/home/sophusrosendahl/ple/docs/models.md:51:`hermes-opus` and `pi-opus` on Claude, the Gemini API for `agy-gemini` and for
+/home/sophusrosendahl/ple/docs/models.md:120:| `gemini/<model>` | Google AI Studio | `GEMINI_API_KEY` | `generativelanguage.googleapis.com` |
+/home/sophusrosendahl/ple/docs/models.md:127:`GOOGLE_GEMINI_BASE_URL` (`https://generativelanguage.googleapis.com`) and
+/home/sophusrosendahl/ple/docs/models.md:158:- When you call a Google-sponsored model without specifying a reasoning level,
+/home/sophusrosendahl/ple/docs/models.md:167:  `reasoning_effort`, or `thinkingConfig.thinkingLevel` in the Gemini API) and
+/home/sophusrosendahl/ple/docs/models.md:169:  `high` for maximum reasoning (the Gemini API also accepts `MAX`, but Argon
+/home/sophusrosendahl/ple/docs/models.md:187:  `kit/model_proxy` only exposes the endpoints harnesses use (Chat Completions,
+/home/sophusrosendahl/ple/docs/local-models.md:31:- The endpoint must return tool calls in both streamed and non-streamed
+/home/sophusrosendahl/ple/docs/rules.md:21:An entry is a single commit of a GitHub repository containing `submission.yaml`, your harness ([`kit/README.md`](../kit/README.md#what-you-submit)), and the `artifacts/` from your dev-set run ([`artifacts.md`](artifacts.md)). Your harnes
+/home/sophusrosendahl/ple/docs/rules.md:68:  endpoint (web search, including a provider's own search tools, and external
+/home/sophusrosendahl/ple/README.md:16:In the [PLE competition](https://ple-bench.com), an entry is a GitHub commit containing your **harness** (the server that drives a model through each task), the Google-sponsored **model** it calls, and the **`artifacts/`** it produced on the
+/home/sophusrosendahl/ple/README.md:35:export VERTEXAI_PROJECT=<your-gcp-project> MODEL_PROXY_KEY=$(openssl rand -hex 24)
+/home/sophusrosendahl/ple/README.md:77:Set `model_api` in `submission.yaml` to any of the eleven Google-sponsored
+/home/sophusrosendahl/ple/README.md:91:starter entries, all on Google-sponsored models except `local-model`, which is
+
+== runner (kit/*.py, kit/model_proxy files, eval/run.py): cpu / memory / pids settings
+/home/sophusrosendahl/ple/kit/__main__.py:249:        memory = stack.MEMORY if which == "serve" else stack.EGRESS_MEMORY
+/home/sophusrosendahl/ple/kit/__main__.py:251:            f"{name} stopped: {what} {stack.exit_wording(state, memory)}; the"
+/home/sophusrosendahl/ple/kit/build.py:79:MAX_CPUS, MAX_MEMORY, MAX_PIDS = 8, 16 << 30, 4096
+/home/sophusrosendahl/ple/kit/build.py:267:# the Docker daemon's (CPUs, bytes of memory), once it answered
+/home/sophusrosendahl/ple/kit/build.py:272:  """Returns the `(cpus, memory_bytes)` reported by the Docker daemon.
+/home/sophusrosendahl/ple/kit/build.py:276:  because a VM (such as Docker Desktop) often has fewer CPUs than the host and
+/home/sophusrosendahl/ple/kit/build.py:277:  `docker run --cpus` fails if requested CPUs exceed the daemon's count.
+/home/sophusrosendahl/ple/kit/build.py:280:    A `(cpus, memory_bytes)` tuple, or None if the daemon did not respond.
+/home/sophusrosendahl/ple/kit/build.py:304:  Applies the evaluation server's limits (8 CPUs, 16 GiB RAM, 4096 processes,
+/home/sophusrosendahl/ple/kit/build.py:305:  8 GiB file size), capping CPUs and memory at what the local Docker daemon
+/home/sophusrosendahl/ple/kit/build.py:306:  provides because `dockerd` rejects `--cpus` above its own count. When the
+/home/sophusrosendahl/ple/kit/build.py:307:  daemon does not report its resources, `--cpus` is omitted and the server's
+/home/sophusrosendahl/ple/kit/build.py:308:  memory limit is used.
+/home/sophusrosendahl/ple/kit/build.py:314:  rest = ["--pids-limit", str(MAX_PIDS), "--ulimit", f"fsize={MAX_FILE_BYTES}"]
+/home/sophusrosendahl/ple/kit/build.py:316:    return ["--memory", str(MAX_MEMORY), *rest]
+/home/sophusrosendahl/ple/kit/build.py:319:      "--cpus",
+/home/sophusrosendahl/ple/kit/build.py:320:      str(max(1, min(MAX_CPUS, ncpu))),
+/home/sophusrosendahl/ple/kit/build.py:321:      "--memory",
+/home/sophusrosendahl/ple/kit/build.py:322:      str(max(1 << 30, min(MAX_MEMORY, mem))),
+/home/sophusrosendahl/ple/kit/build.py:1674:  before `tarfile` allocates memory to read their payloads, matching the
+/home/sophusrosendahl/ple/kit/check.py:59:# The local task container gets the smallest dev task's CPUs and memory
+/home/sophusrosendahl/ple/kit/check.py:60:# (task.toml: 2 CPUs, 4 GB), the server's file-size limit, a process limit and a
+/home/sophusrosendahl/ple/kit/check.py:61:# 1 GB /app in memory, so that a runaway smoke task cannot take this machine
+/home/sophusrosendahl/ple/kit/check.py:63:# grows with this machine's CPUs, as a task's servers may start a worker per CPU
+/home/sophusrosendahl/ple/kit/check.py:65:TASK_PIDS = max(4096, 8 * (os.cpu_count() or 1))
+/home/sophusrosendahl/ple/kit/check.py:67:    "--cpus",
+/home/sophusrosendahl/ple/kit/check.py:69:    "--memory",
+/home/sophusrosendahl/ple/kit/check.py:73:    "--pids-limit",
+/home/sophusrosendahl/ple/kit/check.py:74:    str(TASK_PIDS),
+/home/sophusrosendahl/ple/kit/check.py:238:  of any size or line length require bounded memory and each match is counted
+/home/sophusrosendahl/ple/kit/egress.py:37:proxy memory regardless of how many connections arrive. Connection events are
+/home/sophusrosendahl/ple/kit/egress.py:754:  memory by the number of slots rather than incoming connection volume.
+/home/sophusrosendahl/ple/kit/protocol.py:93:  Any exception raised by `check` other than `ProtocolError` or `MemoryError` is
+/home/sophusrosendahl/ple/kit/protocol.py:109:    except (ProtocolError, MemoryError):
+/home/sophusrosendahl/ple/kit/relay.py:69:WEDGED = "the task container is not answering: out of processes or memory?"
+/home/sophusrosendahl/ple/kit/relay.py:171:    pids = list(tagged())
+/home/sophusrosendahl/ple/kit/relay.py:172:    for pid in pids:
+/home/sophusrosendahl/ple/kit/relay.py:177:    if not pids:
+/home/sophusrosendahl/ple/kit/relay.py:506:  return "killed (out of memory?)" if code == 137 else None
+/home/sophusrosendahl/ple/kit/relay.py:714:# and its websocket), so a proxy killed for its memory is the harness's fault,
+
+== kit/model_proxy: model entries and backends (file names, first lines naming vertex or gemini)
+__pycache__
+config.yaml
+effort_default.py
+judge_fallback.py
+start.sh
+/home/sophusrosendahl/ple/kit/model_proxy/config.yaml:16:  - {model_name: gemini-4-argon, litellm_params: {model: vertex_ai/gemini-4-argon, vertex_project: os.environ/VERTEXAI_PROJECT, vertex_location
+/home/sophusrosendahl/ple/kit/model_proxy/config.yaml:17:  - {model_name: gemini-4-carbon, litellm_params: {model: vertex_ai/gemini-4-carbon, vertex_project: os.environ/VERTEXAI_PROJECT, vertex_locati
+/home/sophusrosendahl/ple/kit/model_proxy/config.yaml:18:  - {model_name: gemini-4-neon, litellm_params: {model: vertex_ai/gemini-4-neon, vertex_project: os.environ/VERTEXAI_PROJECT, vertex_location: 
+/home/sophusrosendahl/ple/kit/model_proxy/config.yaml:19:  - {model_name: gemini-4-hydrogen, litellm_params: {model: vertex_ai/gemini-4-hydrogen, vertex_project: os.environ/VERTEXAI_PROJECT, vertex_lo
+/home/sophusrosendahl/ple/kit/model_proxy/config.yaml:20:  - {model_name: gemini-3.8-flash, litellm_params: {model: vertex_ai/gemini-3.8-flash, vertex_project: os.environ/VERTEXAI_PROJECT, vertex_loca
+/home/sophusrosendahl/ple/kit/model_proxy/config.yaml:21:  - {model_name: gemini-3.1-pro-preview, litellm_params: {model: vertex_ai/gemini-3.1-pro-preview, vertex_project: os.environ/VERTEXAI_PROJECT,
+/home/sophusrosendahl/ple/kit/model_proxy/config.yaml:24:  - {model_name: claude-opus-5-5, litellm_params: {model: vertex_ai/claude-opus-5-5, vertex_project: os.environ/VERTEXAI_PROJECT, vertex_locati
+/home/sophusrosendahl/ple/kit/model_proxy/config.yaml:25:  - {model_name: gpt-oss-120b, litellm_params: {model: vertex_ai/openai/gpt-oss-120b-maas, vertex_project: os.environ/VERTEXAI_PROJECT, vertex_
+/home/sophusrosendahl/ple/kit/model_proxy/config.yaml:26:  - {model_name: glm-5.2, litellm_params: {model: vertex_ai/zai-org/glm-5.2-maas, vertex_project: os.environ/VERTEXAI_PROJECT, vertex_location:
+/home/sophusrosendahl/ple/kit/model_proxy/config.yaml:27:  - {model_name: gemma-4-26b, litellm_params: {model: vertex_ai/google/gemma-4-26b-a4b-it-maas, vertex_project: os.environ/VERTEXAI_PROJECT, ve
+/home/sophusrosendahl/ple/kit/model_proxy/config.yaml:28:  - {model_name: llama-4-maverick, litellm_params: {model: vertex_ai/meta/llama-4-maverick-17b-128e-instruct-maas, vertex_project: os.environ/V
