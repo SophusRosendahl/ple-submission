@@ -361,3 +361,24 @@ Rung 0 instead tries a **low reasoning effort** (v5).
 - **Versions:** rung 1 v1 = no guard (run-017 Flash; Neon rerun in progress when this was decided); rung 1 v2 =
   guard, both models. Verified locally against a mock endpoint: the model's `cat input/A-101.png` came back as
   `INPUT_GUARD: refused`.
+
+### Rung 1 v1 results, both models (2026-11-27)
+
+| | Flash (run-017) | Neon (run-019) |
+|---|---|---|
+| model calls | 287 | 10 |
+| input tokens (cached) | 42.6 M (97.1 %) | 335 k (70.9 %) |
+| output tokens (reasoning) | 183.5 k | 31.5 k (15.6 k) |
+| tools | bash 284, write 2 | bash 6, write 1, edit 2 |
+| ran its own deliverable | yes | yes |
+| commands that re-opened an input file (v1, no guard) | 10 | 0 |
+| grader | valid model, clash gate failed | valid model, clash gate failed |
+| compliance, if the gate had passed | 4 of 11 passed, 0.569 | 6 of 11 passed, 0.600 |
+| score | 0.0 | 0.0 |
+
+- Both models now deliver a script that runs and writes a valid model (rung 0: 5 of 8 observations did not). Both
+  stop at the clash gate. Neon needed 10 calls where Flash needed 287.
+- Input re-reads are a Flash behaviour: 10 commands that named an input (it decoded the PNG sheets in Python); Neon
+  never did. This is the baseline for the v2 input guard. (The extractor command that the harness itself runs is
+  not counted.)
+- Both rung 1 v1 runs are single observations; repeats are needed before any claim about the loop.

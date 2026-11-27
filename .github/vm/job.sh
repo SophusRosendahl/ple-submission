@@ -1,9 +1,9 @@
 # stop: idle
 # pull: research/runs.jsonl research/run-details
-# Rung 1 v1, Neon again: the first Neon run (run-018) failed on its first call (Pi sent a thinking budget; patch_pi.py fixes it).
+# Rung 1 v2: Pi agent loop, input files fed once as context and refused afterwards (input guard), both models, effort low.
 cd ~/ple-submission && git log -1 --oneline
 if tmux has-session -t rung1 2>/dev/null; then echo "rung1 already running: waiting for it"; else
-  tmux new -d -s rung1 "MODELS=gemini-4-neon TASKS=data-hall-mep-routing EFFORT=low bash ~/ple-submission/infra/gcp-vm/rung1.sh 2>&1 | tee ~/rung1.log"
+  tmux new -d -s rung1 "TASKS=data-hall-mep-routing EFFORT=low bash ~/ple-submission/infra/gcp-vm/rung1.sh 2>&1 | tee ~/rung1.log"
 fi
 sleep 30
 for i in $(seq 280); do tmux has-session -t rung1 2>/dev/null || break; sleep 15; done
