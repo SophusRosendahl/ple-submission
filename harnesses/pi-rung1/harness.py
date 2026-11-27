@@ -33,6 +33,7 @@ custom `model` provider with `UNKNOWN_MODEL` limits.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 import pathlib
@@ -65,6 +66,9 @@ COMPAT = {
 # A model pi's catalog does not know gets these limits; tune them for yours.
 # Pi's catalogue knows gemini-3.8-flash (images, 65.5K output) but NOT gemini-4-neon: left to the template default it
 # would be text only with 16,384 output tokens and could not see the drawings. Both Gemini models stop at 65,536.
+# Budget guard: the most model calls (replies) one task may use. Every reply, with or without a tool call, is one
+# call. After the last allowed reply its tool calls finish, then Pi is stopped; what is on disk is graded.
+MAX_CALLS = int(os.environ.get("PI_MAX_CALLS") or 20)
 UNKNOWN_MODEL = {"input": ["text", "image"], "contextWindow": 1000000, "maxTokens": 65536, "reasoning": True}
 NOTE = (
     "You are working on an engineering task. Everything the task provides is already in this conversation: the"
@@ -75,7 +79,9 @@ NOTE = (
     " format the instruction asks. Keep notes and partial results in /tmp/scratch, never in a deliverable folder."
     " Before you finish, review and consider your work: look at what you wrote, compare it with the instruction,"
     " think about what could be wrong, and fix what does not match. When you are done, reply with a short summary"
-    " of what you delivered and where."
+    " of what you delivered and where. You have a budget of {max_calls} model calls in all: every reply you send,"
+    " with or without a tool call, is one call, and when the budget is used up the run is stopped and whatever is"
+    " on disk is graded. So put a first version of every deliverable in place early and improve it."
 )
 
 
@@ -178,8 +184,11 @@ def configure(
 class Run:
   """Tracks JSON stream events from a single Pi subprocess run."""
 
-  def __init__(self, session: taskbridge.Session, model: str):
+  def __init__(self, session: taskbridge.Session, model: str, max_calls: int = MAX_CALLS):
     self.session, self.model, self.replies = session, model, 0
+    self.max_calls = max_calls
+    self.budget_hit = asyncio.Event()  # set once the last allowed reply's tool calls have finished
+    self.pending_tools = None  # tool calls of the last allowed reply that are still running
     # Same shape as rung 0's CALLS summary (research/costs.py reads ok and failed). Pi's usage has a
     # `reasoning` count; the proxy request log is the cross-check.
     self.calls = {"ok": 0, "failed": 0, "input_tokens": 0, "cached_input_tokens": 0,
@@ -190,6 +199,8 @@ class Run:
 
   async def finish(self) -> None:
     """Logs the per-task summaries the tracker reads."""
+    await self.session.log("pi: BUDGET " + json.dumps({"max_calls": self.max_calls, "replies": self.replies,
+                                                       "stopped_by_budget": self.budget_hit.is_set()}))
     await self.session.log("pi: CALLS " + json.dumps(self.calls))
     await self.session.log("pi: TOOLS " + json.dumps({"counts": self.tools, "ran_deliverable": self.ran_deliverable, "input_guard_refusals": self.blocked}))
 
@@ -215,6 +226,10 @@ class Run:
         )
       # input_tokens counts cached prompt tokens too
       u = message.get("usage") or {}
+      if self.replies >= self.max_calls and self.pending_tools is None:
+        tool_calls = sum(1 for b in message.get("content") or [] if b.get("type") == "toolCall")
+        if tool_calls:  # a reply without a tool call is the final answer: Pi ends by itself
+          self.pending_tools = tool_calls
       failed = message.get("stopReason") == "error"
       self.calls["failed" if failed else "ok"] += 1
       prompt = u.get("input", 0) + u.get("cacheRead", 0) + u.get("cacheWrite", 0)
@@ -236,6 +251,11 @@ class Run:
           cache_read_tokens=u.get("cacheRead", 0),
       )
     elif kind == "tool_execution_end":
+      if self.pending_tools is not None:
+        self.pending_tools -= 1
+        if self.pending_tools <= 0:
+          await self.session.log(f"pi: call budget of {self.max_calls} used up: stopping")
+          self.budget_hit.set()
       if "INPUT_GUARD" in json.dumps(event.get("result"), default=str):
         self.blocked += 1
         await self.session.log("pi: input guard refused a command")
@@ -327,13 +347,13 @@ async def solve(session: taskbridge.Session) -> str:
           "--thinking",
           THINKING,
           "--append-system-prompt",
-          NOTE.format(workdir=session.workdir),
+          NOTE.format(workdir=session.workdir, max_calls=MAX_CALLS),
           # no `read` tool in rung 1: the inputs arrive as context. (bash can still print any file; we log tool calls.)
           "--tools",
           "write,edit,bash",
       ] + image_args
       run = Run(session, model)
-      done = await taskbridge.run_process(
+      proc = asyncio.create_task(taskbridge.run_process(
           argv,
           session,
           env=env,
@@ -342,7 +362,21 @@ async def solve(session: taskbridge.Session) -> str:
           stdin=prompt.encode(),
           stop_before_sec=STOP_BEFORE_SEC,
           log_prefix="pi: ",
-      )
+      ))
+      budget = asyncio.create_task(run.budget_hit.wait())
+      await asyncio.wait({proc, budget}, return_when=asyncio.FIRST_COMPLETED)
+      if proc.done():
+        done = proc.result()
+        budget.cancel()
+      else:  # the call budget is used up: stop Pi (run_process kills its process group when cancelled)
+        proc.cancel()
+        with contextlib.suppress(asyncio.CancelledError, Exception):
+          await proc
+        done = taskbridge.Finished(-1, "", True)
+        note = (f"Stopped by the harness: the budget of {MAX_CALLS} model calls was used up. Whatever the"
+                " deliverables held at that moment is what was delivered; it was not reviewed afterwards.")
+        session.final_message = note + (f"\n\nLast message from the agent: {session.final_message}"
+                                        if session.final_message else "")
   await run.finish()
   if not run.replies:
     raise RuntimeError(

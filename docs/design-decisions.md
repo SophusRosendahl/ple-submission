@@ -394,3 +394,20 @@ Rung 0 instead tries a **low reasoning effort** (v5).
   (Flash 1.25 M, Neon 97.6 k). A fourth, the context size at the last call, shows how large the conversation grew.
 - **Cross-check pending:** these are Pi's own usage figures, logged per reply. The proxy request log (in the
   bucket, `ple-proxy-requests.jsonl`) is the ground truth and has not yet been compared for rung 1.
+
+## Call budget guard: 20 model calls per task (2026-11-27, user decision, after a cost estimate)
+
+- **Why:** run-017 (Flash, rung 1) used 287 calls and a conversation of 331 k tokens; at list prices a Flash run
+  could cost $5 to $33 for one task, so a full pass over 15 or 29 tasks could cost hundreds of dollars. Neon did the
+  same task in 10 calls.
+- **How:** `harness.py` counts model replies (every reply, with or without a tool call, is one call). After the
+  20th reply, its tool calls are allowed to finish, then Pi is stopped (`PI_MAX_CALLS` overrides the 20; default 20).
+  A reply with no tool call is the final answer and ends the run by itself. The system note tells the model the
+  budget and to write a first version early. On a stop, `final_message` says the budget was used up and that the
+  deliverables were not reviewed afterwards. The log has `pi: BUDGET {max_calls, replies, stopped_by_budget}`.
+- **Tests:** `test_budget.py` (counting, waiting for the last reply's tool calls, a final answer at the limit,
+  killing a cancelled process). Run: `cd harnesses/pi-rung1 && python3 -m unittest test_budget`.
+- **Versions:** rung 1 v1 = no guard, no budget (run-017, run-019); the v2 job (input guard only) was started and
+  **cancelled** after 16 minutes when the budget was decided, never recorded; v3 = input guard + 20-call budget.
+- **Why 20 is also a finding:** the efficiency criterion asks for score against calls; a capped run shows what the
+  loop can do inside a fixed budget, and a task that is not finished in 20 calls is itself a result.

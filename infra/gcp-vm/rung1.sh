@@ -30,7 +30,7 @@ for MODEL in ${MODELS:-gemini-3.8-flash gemini-4-neon}; do
   echo "=== rung 1 with $MODEL ($(date -u +%FT%TZ)) ==="
   python3 research/run_dev.py --ple "$HOME/ple" --entry harnesses/pi-rung1 \
       --model "$MODEL" --judge dev --trials 5 --env-file "$ENV_FILE" "${TASK_ARGS[@]}" "${EFFORT_ARGS[@]}" \
-      --label "rung 1 v2: Pi agent loop, files fed once as context (input guard), review note, reasoning effort ${EFFORT:-default}${REP:+, repeat $REP} ($MODEL)" || echo "=== run for $MODEL failed ==="
+      --label "rung 1 v3: Pi agent loop, files fed once as context (input guard), 20-call budget, review note, reasoning effort ${EFFORT:-default}${REP:+, repeat $REP} ($MODEL)" || echo "=== run for $MODEL failed ==="
   bash "$HOME/ple-submission/infra/gcp-vm/save_runs.sh" || true   # keep the full outputs off the VM disk
 done
 echo "=== done ($(date -u +%FT%TZ)) ==="
