@@ -81,7 +81,7 @@ def explain(statement: dict) -> tuple[str, str]:
     if n and n.group(1) == "0":
       return ("orphan representation",
               f"{which} belongs to no product. Remove it, or assign it to an element (an unused representation is invalid).")
-    return ("shared representation",
+    return (f"shared representation {which}",
             f"{which} is assigned to {n.group(1) if n else 'several'} products, but IFC allows one representation to belong to one product. "
             "Create a new representation for every product (build it inside the loop that creates each element) instead of assigning one "
             "representation object to many elements. Sharing geometry is done with a representation map and mapped items, not by reuse.")
