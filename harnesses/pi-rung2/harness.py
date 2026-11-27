@@ -70,11 +70,21 @@ COMPAT = {
 # call. After the last allowed reply its tool calls finish, then Pi is stopped; what is on disk is graded.
 MAX_CALLS = int(os.environ.get("PI_MAX_CALLS") or 40)  # rung 2 reads, checks and re-checks: 20 is too few
 UNKNOWN_MODEL = {"input": ["text", "image"], "contextWindow": 1000000, "maxTokens": 65536, "reasoning": True}
+# Rungs 0 to 2: the agent cannot run ifcopenshell (the later "run and validate" rung does). A stub package in this folder
+# of the task container shadows the library for the agent's own commands (task-tools.ts sets PYTHONPATH); it is removed
+# when the run ends, so the grader's run of the deliverable is untouched.
+BLOCK_DIR = "/tmp/.rung_blocked"
+BLOCK_STUB = (
+    'raise ImportError("IFCOPENSHELL_BLOCKED: ifcopenshell cannot be run by the agent in this rung. Write the script'
+    ' from the drawings; numpy and the standard library work for checking your own numbers.")\n'
+)
 NOTE = (
     "You are working on an engineering task. Your tools read, write, edit and bash act on the task's Linux container,"
     " whose working directory is {workdir}; it has no internet access. The task's input files are in that container:"
     " the first message says where. Nothing from them is in the conversation yet, so read what you need with the read"
-    " tool (it shows images). Put every deliverable exactly where and in the format the instruction asks. Keep notes"
+    " tool (it shows images)."
+    " The ifcopenshell library cannot be imported in your commands during this run; the script you deliver is run later, with it."
+    " Put every deliverable exactly where and in the format the instruction asks. Keep notes"
     " and partial results in /tmp/scratch, never in a deliverable folder.\n\n"
     "Work in this order.\n"
     "1. Requirements. Read the whole instruction. Write the requirements as a numbered list in"
@@ -210,6 +220,7 @@ class Run:
                   "output_tokens": 0, "reasoning_tokens": 0}
     self.tools = {}
     self.ran_deliverable = False
+    self.ifc_blocked = 0  # imports of ifcopenshell the stub refused
     self.blocked = 0  # always 0 in rung 2 (no input guard); kept so the log shape matches rung 1
     self.reads = {}   # path -> times the read tool opened it (more than once = a re-read)
     self.written = []  # paths the write and edit tools touched, in order
@@ -219,7 +230,7 @@ class Run:
     await self.session.log("pi: BUDGET " + json.dumps({"max_calls": self.max_calls, "replies": self.replies,
                                                        "stopped_by_budget": self.budget_hit.is_set()}))
     await self.session.log("pi: CALLS " + json.dumps(self.calls))
-    await self.session.log("pi: TOOLS " + json.dumps({"counts": self.tools, "ran_deliverable": self.ran_deliverable, "reads": self.reads, "written": self.written}))
+    await self.session.log("pi: TOOLS " + json.dumps({"counts": self.tools, "ifcopenshell_blocked": self.ifc_blocked, "ran_deliverable": self.ran_deliverable, "reads": self.reads, "written": self.written}))
 
   async def on_event(self, event: dict[str, Any]) -> None:
     """Processes a parsed JSON event from Pi, updating final message and usage.
@@ -273,6 +284,8 @@ class Run:
         if self.pending_tools <= 0:
           await self.session.log(f"pi: call budget of {self.max_calls} used up: stopping")
           self.budget_hit.set()
+      if "IFCOPENSHELL_BLOCKED" in json.dumps(event.get("result"), default=str):
+        self.ifc_blocked += 1
       if "INPUT_GUARD" in json.dumps(event.get("result"), default=str):
         self.blocked += 1
         await self.session.log("pi: input guard refused a command")
@@ -366,6 +379,8 @@ async def solve(session: taskbridge.Session) -> str:
       name, model = await asyncio.to_thread(
           configure, agent_dir, relay, session, env
       )
+      await session.write_file(f"{BLOCK_DIR}/ifcopenshell/__init__.py", BLOCK_STUB)
+      env["TASK_PYTHONPATH_PREFIX"] = BLOCK_DIR
       # Rung 2: the contents are not fed. The first message is the instruction plus a listing of where the files are.
       prompt = session.instruction + "\n\n" + await inputs.listing(session)
       argv = [
@@ -420,6 +435,10 @@ async def solve(session: taskbridge.Session) -> str:
         session.final_message = note + (f"\n\nLast message from the agent: {session.final_message}"
                                         if session.final_message else "")
   await dump_scratch(session)
+  try:
+    await session.exec(f"rm -rf {BLOCK_DIR}", timeout_sec=30)  # leave the container as the grader expects it
+  except Exception as exc:
+    await session.log(f"pi: could not remove the ifcopenshell stub: {type(exc).__name__}: {exc}")
   await run.finish()
   if not run.replies:
     raise RuntimeError(

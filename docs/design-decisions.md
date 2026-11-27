@@ -637,3 +637,27 @@ What a model can see and reach in the task container, listed from inside it by a
   carries nothing. (Tested here in the cloud session: even a connect to an address with nothing behind it succeeds.)
 - **Audit v2** replaces the connect test with requests that need a reply: DNS lookup, an HTTP GET, a TCP request to
   `1.1.1.1:80`, a connect to an unroutable address, plus the routing table and network devices. Only its result decides.
+
+## Rungs 0 to 2 do not run ifcopenshell (2026-11-27, user decision)
+
+- **Decision:** in rungs 0 to 2 the agent must not be able to run ifcopenshell; that comes in a later rung ("run and validate").
+  Rung 0 has no tools, so it already holds. In rungs 1 and 2 it is enforced **by construction, not by instruction**: the harness
+  writes a stub package `ifcopenshell/__init__.py` into `/tmp/.rung_blocked` in the task container, and every bash command starts
+  with `PYTHONPATH` pointing at it, so `import ifcopenshell` (and running a script that imports it) raises
+  `IFCOPENSHELL_BLOCKED`. The image and the grader's own run of the deliverable are untouched, the stub is removed at the end of the
+  run, and each refused import is counted (`ifcopenshell_blocked` in `pi: TOOLS`). One factual sentence in the system note tells the
+  model it cannot import the library in this run and that the script it delivers will be run later with it. Verified against a
+  real ifcopenshell install and end to end through Pi with a mock task container. A determined workaround (unsetting the variable,
+  `python -S`) is possible; the count and the commands are logged.
+- **What this does to the runs so far.** Rung 1 v1 to v3 and rung 2 v1 (runs 017 to 021, 023, 024) let the agent run ifcopenshell
+  and its own script. They are not rung 1 or rung 2 as now defined; they are early evidence for the later rung: with the library and
+  the ability to run its script, both models delivered scripts that run and valid models (rung 0: 5 of 8 did not), still failing on
+  clashes. Keep them in the tracker and the write-up under that heading, and rerun the rungs under the new condition:
+  **rung 1 v4** (v3 plus the block) and **rung 2 v2** (v1 plus block, batching and scratch logging).
+- **Consequence for rung 2's method:** its checks cannot open the IFC, so they will be plain-Python checks of the agent's own numbers
+  (positions, extents, clearances). That is a better test of whether requirements-first checking works without the safety net.
+- **Task container's ifcopenshell and the installability question:** the task image already has ifcopenshell 0.8.4.post1 on Python
+  3.11 (verified by the audit and by the agents' own output), and the task container has no network, so nothing can or needs to be
+  installed there. For our own serve container, the build step runs with internet; installing the pinned library into a fresh
+  Python 3.12 environment, the way our `install` does, works here (0.8.4, `validate` and `api` import); not yet tested inside the
+  organizers' `debian:bookworm` builder.

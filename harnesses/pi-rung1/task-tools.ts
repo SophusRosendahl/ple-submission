@@ -32,6 +32,10 @@ import path from 'node:path';
 const RELAY = process.env.TASK_RELAY_URL ?? "";
 const WORKDIR = process.env.TASK_WORKDIR ?? "/";
 const MAX_EXEC_SEC = 600;
+// Rungs 0 to 2 do not let the agent run ifcopenshell yet (a later rung does). The harness puts a stub package in a folder
+// of the task container and names it here; every bash command starts with PYTHONPATH pointing at it, so `import
+// ifcopenshell` raises there. The image and the grader's copy of the library are not touched.
+const PYTHONPATH_PREFIX = process.env.TASK_PYTHONPATH_PREFIX ?? "";
 // Rung 1 feeds the input files once, as initial context; a command that names one of them again is refused.
 // The harness lists the file names and folders in TASK_INPUT_GUARD (a JSON array of substrings).
 const GUARD: string[] = (() => {
@@ -196,7 +200,8 @@ export default function registerTaskTools(pi: ExtensionAPI) {
 						return { exitCode: 1 };
 					}
 					const limit = execLimit(timeout, MAX_EXEC_SEC);
-					const run = relay("exec", { command: `cd ${quote(cwd)} || exit 1\n${command}`, timeout_sec: limit });
+					const shadow = PYTHONPATH_PREFIX ? "export PYTHONPATH=" + quote(PYTHONPATH_PREFIX) + ':"${PYTHONPATH:-}"\n' : "";
+					const run = relay("exec", { command: `cd ${quote(cwd)} || exit 1\n${shadow}${command}`, timeout_sec: limit });
 					// The relay cannot cancel an exec: an abort stops the wait, and the command runs on to its time limit.
 					const abort = new Promise<never>((_, reject) =>
 						signal?.addEventListener("abort", () => reject(new Error("aborted")), { once: true }),
