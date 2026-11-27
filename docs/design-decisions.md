@@ -661,3 +661,22 @@ What a model can see and reach in the task container, listed from inside it by a
   installed there. For our own serve container, the build step runs with internet; installing the pinned library into a fresh
   Python 3.12 environment, the way our `install` does, works here (0.8.4, `validate` and `api` import); not yet tested inside the
   organizers' `debian:bookworm` builder.
+
+### Audit v2 result: the task container's network (2026-11-27, run-025, a diagnostic)
+
+| Test from inside the task container | Result |
+|---|---|
+| DNS lookup `example.com` | resolves (172.66.147.243), through Docker's resolver at 127.0.0.11 |
+| HTTP GET `example.com` | **fails**: remote end closed the connection without a response |
+| TCP request to `1.1.1.1:80` (HEAD) | connects, reply is empty |
+| TCP connect to `10.255.255.1:80`, an address with nothing behind it | "connects" |
+| TCP connect to `8.8.8.8:443` | "connects" |
+
+- **Reading:** connections are accepted locally and carry nothing: a transparent egress block, as configured (`network_mode =
+  "no-network"` in the task, enforced by Harbor's egress-control sidecar). **No data left or arrived**, so the earlier worry
+  (task container with open internet) is withdrawn. The cgroup limits are as before (2 CPUs, 4 GiB, 4,096 processes).
+- **What still differs from a hard `--network none`** (which the kit's own smoke check uses): DNS resolves and a connect is
+  accepted instead of failing at once. For an agent the outcome is the same, a request that returns nothing; for a harness that
+  retried or waited on the network it would cost time. We do not know how the real evaluation isolates the container; it is
+  stated to have no network, and ours behaves the same for every request that needs a reply.
+- No agent used the network in any run so far (checked: no curl, wget, pip install, apt, git clone or URL in any command).
