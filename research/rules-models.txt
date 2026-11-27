@@ -1,0 +1,18 @@
+== lines in docs and READMEs about declared / more than one / second model, sub-agents, ensembles, must match
+/home/sophusrosendahl/ple/docs/rules.md:63:  you submit, running the `model_api` declared in `submission.yaml`. Re-running
+/home/sophusrosendahl/ple/docs/rules.md:72:- The `model_api` in `submission.yaml` must match the model your harness actually calls.
+/home/sophusrosendahl/ple/docs/models.md:68:Call only the model you declared. In evaluation, the key works for that model
+/home/sophusrosendahl/ple/docs/models.md:111:competition accepts only `google-cloud/<id>` models, so `kit check` never
+/home/sophusrosendahl/ple/docs/protocol.md:129:| `{"type": "usage", "model": "...", "input_tokens": 1200, "output_tokens": 300, "cache_read_tokens": 0}` | Records token usage for one model call |
+/home/sophusrosendahl/ple/kit/README.md:37:| `model_api` | `google-cloud/<id>`, one of the Google-sponsored models ([`docs/models.md`](../docs/models.md)). `openai/<model>`, `anthropic/<model>`, `gemini/<model>`, and `openai-compatible/<model>` with a public HTTPS `model_base_url` run locally only ([your own model](../
+/home/sophusrosendahl/ple/kit/README.md:94:session ends, the files at the task's declared deliverable paths and your final
+/home/sophusrosendahl/ple/kit/README.md:148:- `--env-file` loads `NAME=value` pairs for the local run, kept outside your entry: `MODEL_PROXY_URL` and `MODEL_PROXY_KEY` for `google-cloud` models, or your own model's key for a local-only entry ([`docs/models.md`](../docs/models.md#your-own-model-local-runs-only)). Variab
+/home/sophusrosendahl/ple/kit/README.md:165:- Model key scoping: in evaluation, a `google-cloud` entry's key works only for its declared model ([`docs/models.md`](../docs/models.md#what-your-server-receives)), while your local proxy serves all eleven.
+
+== rules.md headings
+1:# Rules and scoring
+3:## The dev set and the test set
+19:## Entries
+23:## Scoring
+51:## Dev score
+55:## Fair play
