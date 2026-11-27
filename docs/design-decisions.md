@@ -680,3 +680,18 @@ What a model can see and reach in the task container, listed from inside it by a
   retried or waited on the network it would cost time. We do not know how the real evaluation isolates the container; it is
   stated to have no network, and ours behaves the same for every request that needs a reply.
 - No agent used the network in any run so far (checked: no curl, wget, pip install, apt, git clone or URL in any command).
+
+## Rung 1 v4 and rung 2 v2 results (2026-11-27; runs 026 to 029; ifcopenshell not available to the agent)
+
+Full write-up: `docs/rung1v4-rung2v2-report.md` and the report page. In short, one run per cell:
+
+- **run-028, Neon, rung 1 v4: score 0.921, all gates passed** (valid IFC, zero clashes, connectivity 22/22). 9 calls. Its joints butt:
+  the entry segment ends at the face of the spine and each branch starts at the spine's other face. It wrote its own plain-Python
+  verification and never ran its script. First nonzero score on this task.
+- **run-029, Neon, rung 2 v2:** 20 same-service overlaps. Its `checks.py` (now readable thanks to the scratch logging) compares
+  segments of different services only; the requirements quote the "anywhere" rule correctly. The check encodes a narrower reading
+  without saying so, and the connectivity check counts overlapping segments as connected.
+- **Flash, both rungs:** no deliverable (20 calls of bash in rung 1 v4; 40 calls of reading, cropping and notes in rung 2 v2).
+- **No batching** in any of the four runs although rung 2 v2's note asks for it: 0 of 180 agent steps held more than one tool call.
+- The block held: 0 refusals for Neon, 1 and 2 for Flash.
+- **Caveat:** n = 1 per cell. The pass could be luck; the repeats decide. Do not describe rung 1 as better than rung 2 from this.
