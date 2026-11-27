@@ -21,7 +21,7 @@
 
 1. **Rung 1 removed the mechanical failures.** The scripts run, and the overlaps inside the model's own rebuild of the room (8, 2, 10 in rung 0) are gone in both rung 1 runs. Neon's own check found 8 roof-and-door overlaps in its first build, and its final model has none.
 2. **The 22 same-service overlaps never move.** 22 to 25 in every run, in both models, with and without the loop. Both agents' own clash check excluded exactly this category, by assumption. The loop gave them a way to check, but not a reason to doubt the definition.
-3. **Three things are constant across all five runs:** the 16 `clear_height` violations (items with their underside at 1,890 mm; by the models' own notes these are the in-aisle sprinkler heads hung under the containment roofs, which we have not confirmed item by item), the two rules that checked nothing, and a route length of 0.61 to 0.69 of the reference. They do not depend on model or rung, which fits the hidden naming-contract hypothesis for the first two (unproven).
+3. **Three things are constant across all five runs:** the 16 `clear_height` violations (all 16 are sprinkler heads, at 1,890 mm, or 1,870 mm in run-017; the models' own notes name them as the 16 in-aisle heads hung under the containment roofs, matching the drawings), the two rules that checked nothing, and a route length of 0.61 to 0.69 of the reference. They do not depend on model or rung, which fits the hidden naming-contract hypothesis for the first two (unproven).
 4. **More calls did not mean a better result here.** Flash needed 287 calls and 42.6 M prompt tokens, Neon 10 calls and 0.3 M, for the same outcome.
 
 ## The models wrote their own checks, unprompted, and one was wrong

@@ -424,3 +424,23 @@ Rung 0 instead tries a **low reasoning effort** (v5).
   "overlapping another by > 2 mm anywhere"; the grader found 22 same-service overlaps in each run.
 - **Use in the write-up:** insight and failure analysis (criterion 1). Journal section 6a; the report page
   (`docs/rung1-v1-report.md`). Caveat to state there: one run per model, keyword counts, no repeats yet.
+
+## What the 16 clear_height violations are (2026-11-27, user question)
+
+- **Fact (grader report, all five runs that reached the rules):** the 16 violating items are sprinkler heads, named
+  `SPK-A01...`, `SPR-IA01...` or `SPR-BC-W1...` by the model, all with their underside at 1,890 mm above the finished
+  floor (1,870 mm in run-017), against the 2,600 mm headroom the rule asks for. The 63 ceiling heads pass.
+- **They are where the drawings put them.** The models' reconciliation notes read F-101 as 16 in-aisle heads hung under
+  the cold-aisle containment roofs with the deflector at +1,890 mm. The count matches (16). So the model did not
+  make a modelling mistake here; a flat 2,600 mm rule applied to a head the drawings place at 1,890 mm fails.
+- **Likely explanation (not proven):** the rule is meant not to apply to heads inside a containment aisle, and the
+  grader decides that by recognising the containment roof. Support: `wide_obstruction_needs_sprinkler` (roofs wider
+  than 1,200 mm) found nothing to check in any run, although every model built 1,400 mm roofs, so the grader
+  appears not to see the roofs as roofs; with no roof seen, the heads are not "under containment" and the headroom
+  rule applies to them. It fits the same hidden naming contract as `tray_below_tile`. The other reading (a
+  deliberate conflict between the drawing and the rule, meant to be flagged in the reconciliation log) is not
+  excluded; we cannot tell the two apart without the grader's rules, which we do not read.
+- **What we may do about it:** look only in public competition documents for the class/name convention; do not raise
+  the heads to 2,600 mm, which would contradict the drawing and the sprinkler rules that already pass.
+- **Cost:** 16 violations of 85 to 102 items checked. They lower the compliance factor (0.83 to 0.92 across the five
+  runs); they do not trigger a gate, so on their own they would not zero the score.
