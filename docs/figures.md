@@ -33,7 +33,7 @@ finish, stops the agent, and sends an honest note as the final message. Either w
 
 ![The structured workflow](figures/fig4-structured-workflow.png)
 
-A check-builder (a sub-agent on a different model that sees only the task) programs the checks once, from a prepopulated library, before the design exists. The designer builds, binds the check-builder's roles to its own item kinds, evaluates, and reviews; the checks stay as built. The engine's report is made of facts it computed: failures, what was examined, which kinds no check touches, which checks missed an injected fault. The designer's concerns are recorded and shown with the engine's evidence.
+A check-builder (a sub-agent with a fresh context that sees only the task) programs the checks once, from a prepopulated library, before the design exists. The designer builds, binds the check-builder's roles to its own item kinds, evaluates, and reviews; the checks stay as built. The engine's report is made of facts it computed: failures, what was examined, which kinds no check touches, which checks missed an injected fault. The designer's concerns are recorded and shown with the engine's evidence.
 
 ## Figure 5. The parts of the structured workflow (proposed)
 

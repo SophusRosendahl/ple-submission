@@ -1,6 +1,6 @@
 stateDiagram-v2
   [*] --> Specify: task arrives
-  Specify --> Design: the check-builder, a sub-agent on a different model that sees only the task, programs the checks once, from the library
+  Specify --> Design: the check-builder, a sub-agent with a fresh context that sees only the task, programs the checks once, from the library
   Design --> Bind: the designer writes the solution and tags its items by kind
   Bind --> Evaluate: engine maps the check-builder's roles onto the designer's kinds
   Evaluate --> Review: report with failures, what was examined, kinds no check touches, faults the checks missed

@@ -1,5 +1,5 @@
 flowchart LR
-  CB["CHECK-BUILDER<br/>sub-agent, a different model<br/>sees only the task and the library<br/>never sees the design<br/>programs the checks once"]
+  CB["CHECK-BUILDER<br/>sub-agent, same model, fresh context<br/>sees only the task and the library<br/>never sees the design<br/>programs the checks once"]
   DS["DESIGNER<br/>the main agent, Pi loop<br/>builds, reviews, fixes"]
   subgraph ENG["ENGINE WE PROVIDE (serve container, deterministic, tested)"]
     LB["Check library<br/>all-pairs overlap, clearance, ranges,<br/>connectivity, coverage, counts, length<br/>plus custom checks"]

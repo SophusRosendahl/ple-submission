@@ -19,7 +19,7 @@ The agent reads well, lists the requirements, and fixes what its checks report (
 - **Objective tracker:** route length by group and total, and the change against the previous and the best evaluation.
 - **Robustness is a requirement of its own:** unit tests for touching against overlapping (the 2 mm tolerance edge), identical boxes, empty groups, thousands of items; fast pair search; explicit units; no hidden state between evaluations.
 
-**2. The check-builder (a sub-agent on a different model).** Before the design exists, the harness calls the model once, with fresh context: the task text, the library's catalogue and the configuration schema, and nothing else. It returns a configuration: for each requirement it finds, which library check, over which roles ("any solid", "route segments", "sprinkler heads"), with which numbers. It never sees the design, the drawings' content or the designer's notes. The hypothesis it tests: the exclusion of same-service pieces came from the designer's context (it knows its segments overlap at joints), not from the model's reading of the rule, so a check-builder without that context will not write it. If the check-builder writes it anyway, the belief is the model's own and the engine's strict default and fault self-test are what remain.
+**2. The check-builder (a sub-agent: the same model, a fresh context).** Before the design exists, the harness calls the model once, with fresh context: the task text, the library's catalogue and the configuration schema, and nothing else. It returns a configuration: for each requirement it finds, which library check, over which roles ("any solid", "route segments", "sprinkler heads"), with which numbers. It never sees the design, the drawings' content or the designer's notes. The hypothesis it tests: the exclusion of same-service pieces came from the designer's context (it knows its segments overlap at joints), not from the model's reading of the rule, so a check-builder without that context will not write it. If the check-builder writes it anyway, the belief is the model's own and the engine's strict default and fault self-test are what remain.
 
 **3. The designer (the main agent).** It reads the drawings, builds the solution, exposes its items, **binds** the check-builder's roles to its item kinds, evaluates, and then **reviews**: it reads the check-builder's configuration and the report, and may amend (add, tighten, or narrow a check). Every amendment, and above all every narrowing, is recorded by the engine and printed in the report and in the final evidence. The designer is not stopped from narrowing a check; it cannot do so unseen.
 
@@ -60,14 +60,14 @@ Rung 3 v1 (checker + engine + review) against rung 2 v3 (same task, Neon, ifcope
 3. **The checks are fixed after the check-builder sets them up.** The designer reviews the checks and the report and may record a concern; the concern is shown in the evidence block; it does not change the checks. (This replaces the amend-and-log idea: simpler; the cost is that a wrong check cannot be repaired inside a run, which we will see in the reports.)
 4. **Library plus custom checks:** a library-only design is too restrictive.
 5. **Budget: 40 calls for the designer** (as in rung 2) rather than 60; the check-builder's calls are counted and reported separately (expected 1 to 3).
-6. **Sub-agents always run on a different model from the designer.** Open point below.
+6. **Sub-agents run on the declared model with a fresh context.** The first idea, a different model, is dropped (user, after the rules text: it cannot be forced, and a submitted entry may only call its declared model).
 
 ## Settled: a second model, and the competition's rules (organizers' `docs/rules.md` and `docs/models.md`, read 2026-11-27)
 
 - `rules.md`: "The `model_api` in `submission.yaml` must match the model your harness actually calls."
 - `models.md`: "Call only the model you declared. In evaluation, the key works for that model..." and `kit/README.md`: in evaluation a `google-cloud` entry's key "works only for its declared model", while the local proxy serves all eleven.
 - **So a sub-agent on a different model cannot be part of a submitted entry** (the call would be refused and the entry would break the rule). It can be used in **local research runs**, where our proxy serves every model.
-- **Consequence for the design:** the check-builder takes its model as a setting. The submittable harness uses the declared model with a **fresh context** (the independence comes from the context, not the model). A different model is a research ablation: it tells us whether independence of model adds anything beyond independence of context. The user's principle, sub-agents on a different model, is kept for those research runs.
+- **Consequence for the design (decided):** the check-builder uses the declared model with a **fresh context**; the independence comes from the context, not from the model. The model stays a setting in the code, so a different-model ablation remains one line, but it is not part of the plan.
 
 ## Engine validated against the grader (2026-11-27)
 

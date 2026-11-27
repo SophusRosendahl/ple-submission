@@ -794,3 +794,9 @@ setting is one line.
   A sub-agent on a different model is therefore **research only**; the submittable harness uses the declared model with a fresh context. The check-builder's model is a setting.
 - **Tool bug found and fixed:** vertex data was read from a freed temporary (garbage values such as 6e284); the earlier cross-run geometry comparison was affected and was not used for any conclusion.
 - **Open:** Mode A (plan, `model_items()`) or Mode B (the harness runs the script with the real library and reads the IFC; the agent only sees the report).
+
+### Sub-agent model, settled (2026-11-27, user)
+
+A different model for the sub-agent cannot be forced (and a submitted entry may only call its declared model), so **the check-builder runs on the declared model with a fresh context**. The independence
+the design relies on is independence of context: it never sees the design, the notes or the drawings. Whether the model's own prior about joints survives that is what the experiment shows. A
+different-model ablation stays possible (the model is a setting) but is not planned.
