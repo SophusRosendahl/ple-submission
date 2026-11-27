@@ -1,5 +1,5 @@
 # stop: yes
-# Read the drawing sheets (task INPUTS, never the grader's tests/) and have Gemini transcribe what they say about the modelling contract.
+# Round 2: the other five sheets (task INPUTS, never the grader's tests/): where is the IFC class / property-set contract?
 up() { curl -s -o /dev/null -m 5 http://172.17.0.1:4000/health/liveliness; }
 if ! up; then
   VERTEXAI_PROJECT=ple-submission bash infra/local/start_proxy.sh >/dev/null 2>&1
@@ -13,12 +13,13 @@ root = os.path.expanduser("~/.cache/plebench/tasks")
 def sheet(name):
     hits = [p for p in glob.glob(f"{root}/**/{name}", recursive=True) if "data-hall-mep-routing" in p and "/tests/" not in p and "evaluator" not in p]
     return hits[0] if hits else None
-QUESTION = ("This is a sheet from a data-hall drawing set. Transcribe VERBATIM and completely every note, legend, table and callout on it "
-            "that concerns: (a) the access floor and floor tiles (tile size, panel thickness, how they must be modelled); "
-            "(b) cable tray, busway, chilled-water pipe and containment (sizes, minimum clearances, elevations, separations); "
-            "(c) any IFC class, ObjectType, PredefinedType or property-set name or property required for any element; "
-            "(d) sprinkler requirements. Quote exactly, keep numbers and units, say 'none on this sheet' for an item with nothing. No commentary.")
-for name in ("A-602.png", "A-101.png"):
+QUESTION = ("This is a sheet from a data-hall drawing set. Transcribe VERBATIM and completely every note, legend, table or callout on it "
+            "that concerns any of: (1) an IFC class, ObjectType, PredefinedType, property-set name or property name/value required or named for ANY element "
+            "(racks, CRAH, PDU, columns, sprinkler heads, containment roof or door, access floor or floor tiles, cable tray, busway, pipe); "
+            "(2) the access floor or floor tiles (size, thickness, whether tiles are separate elements); "
+            "(3) sprinkler heads under the containment roof or any wide obstruction (the head line); "
+            "(4) any modelling contract, naming or tagging rule. Quote exactly, keep numbers and units, and write 'none on this sheet' for an item with nothing. No commentary.")
+for name in ("A-601.png", "F-101.png", "A-301.png", "M-101.png", "E-101.png"):
     p = sheet(name)
     print(f"\n=================== {name}: {p}")
     if not p: continue
