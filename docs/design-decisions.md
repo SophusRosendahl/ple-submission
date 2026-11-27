@@ -514,3 +514,20 @@ thoughts.
   commits. Check by comparing the hash against the organizers' repository. Run records written from now on store the
   repository commit (`env.ple_commit`); earlier runs (up to run-021) do not.
 - Machine: 32 CPUs and 126 GB of memory, against 2 CPUs and 4 GB for the serve container in the real evaluation.
+
+## Sponsored endpoints and container limits, from the organizers' own files (2026-11-27, `research/runner-limits.txt`)
+
+- **Endpoints (docs/models.md):** every Google-sponsored Gemini model is served over "OpenAI Chat Completions, Gemini API"
+  (both surfaces). For local runs the docs say you need "a proxy that serves the same model names": the kit's
+  `kit/model_proxy/start.sh` starts a LiteLLM proxy "backed by Vertex AI in your own Google Cloud project", and its
+  `config.yaml` maps every sponsored model to `vertex_ai/<model>` (including `gemini-4-neon`, `gemini-3.8-flash`).
+  The backend behind the real sponsored endpoint is not stated; the `google-cloud/` prefix and the proxy design
+  suggest Vertex AI. The participant's own-key route `gemini/<model>` is Google AI Studio (`generativelanguage.googleapis.com`),
+  a different service.
+- **Limits:** `kit/build.py` applies "the evaluation server's limits (8 CPUs, 16 GiB RAM, 4096 processes, 8 GiB file
+  size)" to the build container, capped at what the local Docker daemon has. `kit/check.py` gives the local task
+  container the smallest dev task's resources (2 CPUs, 4 GB) for the smoke task. `eval/run.py` itself sets no CPU or
+  memory (no match); the task containers get their limits from each task's `task.toml`, which Harbor applies
+  (`research/task_resources.json`: this task 2 CPUs and 4,096 MB). So each trial's containers are already limited
+  individually; the 32-CPU machine only decides how many trials run side by side (5). **Not verified:** that the
+  limits are enforced inside the container; the environment audit prints `cpu.max` and `memory.max` from inside it.
