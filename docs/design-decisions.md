@@ -553,3 +553,18 @@ thoughts.
 - **Logged for the report:** `pi: TOOLS` now has `reads` (path to times opened, so re-reads are visible) and `written`
   (paths written or edited, in order, which shows whether requirements.md, data.md and the checks were created).
 - **Entry:** `harnesses/pi-rung2`; VM script `infra/gcp-vm/rung2.sh`; label `rung 2 v1`.
+
+## Do tool calls have to be one per model call? (2026-11-27, user question)
+
+- **No.** A model may put several tool calls in one reply; that is one model call. Pi runs them in parallel by default
+  (`executeToolCallsParallel` in its agent loop) and returns all results together; the budget guard already handles it
+  (it waits for every tool call of the last allowed reply).
+- **Our models never did it, unprompted.** Replies with more than one tool call: Flash v1 0 of 296, Neon v1 0 of 22,
+  Flash v3 0 of 31, Neon v3 0 of 22. So "reading 7 drawings takes 7 calls" in the rung 2 notes was an assumption about
+  behaviour, supported by these logs, not a limit of the system.
+- **Effect of batching:** fewer calls and less wall time, not fewer tokens (every image still enters the context once).
+  It also lowers the call-budget pressure that stopped Flash in rung 1 v3.
+- **Plan:** let rung 2 v1 finish as the baseline (does it batch on its own? almost certainly not), then rung 2 v2 adds one
+  line to the system note: make independent tool calls together in one reply, for example reading several files at once,
+  since every reply counts against the budget. One change, measured against v1. The call and tool counts per reply are
+  already in the logs, so the report can show it.
