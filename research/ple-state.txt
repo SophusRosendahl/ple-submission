@@ -1,0 +1,16 @@
+== organizers' repository at /home/sophusrosendahl/ple
+origin	https://github.com/SophusRosendahl/ple.git (fetch)
+origin	https://github.com/SophusRosendahl/ple.git (push)
+== commit
+5cf736f8b6e6f28eea71cae52de0c3bedaa88fa2 2026-11-23T15:52:27-08:00 Add Gemini 4 Carbon, Neon, and Hydrogen to the Google-sponsored models.
+== local changes (git status --porcelain, tracked and untracked; empty = none)
+== diff against the commit (stat)
+== ignored files that could change behaviour (names only)
+!! .venv/
+!! kit/__pycache__/
+!! kit/model_proxy/__pycache__/
+!! local.env
+!! uv.lock
+== cpus / memory of this machine
+32
+Mem:             125           1         124           0           0         124
