@@ -319,9 +319,19 @@ for rid in ("run-004", "run-009", "run-010"):
   `tray_below_tile`: 0 items checked, in this run and in the blind one). The grader lets a rule through when
   the submitted model has nothing it applies to, but a compliance check that tested nothing does not show
   compliance, so we count it as not passed. Run-010's tally is **6 of 11 passed, 3 failed, 2 not passed**.
-  (Run-010's cable tray ran entirely under the floor and its script says the tray clears the floor panel
-  "by 88 mm, more than the 20 mm required", yet `tray_below_tile` checked nothing. The script models the
-  access floor as one hall-wide slab, not as 600 mm tiles, which may be why the rule found no tile.)
+  **Why they checked nothing (from the task's own drawings, 2026-11-27).** Both rules are defined on the
+  sheets, and the model built both elements to those definitions. Sheet A-301 says the top of any under-floor
+  tray must be 20 mm or more below the underside of the floor panel, and that the access floor is one 35 mm
+  panel following the room outline (not tiles): the script's floor is exactly that, and its tray top sits 88
+  mm below the panel. Sheets F-101 and A-602 say the 1,400 mm cold-aisle containment roof is a fixed
+  obstruction wider than 1,200 mm that needs heads beneath it: the script's four roofs are 1,400 mm wide and
+  it has the 16 in-aisle heads. Yet the grader found nothing to check for either rule, although it did see
+  the roofs for the clash gate. **None of the seven sheets, and not the task text, names the IFC class,
+  type or property that identifies a floor panel or a containment roof** (every sheet answered "none" when
+  asked for IFC class, ObjectType or property-set names; the task text only says "exact element classes" and
+  gives one example, racks). So the likely cause is a hidden naming convention: the grader recognises these two
+  elements by names the task never states. This is a likelihood, not proven; the grader's own files would
+  show it and we do not open them.
 * **If every gate had passed, the score would have been 0.593** (compliance 0.915 x efficiency 0.648).
   That is the real distance to a usable answer.
 

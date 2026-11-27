@@ -250,3 +250,18 @@ Rung 0 instead tries a **low reasoning effort** (v5).
 - Why it matters: the grader only checks what is in the submitted model, so leaving elements out (or modelling
   them in a form the grader does not recognise) hides violations. An empty check is a warning sign, not good news.
 
+## A hidden naming contract (2026-11-27, from the task's own drawings)
+
+- Two compliance rules (`tray_below_tile`, `wide_obstruction_needs_sprinkler`) checked nothing on run-010 even
+  though the model built what the drawings define: one 35 mm floor panel following the room outline, a tray
+  top 88 mm below its underside, and four 1,400 mm containment roofs with in-aisle heads beneath them.
+- The task text refers to "exact element classes" and "required Pset_DCM_* property sets" but gives only one
+  example (racks), and **none of the seven sheets states any IFC class, type or property name**. The grader
+  appears to identify the floor panel and the containment roof by names the task never gives.
+- **Consequence for the harness:** a model cannot see this failure from the inside, and the grader reports
+  nothing about it except a rule that checked nothing (which we count as not passed). Using a convention found
+  by probing the dev grader would be task-specific tuning, which the fair-play rules forbid; a general lesson
+  is allowed (name real-world elements with the standard IFC class that fits them, and say which names were
+  assumed in the final message).
+- **Open:** whether the public competition docs or the dataset card state the convention. Look there only.
+
