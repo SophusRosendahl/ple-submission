@@ -1,6 +1,7 @@
 """The evaluate tool end to end on real IFC files, with a fake task container (needs ifcopenshell)."""
 import asyncio
 import base64
+import json
 import os
 import unittest
 
@@ -10,7 +11,7 @@ try:
 except ImportError:
   HAVE = False
 
-import checkbuilder
+import catalogue
 import evaluator
 
 IFC_OK, IFC_BAD = "/tmp/ifcruns/run-028.ifc", "/tmp/ifcruns/run-030.ifc"
@@ -40,7 +41,10 @@ PATTERNS = {"pipe": ["IfcPipeSegment*"]}
 
 
 def state():
-  return evaluator.DesignState([dict(c) for c in CHECKS], dict(PATTERNS), [])
+  st = evaluator.DesignState()
+  st.config = {"requirements": [], "roles": dict(PATTERNS), "checks": [dict(c) for c in CHECKS], "unchecked": []}
+  st.versions = [{"version": 1, "at_evaluation": 0, "config": st.config, "change": ["first version"]}]
+  return st
 
 
 def run(coro):
@@ -72,14 +76,30 @@ class Evaluate(unittest.TestCase):
     out = run(evaluator.evaluate_tool(FakeSession({}), state(), {"ifc": "/app/none.ifc"}))["output"]
     self.assertIn("Could not read /app/none.ifc", out)
 
-  def test_concern_is_kept_and_shown_afterwards(self):
-    s, st = FakeSession({"/app/m.ifc": IFC_OK}), state()
-    run(evaluator.concern_tool(s, st, {"check": "C2", "text": "limit looks too low"}))
+  def test_evaluate_without_checks_says_so(self):
+    out = run(evaluator.evaluate_tool(FakeSession({"/app/m.ifc": IFC_OK}), evaluator.DesignState(), {"ifc": "/app/m.ifc"}))["output"]
+    self.assertIn("No checks are installed yet", out)
+
+  def test_set_checks_installs_versions_and_evaluation_shows_the_rewrite(self):
+    s, st = FakeSession({"/app/m.ifc": IFC_OK}), evaluator.DesignState()
+    cfg = {"requirements": [], "roles": {"pipe": ["IfcPipeSegment*"]}, "checks": [{"id": "Z", "type": "z_range", "role": "pipe", "zmax": 2400}]}
+    out = run(evaluator.set_checks_tool(s, st, {"config": json.dumps(cfg)}))["output"]
+    self.assertIn("Installed as version 1", out)
+    run(evaluator.evaluate_tool(s, st, {"ifc": "/app/m.ifc"}))
+    cfg["checks"][0]["zmax"] = 9000
+    run(evaluator.set_checks_tool(s, st, {"config": json.dumps(cfg)}))
     out = run(evaluator.evaluate_tool(s, st, {"ifc": "/app/m.ifc"}))["output"]
-    self.assertIn("C2: limit looks too low", out)
+    self.assertIn("CHECKS: version 2 (rewritten since the last evaluation: edited Z: changed zmax", out)
+
+  def test_an_invalid_config_is_refused_and_the_old_version_stays(self):
+    s, st = FakeSession({}), state()
+    out = run(evaluator.set_checks_tool(s, st, {"config": json.dumps({"roles": {}, "checks": [{"id": "a", "type": "z_range", "role": "nope"}]})}))["output"]
+    self.assertIn("NOT installed", out)
+    self.assertEqual(len(st.versions), 1)
 
   def test_objective_tracks_best_so_far(self):
-    st = evaluator.DesignState([{"id": "L", "type": "length_sum", "role": "pipe"}], dict(PATTERNS), [])
+    st = state()
+    st.config["checks"] = [{"id": "L", "type": "length_sum", "role": "pipe"}]
     out = run(evaluator.evaluate_tool(FakeSession({"/app/m.ifc": IFC_OK}), st, {"ifc": "/app/m.ifc"}))["output"]
     self.assertIn("OBJECTIVE", out)
     self.assertIsNotNone(st.best_total)
@@ -88,9 +108,9 @@ class Evaluate(unittest.TestCase):
 class Builder(unittest.TestCase):
   def test_roundtrip_validation(self):
     cfg = {"requirements": [], "roles": {"p": ["IfcPipe*"]}, "checks": [{"id": "a", "type": "z_range", "role": "p", "zmax": 1}]}
-    self.assertEqual(checkbuilder.validate(cfg), [])
-    self.assertTrue(checkbuilder.validate({"roles": {}, "checks": [{"id": "a", "type": "custom", "code": "def check(:"}]}))
-    self.assertTrue(checkbuilder.validate(None))
+    self.assertEqual(catalogue.validate(cfg), [])
+    self.assertTrue(catalogue.validate({"roles": {}, "checks": [{"id": "a", "type": "custom", "code": "def check(:"}]}))
+    self.assertTrue(catalogue.validate(None))
 
 
 class Probes(unittest.TestCase):

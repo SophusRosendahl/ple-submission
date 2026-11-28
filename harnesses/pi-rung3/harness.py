@@ -42,9 +42,8 @@ import subprocess
 import tempfile
 from typing import Any
 
-import checkbuilder
+import catalogue
 import evaluator
-import probe
 import inputs
 import taskbridge
 
@@ -79,31 +78,28 @@ NOTE = (
     " the first message says where. Nothing from them is in the conversation yet, so read what you need with the read"
     " tool (it shows images). The ifcopenshell library works in your commands. Put every deliverable exactly where and in the"
     " format the instruction asks. Keep notes and partial results in /tmp/scratch, never in a deliverable folder.\n\n"
-    "The requirements were turned into automatic checks before you started, by someone who had only the task text. They are fixed:"
-    " you cannot edit them. The `evaluate` tool runs them on your IFC file (give it the file's path, and optionally the command that"
-    " builds it) and reports the IFC schema errors, every failing check with where it fails, by how much and what to change, the"
-    " objective, and what the checks do not cover. If you think a check is wrong, too strict, too lax or missing, record it with"
-    " `note_concern` (that does not change the check) and say so in your summary.\n\n"
-    "{checks}\n\n"
+    "You have two more tools. `set_checks` installs your own automatic checker for the design, and `evaluate` builds and validates your IFC"
+    " and runs that checker on it. The checker is described below.\n\n"
+    "{catalogue}\n\n"
     "Work in this order.\n"
-    "1. Requirements. Read the whole instruction and compare it with the requirements and checks above. Do not narrow, soften or"
-    " reinterpret a requirement.\n"
-    "2. Data. Read every input file you need, several at once if you like. In /tmp/scratch/data.md write down what you took from each."
-    " Re-read whatever you are unsure of.\n"
-    "3. Build a first version of every deliverable early, then improve it.\n"
-    "4. After every build, call `evaluate` and fix what it reports, starting with schema errors and then failing checks. A report"
-    " that says READY is the checks' verdict, not proof: also look at what it says is not covered, and check those requirements yourself.\n"
-    "5. Before you finish, re-read the instruction against what you delivered and confirm that every deliverable exists where the"
+    "1. Requirements. Read the whole instruction. Do not narrow, soften or reinterpret a requirement.\n"
+    "2. Data. Read every input file you need, several at once if you like. In /tmp/scratch/data.md write down what you took from each,"
+    " including every coordinate, limit and facing the checks need. Re-read whatever you are unsure of.\n"
+    "3. Checks. Write the requirements as checks and install them with `set_checks` before you build. Fix WRONG rows.\n"
+    "4. Build a first version of every deliverable early, then improve it.\n"
+    "5. After every build, call `evaluate` and fix what it reports, starting with schema errors and then failing checks."
+    " If a check itself is wrong (it errors, measures something other than its requirement, or lacks a number you have since read),"
+    " rewrite it with `set_checks`; never loosen a check to make the design pass.\n"
+    "6. Before you finish, re-read the instruction against what you delivered and confirm that every deliverable exists where the"
     " instruction says.\n\n"
     "Batch your tool calls. When several tool calls do not depend on each other, make them together in one reply"
     " instead of one per reply: read all the files you need at once, and put several commands into one bash call."
     " Every reply counts against your budget.\n\n"
-    "When you are done, reply with a short summary: what you delivered and where, what `evaluate` last said, your assumptions and"
-    " concerns, and anything you did not verify. Do not claim more than you tested. You have a"
+    "When you are done, reply with a short summary: what you delivered and where, what `evaluate` last said, whether and why you rewrote"
+    " the checks, your assumptions, and anything you did not verify. Do not claim more than you tested. You have a"
     " budget of {max_calls} model calls in all: every reply you send, with or without a tool call, is one call, and"
     " when the budget is used up the run is stopped and whatever is on disk is graded."
 )
-CHECKBUILDER_MAX_CALLS = 10  # the check-builder's own budget (drafts, probe rounds, a final review); not part of the designer's 40
 
 
 def provider() -> tuple[str, dict[str, Any]]:
@@ -335,96 +331,6 @@ async def dump_scratch(session: taskbridge.Session) -> None:
     await session.log(f"pi: could not dump the scratch folder: {type(exc).__name__}: {exc}")
 
 
-class SubSession:
-  """The session as the check-builder's Pi run sees it: its own final message, its log lines tagged 'checkbuilder:'."""
-
-  def __init__(self, session):
-    self._s, self.final_message = session, ""
-
-  def __getattr__(self, name):
-    return getattr(self._s, name)
-
-  async def log(self, text: str) -> None:
-    await self._s.log("checkbuilder: " + text[4:] if text.startswith("pi: ") else text)
-
-
-def pi_argv(name: str, model: str, system: str, tools: str | None, extra: list[str] | None = None) -> list[str]:
-  argv = [PI, "--print", "--mode", "json", "--no-session", "-nc", "-ns", "-np", "-na"] + (["-e", str(HERE / "task-tools.ts")] if tools else []) + [
-          "--provider", name, "--model", model, "--thinking", THINKING, "--append-system-prompt", system]
-  argv += ["--tools", tools] if tools else ["--no-tools"]
-  return argv + (extra or [])
-
-
-async def build_checks(session, relay, env, name: str, model: str) -> tuple[evaluator.DesignState, dict]:
-  """The check-builder: a full Pi agent with one tool, test_checks, that drafts the configuration, probes it with planted faults,
-  reviews it against the task text and replies with the final JSON. Falls back to its last configuration that passed validation,
-  and then to a bare overlap sweep."""
-  sub = SubSession(session)
-  held: dict[str, Any] = {"last_valid": None, "tests": 0, "wrong_at_last_test": None}
-
-  async def test_checks(fields: dict) -> dict:
-    held["tests"] += 1
-    try:
-      cfg = json.loads(fields.get("config") or "")
-    except ValueError as exc:
-      return {"output": f"config is not valid JSON: {exc}"}
-    problems = checkbuilder.validate(cfg)
-    if problems:
-      return {"output": "The configuration cannot be used yet:\n- " + "\n- ".join(problems[:15])}
-    result = probe.run_probes(cfg)
-    held["last_valid"] = cfg
-    held["wrong_at_last_test"] = sum(1 for r in result["rows"] if not r["ok"])
-    return {"output": "The configuration is valid.\n" + probe.render(result)}
-
-  relay.extra["testchecks"] = test_checks
-  cb_env = dict(env, TASK_CHECKBUILDER="1")
-  run = Run(sub, model, max_calls=CHECKBUILDER_MAX_CALLS)
-  proc = asyncio.create_task(taskbridge.run_process(
-      pi_argv(name, model, checkbuilder.SYSTEM, "test_checks"), session, env=cb_env, stdin=checkbuilder.prompt(session.instruction).encode(),
-      on_line=run.on_line, stop_before_sec=STOP_BEFORE_SEC, log_prefix="checkbuilder: "))
-  budget = asyncio.create_task(run.budget_hit.wait())
-  await asyncio.wait({proc, budget}, return_when=asyncio.FIRST_COMPLETED)
-  if not proc.done():
-    proc.cancel()
-    with contextlib.suppress(asyncio.CancelledError, Exception):
-      await proc
-  budget.cancel()
-  relay.extra.pop("testchecks", None)
-  await run.finish()
-  final = checkbuilder.extract_json(sub.final_message)
-  problems = checkbuilder.validate(final)
-  source = "final reply"
-  cfg = final
-  if problems and held["last_valid"] is not None:
-    cfg, source = held["last_valid"], "last configuration that passed test_checks (the final reply was unusable: " + "; ".join(problems[:3]) + ")"
-    problems = []
-  await session.log("pi: CHECKBUILDER " + json.dumps({"source": source, "problems": problems, "tests": held["tests"],
-                                                      "wrong_at_last_test": held["wrong_at_last_test"], "calls": run.calls}))
-  if problems:
-    cfg = {"requirements": [], "roles": {}, "unchecked": [], "objective": None,
-           "checks": [{"id": "fallback-overlap", "type": "no_overlap", "title": "no two elements overlap (fallback: the check-builder failed)", "roles": ["*"]}]}
-    await session.log("pi: CHECKBUILDER FAILED, using the fallback overlap sweep: " + "; ".join(problems[:5]))
-  await session.log("pi: CHECKS " + json.dumps(cfg)[:20000])
-  return evaluator.DesignState(cfg["checks"], cfg["roles"], cfg.get("requirements", [])), cfg
-
-
-def checks_text(cfg: dict) -> str:
-  lines = ["REQUIREMENTS AND CHECKS (fixed)"]
-  for r in cfg.get("requirements", []):
-    lines.append(f"  {r.get('id')}: {r.get('text')}")
-  lines.append("Checks:")
-  for c in cfg["checks"]:
-    lines.append(f"  {c['id']} [{c['type']}] {c.get('title', '')} (for {c.get('requirement', '?')})")
-  if cfg.get("unchecked"):
-    lines.append("Not covered by any check, verify yourself:")
-    for u in cfg["unchecked"]:
-      lines.append(f"  {u.get('requirement')}: {u.get('why')}")
-  obj = cfg.get("objective")
-  if obj:
-    lines.append(f"Objective: {obj.get('description')}" + (f" (computed by {obj['check']})" if obj.get("check") else ""))
-  return "\n".join(lines)
-
-
 async def solve(session: taskbridge.Session) -> str:
   """Runs Pi on a single task and returns the final response.
 
@@ -465,10 +371,10 @@ async def solve(session: taskbridge.Session) -> str:
       name, model = await asyncio.to_thread(
           configure, agent_dir, relay, session, env
       )
-      state, cfg = await build_checks(session, relay, env, name, model)
+      state = evaluator.DesignState()
       env["TASK_ENGINE"] = "1"
+      relay.extra["setchecks"] = lambda f: evaluator.set_checks_tool(session, state, f)
       relay.extra["evaluate"] = lambda f: evaluator.evaluate_tool(session, state, f)
-      relay.extra["concern"] = lambda f: evaluator.concern_tool(session, state, f)
       # Rung 3: the contents are not fed. The first message is the instruction plus a listing of where the files are.
       prompt = session.instruction + "\n\n" + await inputs.listing(session)
       argv = [
@@ -490,9 +396,9 @@ async def solve(session: taskbridge.Session) -> str:
           "--thinking",
           THINKING,
           "--append-system-prompt",
-          NOTE.format(workdir=session.workdir, max_calls=MAX_CALLS, checks=checks_text(cfg)),
+          NOTE.format(workdir=session.workdir, max_calls=MAX_CALLS, catalogue=catalogue.CATALOGUE),
           "--tools",
-          "read,write,edit,bash,evaluate,note_concern",
+          "read,write,edit,bash,set_checks,evaluate",
       ]
       version = (HERE / "VERSION").read_text(encoding="utf-8").strip() if (HERE / "VERSION").is_file() else None
       await session.log("pi: VERSION " + json.dumps({"harness": version, "model": model, "thinking": THINKING,
@@ -523,7 +429,7 @@ async def solve(session: taskbridge.Session) -> str:
         session.final_message = note + (f"\n\nLast message from the agent: {session.final_message}"
                                         if session.final_message else "")
   await dump_scratch(session)
-  await session.log("pi: EVALS " + json.dumps({"evaluations": state.evaluations, "concerns": state.concerns}))
+  await session.log("pi: EVALS " + json.dumps({"evaluations": state.evaluations, "checks_versions": len(state.versions)}))
   await run.finish()
   if not run.replies:
     raise RuntimeError(

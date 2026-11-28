@@ -1,8 +1,7 @@
-"""The check-builder: one fresh-context model call that programs the engine from the task text alone.
+"""The check catalogue the agent programs the engine from, and the validation of a checks configuration.
 
-It never sees the design or the input files, only the instruction and the engine's catalogue. Its output is data: requirements,
-roles (names bound to IFC kind patterns), checks from the library (or small custom ones) and the objective. The harness validates
-it and, on an error, asks once more with the error message.
+One agent does everything in rung 3 v2: it writes the checks (set_checks), builds, evaluates, and rewrites the checks when they are
+wrong. This module holds the text that tells it how, and the structural validation of a configuration.
 """
 from __future__ import annotations
 
@@ -11,9 +10,9 @@ import re
 
 import engine
 
-SYSTEM = """You configure an automatic design checker. You will be given an engineering task. You do not design anything.
-Your job: read the task's requirements and objective and program the checker so that every requirement that can be tested
-on the geometry of the delivered IFC model is tested, strictly and completely, and the objective is computed.
+CATALOGUE = """THE CHECKER
+You have an automatic checker for your design. You program it yourself, from the task's requirements and objective: every requirement
+that can be tested on the geometry of the delivered IFC model should be tested, strictly and completely, and the objective computed.
 
 HOW THE CHECKER SEES THE MODEL
 The delivered IFC file is turned into a list of items, one per element that has a shape. Each item has:
@@ -50,44 +49,37 @@ THE CHECK LIBRARY (each check is a JSON object with a unique "id", a "type", a s
                   Use only when the library cannot express the requirement; test_checks runs your code, so an error in it shows up there.
 
 RULES
-- Encode every numeric limit in the task with its own number and unit (convert to mm). Do not soften, narrow or reinterpret.
+- Write the checks BEFORE you build, from the requirements, so the design is built against them. Encode every numeric limit in the task with its own number and unit (convert to mm). Do not soften, narrow or reinterpret.
 - A requirement about every item or every pair must be a full sweep: do not exclude pairs unless the task text says so.
 - One check per requirement is the norm. Put the requirement's id in the check.
 - Requirements that cannot be tested on boxes (file format, naming, documents, anything about a deliverable other than the IFC geometry)
   go in "unchecked" with the reason.
 - The objective: if the task scores a quantity, say what it is in "objective" and, when it is a length, add a length_sum check.
 
-HOW YOUR CHECKS WILL BE USED
-A separate designer agent will build the IFC model. After every build it calls an `evaluate` tool that runs YOUR checks on the delivered
-file and returns a report. It reads that report and changes the design accordingly, so:
-- Your checks are the only automatic judge. They are fixed: the designer cannot edit them, only record a concern. A check that is too strict
-  sends the designer after something that is not a defect; one that is too lax or missing lets a defect through; one whose roles match
-  nothing is reported as an error that the designer cannot fix.
-- For a library check, the report tells the designer where it fails, by how much and what to change (examples are shown by test_checks).
-  For a custom check, YOU write that message: each violation string must name the elements, the amount, and what to change.
-- The designer also sees your requirement ids and check titles, the list of requirements you could not check, and the objective. Make
-  the titles say what is tested, with the number.
-- The designer does not know what you left out unless you list it under "unchecked".
+HOW THE CHECKER WORKS WITH YOUR DESIGN
+- set_checks(config) installs a configuration (the whole thing every time). It validates it, then plants a known fault and a clean case for
+  every check in a small synthetic model built from your roles, runs your checks on them, and shows [ok] or WRONG for each, with the message
+  you would read when the check fails. Custom code is run on the synthetic model too, so a bug in it shows up there. Fix WRONG rows first.
+- evaluate(ifc, run?) builds your IFC (optional command), validates the schema, runs the installed checks on the delivered file and returns
+  the report: where each check fails, by how much and what to change; the objective; the kinds no check covers; the scope of every
+  exclusion. For a custom check YOU write the message: each violation string must name the elements, the amount and the change to make.
+- The checker is only as good as your configuration. A check that is too strict sends you after something that is not a defect; one that is
+  too lax or missing lets a defect through; one whose roles match nothing is an ERROR. READY means your checks pass, not that the design is right.
+- You may rewrite the checks at any time, for example when a check errors, when you find that it measures something other than its
+  requirement, when you learn from the drawings a number the task text only points to (read the input files first: coordinates, limits and
+  facings are often only there), or when a requirement is missing. The evaluation shows the version of the checks and what changed since the
+  previous version. Never loosen, narrow or delete a check just to make the design pass: change a check only because it is wrong against the
+  requirement's own words, and say in your final summary what you changed and why.
+- Requirements that cannot be tested on boxes (file format, naming, documents) are yours to verify directly.
 
-HOW TO WORK
-You have a tool, test_checks(config), where config is your whole reply as a JSON string. Draft the configuration, call test_checks, and read
-the result: it validates the configuration, plants a known fault and a clean case for every check in a small synthetic model built from
-your own roles, and says whether each check passed the clean case and failed the faulty one, with the message the designer would read.
-Every row must be [ok]. A WRONG row means the check is miswired: fix it. Then review your work against the task text once more, requirement
-by requirement: is every numeric limit encoded with its number and unit, is every requirement either checked or listed under "unchecked",
-is any check stricter or looser than the text, would a role glob miss a class the designer would naturally use? Test again after any change.
-Stop when every probe is ok and the review finds nothing. You have a small call budget; do not use it all.
-
-REPLY with a single JSON object and nothing else:
+CONFIGURATION FORMAT (set_checks takes it as one JSON string)
 {"requirements": [{"id": "R1", "text": "the requirement in the task's own words"}],
  "roles": {"role": ["glob", ...]},
- "checks": [ ... ],
+ "checks": [ ... as in the library above ... ],
  "unchecked": [{"requirement": "R9", "why": "..."}],
- "objective": {"description": "...", "check": "id of the check that computes it, or null"}}"""
-
-
-def prompt(instruction: str) -> str:
-  return "TASK\n\n" + instruction
+ "objective": {"description": "...", "check": "id of the check that computes it, or null"}}
+Roles are glob patterns over kind, case-insensitive; you do not know the exact kinds until you have built a model, so start broad and
+narrow once evaluate shows the kinds present."""
 
 
 def extract_json(text: str) -> dict | None:

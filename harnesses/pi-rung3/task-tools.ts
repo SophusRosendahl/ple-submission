@@ -221,14 +221,27 @@ export default function registerTaskTools(pi: ExtensionAPI) {
 	);
 
 	// Rung 3: the evaluation engine. Both tools call the harness (serve side), which holds the checks the check-builder wrote.
+	const setChecks = defineTool({
+		name: "set_checks",
+		label: "Set checks",
+		description:
+			"Install your checker configuration (requirements, roles, checks, unchecked, objective) as one JSON string; call it again to rewrite it. " +
+			"The reply validates it, plants a known fault and a clean case for each check in a small synthetic model, runs your checks on them " +
+			"and shows [ok] or WRONG per check with the message you would read. Fix every WRONG row.",
+		parameters: Type.Object({ config: Type.String({ description: "The whole configuration, as one JSON object" }) }),
+		async execute(_id: string, params: { config: string }) {
+			const r = await relay("setchecks", params);
+			return { content: [{ type: "text", text: r.output ?? "" }], details: {} };
+		},
+	});
 	const evaluate = defineTool({
 		name: "evaluate",
 		label: "Evaluate",
 		description:
-			"Evaluate your design with the project's fixed checks. Give the path of the IFC file you wrote, and optionally a shell " +
-			"command that builds it (for example 'python solution.py'); the command runs first, with ifcopenshell available. " +
-			"The reply validates the IFC schema, runs every check on the elements, and says for each failure where it is, by how much, " +
-			"and what to change. Failures with one cause are listed once with a count. Call it after every build.",
+			"Evaluate your design with your installed checks. Give the path of the IFC file you wrote, and optionally a shell command that builds it " +
+			"(for example 'python solution.py'); the command runs first, with ifcopenshell available. The reply validates the IFC schema, runs every " +
+			"check on the elements, and says for each failure where it is, by how much and what to change. Failures with one cause are listed once " +
+			"with a count. Call it after every build.",
 		parameters: Type.Object({
 			ifc: Type.String({ description: "Path of the IFC file to evaluate, inside the task container" }),
 			run: Type.Optional(Type.String({ description: "Shell command that (re)builds the IFC first, run in the working directory" })),
@@ -238,38 +251,9 @@ export default function registerTaskTools(pi: ExtensionAPI) {
 			return { content: [{ type: "text", text: r.output ?? "" }], details: {} };
 		},
 	});
-	const concern = defineTool({
-		name: "note_concern",
-		label: "Note concern",
-		description:
-			"Record that one of the fixed checks seems wrong, too strict, too lax or missing (the checks cannot be edited). " +
-			"Say which check and why. The concern is kept with the evaluation report and read by whoever reviews the result.",
-		parameters: Type.Object({
-			check: Type.String({ description: "Id of the check, or 'missing' for a check that should exist" }),
-			text: Type.String({ description: "What is wrong and your evidence" }),
-		}),
-		async execute(_id: string, params: { check: string; text: string }) {
-			const r = await relay("concern", params);
-			return { content: [{ type: "text", text: r.output ?? "" }], details: {} };
-		},
-	});
-	const testChecks = defineTool({
-		name: "test_checks",
-		label: "Test checks",
-		description:
-			"Test your checker configuration. Pass the full JSON object (requirements, roles, checks, unchecked, objective) as a string. " +
-			"The reply validates it, plants a known fault and a clean case for each check in a small synthetic model, runs your checks on " +
-			"them, and shows what the designer would read when a check fails. Fix every WRONG row, then call it again.",
-		parameters: Type.Object({ config: Type.String({ description: "The configuration, as one JSON object" }) }),
-		async execute(_id: string, params: { config: string }) {
-			const r = await relay("testchecks", params);
-			return { content: [{ type: "text", text: r.output ?? "" }], details: {} };
-		},
-	});
-	if (process.env.TASK_CHECKBUILDER === "1") pi.registerTool(testChecks);
 	if (process.env.TASK_ENGINE === "1") {
+		pi.registerTool(setChecks);
 		pi.registerTool(evaluate);
-		pi.registerTool(concern);
 	}
 
 	pi.on("before_agent_start", (event) => {
