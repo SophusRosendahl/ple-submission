@@ -93,5 +93,23 @@ class Builder(unittest.TestCase):
     self.assertTrue(checkbuilder.validate(None))
 
 
+class Probes(unittest.TestCase):
+  CFG = {"roles": {"pipe": ["IfcPipeSegment*"], "rack": ["IfcCableCarrier*"]},
+         "checks": [{"id": "b", "type": "z_range", "role": "pipe", "zmax": 2400},
+                    {"id": "c", "type": "min_clearance", "a": "pipe", "b": "rack", "min": 300},
+                    {"id": "e", "type": "connected", "role": "pipe"}]}
+
+  def test_a_wired_config_passes_every_probe(self):
+    import probe
+    r = probe.run_probes(self.CFG)
+    self.assertTrue(r["rows"] and all(x["ok"] for x in r["rows"]), probe.render(r))
+
+  def test_a_miswired_check_is_caught(self):
+    import probe
+    cfg = {"roles": {"pipe": ["IfcPipeSegment*"]}, "checks": [{"id": "z", "type": "z_range", "role": "pipes", "zmax": 2400}]}
+    r = probe.run_probes(cfg)
+    self.assertTrue(any(not x["ok"] for x in r["rows"]))
+
+
 if __name__ == "__main__":
   unittest.main()

@@ -809,3 +809,11 @@ different-model ablation stays possible (the model is a setting) but is not plan
 - **Designer tools** (`task-tools.ts`, relay routes in `taskbridge.py`): `evaluate` and `note_concern`. The checks are fixed; a concern is recorded and shown with every later report.
 - Roles are glob patterns over `IfcClass/ObjectType`, resolved against the kinds actually in the delivered model.
 - Tested: unit tests, the tool on real IFC files, and the whole harness against a fake model server (check-builder call, designer calls, both tools, relay and Pi extension). Not yet run against a real model.
+
+## Check-builder is now an agent that tests its own work (rung 3 v1)
+
+- Before: one call, structural validation only, no way to see whether its checks work. Now a Pi agent with one tool, `test_checks(config)`, and a budget of 10 calls (separate from the designer's 40).
+- `test_checks` validates the configuration, then `probe.py` builds a tiny synthetic model from the configuration's own role globs, plants one clean case and one known fault per check, runs the checks, and returns [ok]/WRONG rows plus the exact message the designer would read on failure. A WRONG row means the check is miswired (role typo, scope that leaves the pair out, limit on the wrong side).
+- Its briefing now says how its checks are used: the designer calls `evaluate` after every build, reads the report, cannot edit checks, only record a concern. A too-strict check wastes effort, a lax or missing one lets a defect through, an unmatched role is an error the designer cannot fix. Custom checks must write their own located, quantified messages. It is told to review its work against the task text once more before replying.
+- Fallbacks: if the final reply is unusable, the last configuration that passed `test_checks`; failing that, a bare overlap sweep (logged).
+- Limits: probes use the globs' own kind names, so they cannot tell whether the globs match the designer's real kinds; custom checks have no generic probe; it still sees only the task text, not the input files.

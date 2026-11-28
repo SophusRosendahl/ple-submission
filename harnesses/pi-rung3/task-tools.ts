@@ -253,6 +253,20 @@ export default function registerTaskTools(pi: ExtensionAPI) {
 			return { content: [{ type: "text", text: r.output ?? "" }], details: {} };
 		},
 	});
+	const testChecks = defineTool({
+		name: "test_checks",
+		label: "Test checks",
+		description:
+			"Test your checker configuration. Pass the full JSON object (requirements, roles, checks, unchecked, objective) as a string. " +
+			"The reply validates it, plants a known fault and a clean case for each check in a small synthetic model, runs your checks on " +
+			"them, and shows what the designer would read when a check fails. Fix every WRONG row, then call it again.",
+		parameters: Type.Object({ config: Type.String({ description: "The configuration, as one JSON object" }) }),
+		async execute(_id: string, params: { config: string }) {
+			const r = await relay("testchecks", params);
+			return { content: [{ type: "text", text: r.output ?? "" }], details: {} };
+		},
+	});
+	if (process.env.TASK_CHECKBUILDER === "1") pi.registerTool(testChecks);
 	if (process.env.TASK_ENGINE === "1") {
 		pi.registerTool(evaluate);
 		pi.registerTool(concern);

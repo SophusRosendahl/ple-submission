@@ -44,6 +44,7 @@ from typing import Any
 
 import checkbuilder
 import evaluator
+import probe
 import inputs
 import taskbridge
 
@@ -102,7 +103,7 @@ NOTE = (
     " budget of {max_calls} model calls in all: every reply you send, with or without a tool call, is one call, and"
     " when the budget is used up the run is stopped and whatever is on disk is graded."
 )
-CHECKBUILDER_MAX_ATTEMPTS = 2
+CHECKBUILDER_MAX_CALLS = 10  # the check-builder's own budget (drafts, probe rounds, a final review); not part of the designer's 40
 
 
 def provider() -> tuple[str, dict[str, Any]]:
@@ -354,25 +355,51 @@ def pi_argv(name: str, model: str, system: str, tools: str | None, extra: list[s
   return argv + (extra or [])
 
 
-async def build_checks(session, env, name: str, model: str) -> tuple[evaluator.DesignState, dict]:
-  """One fresh-context call (two at most) that turns the task text into the engine's checks. Falls back to a bare overlap sweep."""
+async def build_checks(session, relay, env, name: str, model: str) -> tuple[evaluator.DesignState, dict]:
+  """The check-builder: a full Pi agent with one tool, test_checks, that drafts the configuration, probes it with planted faults,
+  reviews it against the task text and replies with the final JSON. Falls back to its last configuration that passed validation,
+  and then to a bare overlap sweep."""
   sub = SubSession(session)
-  problems: list[str] = []
-  cfg = None
-  for attempt in range(1, CHECKBUILDER_MAX_ATTEMPTS + 1):
-    text = checkbuilder.prompt(session.instruction)
-    if problems:
-      text += "\n\nYour previous reply could not be used:\n- " + "\n- ".join(problems[:12]) + "\nReply again with the corrected JSON object."
-    sub.final_message = ""
-    run = Run(sub, model, max_calls=3)
-    await taskbridge.run_process(pi_argv(name, model, checkbuilder.SYSTEM, None), session, env=env, stdin=text.encode(),
-                                 on_line=run.on_line, stop_before_sec=STOP_BEFORE_SEC, log_prefix="checkbuilder: ")
-    await run.finish()
-    cfg = checkbuilder.extract_json(sub.final_message)
+  held: dict[str, Any] = {"last_valid": None, "tests": 0, "wrong_at_last_test": None}
+
+  async def test_checks(fields: dict) -> dict:
+    held["tests"] += 1
+    try:
+      cfg = json.loads(fields.get("config") or "")
+    except ValueError as exc:
+      return {"output": f"config is not valid JSON: {exc}"}
     problems = checkbuilder.validate(cfg)
-    await session.log("pi: CHECKBUILDER " + json.dumps({"attempt": attempt, "problems": problems, "calls": run.calls}))
-    if not problems:
-      break
+    if problems:
+      return {"output": "The configuration cannot be used yet:\n- " + "\n- ".join(problems[:15])}
+    result = probe.run_probes(cfg)
+    held["last_valid"] = cfg
+    held["wrong_at_last_test"] = sum(1 for r in result["rows"] if not r["ok"])
+    return {"output": "The configuration is valid.\n" + probe.render(result)}
+
+  relay.extra["testchecks"] = test_checks
+  cb_env = dict(env, TASK_CHECKBUILDER="1")
+  run = Run(sub, model, max_calls=CHECKBUILDER_MAX_CALLS)
+  proc = asyncio.create_task(taskbridge.run_process(
+      pi_argv(name, model, checkbuilder.SYSTEM, "test_checks"), session, env=cb_env, stdin=checkbuilder.prompt(session.instruction).encode(),
+      on_line=run.on_line, stop_before_sec=STOP_BEFORE_SEC, log_prefix="checkbuilder: "))
+  budget = asyncio.create_task(run.budget_hit.wait())
+  await asyncio.wait({proc, budget}, return_when=asyncio.FIRST_COMPLETED)
+  if not proc.done():
+    proc.cancel()
+    with contextlib.suppress(asyncio.CancelledError, Exception):
+      await proc
+  budget.cancel()
+  relay.extra.pop("testchecks", None)
+  await run.finish()
+  final = checkbuilder.extract_json(sub.final_message)
+  problems = checkbuilder.validate(final)
+  source = "final reply"
+  cfg = final
+  if problems and held["last_valid"] is not None:
+    cfg, source = held["last_valid"], "last configuration that passed test_checks (the final reply was unusable: " + "; ".join(problems[:3]) + ")"
+    problems = []
+  await session.log("pi: CHECKBUILDER " + json.dumps({"source": source, "problems": problems, "tests": held["tests"],
+                                                      "wrong_at_last_test": held["wrong_at_last_test"], "calls": run.calls}))
   if problems:
     cfg = {"requirements": [], "roles": {}, "unchecked": [], "objective": None,
            "checks": [{"id": "fallback-overlap", "type": "no_overlap", "title": "no two elements overlap (fallback: the check-builder failed)", "roles": ["*"]}]}
@@ -438,7 +465,7 @@ async def solve(session: taskbridge.Session) -> str:
       name, model = await asyncio.to_thread(
           configure, agent_dir, relay, session, env
       )
-      state, cfg = await build_checks(session, env, name, model)
+      state, cfg = await build_checks(session, relay, env, name, model)
       env["TASK_ENGINE"] = "1"
       relay.extra["evaluate"] = lambda f: evaluator.evaluate_tool(session, state, f)
       relay.extra["concern"] = lambda f: evaluator.concern_tool(session, state, f)
