@@ -391,12 +391,52 @@ class ScopeShadow(unittest.TestCase):
     self.assertIn("rack", sc["counted_only_kinds"])
     self.assertNotIn("pipe-seg", sc["uncovered_kinds"])
 
-  def test_custom_check_declares_its_roles(self):
-    code = "def check(items, roles, helpers):\n  return {'violations': []}\n"
-    sc = run(self.model(), [{"id": "x", "type": "custom", "code": code, "uses": ["rack"]}])["scope"]
-    self.assertNotIn("rack", sc["uncovered_kinds"])
+  def test_custom_check_scope_is_detected_from_the_roles_it_asks_for(self):
+    code = "def check(items, roles, helpers):\n  its = helpers['items_of'](items, roles, 'rack')\n  return {'violations': [], 'examined': len(its)}\n"
     sc = run(self.model(), [{"id": "x", "type": "custom", "code": code}])["scope"]
-    self.assertEqual(sc["custom_without_uses"], ["x"])
+    self.assertNotIn("rack", sc["uncovered_kinds"])
+    self.assertEqual(sc["by_kind"]["rack"], ["custom"])
+    code = "def check(items, roles, helpers):\n  return {'violations': []}\n"  # asks for no role: its scope is unknown
+    sc = run(self.model(), [{"id": "x", "type": "custom", "code": code}])["scope"]
+    self.assertIn("rack", sc["uncovered_kinds"])
+
+  def test_clash_sweep_over_everything_is_not_coverage_of_other_requirements(self):
+    r = run(self.model(), [{"id": "c", "type": "no_overlap"}, {"id": "h", "type": "z_range", "role": "pipe", "zmin": 2600}])
+    sc = r["scope"]
+    self.assertIn("rack", sc["overlap_only_kinds"])
+    self.assertNotIn("pipe-seg", sc["overlap_only_kinds"])
+    self.assertTrue(any("tested only for overlap" in w for w in r["warnings"]))
+
+
+class BandsAndMargins(unittest.TestCase):
+  def test_bands_accept_either_zone_and_reject_in_between(self):
+    items = [box("over", "pipe-seg", "S", 0, 0, 2700, 10, 10, 2800), box("under", "pipe-seg", "S", 100, 0, -700, 110, 10, -600),
+             box("mid", "pipe-seg", "S", 200, 0, 1000, 210, 10, 1100)]
+    r = run(items, [{"id": "z", "type": "z_range", "role": "pipe", "bands": [[2600, 3100], [-900, -55]]}])["results"]["z"]
+    self.assertEqual(r["violations"], 1)
+    self.assertIn("mid: z 1000 to 1100 lies in none of the allowed bands", r["offenders"][0])
+    self.assertIn("move it down by 1155 mm", r["offenders"][0])
+
+  def test_bands_shadow_reports_hanging_items_outside_the_bands(self):
+    items = [box("p", "pipe-seg", "S", 0, 0, 2700, 10, 10, 2800), box("spr", "col", "", 500, 0, 1890, 520, 20, 1990)]
+    r = run(items, [{"id": "z", "type": "z_range", "role": "pipe", "bands": [[2600, 3100]]}])["results"]["z"]
+    self.assertEqual(len(r["outside_scope"]), 1)
+    self.assertIn("1890", r["outside_scope"][0])
+
+  def test_z_range_needs_a_limit(self):
+    self.assertTrue(E.validate_config([{"id": "z", "type": "z_range", "role": "pipe"}]))
+
+  def test_margins_say_how_close_each_check_is_to_its_limit(self):
+    items = [box("a", "pipe-seg", "S", 0, 0, 2650, 100, 100, 2750), box("b", "rack", "", 500, 0, 0, 600, 100, 100)]
+    z = run(items, [{"id": "z", "type": "z_range", "role": "pipe", "zmin": 2600}])["results"]["z"]
+    self.assertEqual(z["margin"]["value"], 50.0)
+    level = [box("a", "pipe-seg", "S", 0, 0, 2650, 100, 100, 2750), box("b", "rack", "", 500, 0, 2650, 600, 100, 2750)]
+    c = run(level, [{"id": "c", "type": "min_clearance", "a": "pipe", "b": "rack", "min": 300, "mode": "best_axis"}])["results"]["c"]
+    self.assertEqual(c["margin"]["value"], 100.0)  # gap on x is 400, need 300
+    n = run(items, [{"id": "n", "type": "nearest_within", "from": "pipe", "to": "rack", "max": 600}])["results"]["n"]
+    self.assertEqual(n["margin"]["value"], 200.0)
+    r = run(items, [{"id": "r", "type": "connected", "role": "pipe", "reach": {"point": [0, 0], "tol": 500}}])["results"]["r"]
+    self.assertEqual(r["margin"]["value"], 500.0)
 
 
 if __name__ == "__main__":

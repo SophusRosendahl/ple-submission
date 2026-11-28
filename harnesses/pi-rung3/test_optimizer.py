@@ -50,6 +50,9 @@ class Search(unittest.TestCase):
 
 
 class FakeSession:
+  def time_left(self):
+    return None
+
   def __init__(self):
     self.logs, self.written = [], []
 
@@ -92,6 +95,26 @@ class Tool(unittest.TestCase):
     out, _ = self.run_tool({"build": "b", "ifc": "o", "params_file": "p", "evaluations": 60,
                             "params": {"x": {"min": 3, "max": 10, "init": 9}, "y": {"min": 0, "max": 10, "init": 1}}})
     self.assertIn("at a bound of its range", out["output"])
+
+
+class Binding(unittest.TestCase):
+  def test_binding_checks_and_audit_text_are_reported(self):
+    def m(values):
+      x = values["x"]
+      r = report(0, 100 * x)
+      r["results"]["c"]["margin"] = {"value": float(x - 3) * 10, "unit": "mm", "at": "item-7 (bottom above 3)"}
+      return r
+    async def measure(session, state, ifc, build, pfile, values):
+      return m(values)
+    st = evaluator.DesignState()
+    st.config = {"roles": {}, "checks": [{"id": "c", "type": "count", "role": "*"}], "requirements": []}
+    out = asyncio.new_event_loop().run_until_complete(optimizer.optimize_tool(FakeSession(), st, {
+        "build": "b", "ifc": "o", "params_file": "p", "evaluations": 60, "params": {"x": {"min": 3, "max": 10, "init": 9}}}, measure=measure))["output"]
+    self.assertIn("BINDING CHECKS at the best design", out)
+    self.assertIn("c: 0 mm of slack at item-7", out)
+    self.assertIn("at the start", out)
+    self.assertIn("BEFORE YOU KEEP THIS DESIGN", out)
+    self.assertIn("verify_facts", out)
 
 
 try:

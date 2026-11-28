@@ -301,7 +301,14 @@ def check_min_clearance(items, roles, spec) -> dict:
   bad = np.argwhere(val < need)
   bad = [(i, j, float(val[i, j])) for i, j in bad if items[ia[i]]["id"] != items[ib[j]]["id"]]
   bad.sort(key=lambda v: v[2])
-  return {"status": "fail" if bad else "pass", "violations": len(bad), "examined": int(val.size),
+  ida, idb = np.array([items[i]["id"] for i in ia]), np.array([items[j]["id"] for j in ib])
+  other = ida[:, None] != idb[None, :] if val.size else np.zeros((0, 0), dtype=bool)
+  margin = None
+  if val.size and other.any():
+    masked = np.where(other, val, np.inf)
+    i0, j0 = np.unravel_index(masked.argmin(), masked.shape)
+    margin = {"value": float(masked[i0, j0] - need), "unit": "mm", "at": f"{ida[i0]} to {idb[j0]}"}
+  return {"status": "fail" if bad else "pass", "violations": len(bad), "examined": int(val.size), "margin": margin,
           "offenders": [f"{items[ia[i]]['id']} to {items[ib[j]]['id']}: {v:.0f} mm, need {need:.0f} ({mode}); "
                         + _move_text(g[i, j], need, v, items[ia[i]]["id"], items[ib[j]]["id"]) for i, j, v in bad[:TOP]]}
 
@@ -319,21 +326,57 @@ def _above_below(items, i, side, lo, hi):
   return out[:2]
 
 
+def _band_fit(lo, hi, bands):
+  """(0, band) if [lo, hi] lies inside one of the bands, else (shift needed, nearest band) or (None, nearest band) if too tall."""
+  best = None
+  for bl, bh in bands:
+    if bl <= lo and hi <= bh:
+      return 0.0, (bl, bh)
+    if hi - lo > bh - bl:
+      cand = (math.inf, (bl, bh))
+    else:
+      shift = bl - lo if lo < bl else bh - hi
+      cand = (shift, (bl, bh))
+    if best is None or abs(cand[0]) < abs(best[0]):
+      best = cand
+  return best
+
+
 def check_z_range(items, roles, spec) -> dict:
+  """Every selected item lies inside the allowed z-band: [zmin, zmax], or any one of `bands` ([[lo, hi], ...], e.g. overhead or plenum)."""
   idx = select(items, roles, spec["role"])
   b = boxes(items, idx)
   zmin, zmax = spec.get("zmin"), spec.get("zmax")
-  bad = []
+  bands = [(float(x[0]), float(x[1])) for x in spec.get("bands", [])]
+  bad, margin = [], None  # bad: (index, side, value, amount, limit)
+  def slack(v, i, why):
+    nonlocal margin
+    if margin is None or v < margin["value"]:
+      margin = {"value": float(v), "unit": "mm", "at": f"{items[i]['id']} ({why})"}
   for k, i in enumerate(idx):
     lo, hi = b[k, 2], b[k, 5]
-    if zmin is not None and lo < float(zmin):
-      bad.append((i, "bottom", lo, float(zmin) - lo, float(zmin)))
-    if zmax is not None and hi > float(zmax):
-      bad.append((i, "top", hi, hi - float(zmax), float(zmax)))
+    if bands:
+      shift, band = _band_fit(lo, hi, bands)
+      if shift == 0.0:
+        slack(min(lo - band[0], band[1] - hi), i, f"inside band {band[0]:.0f} to {band[1]:.0f}")
+      else:
+        bad.append((i, "band", lo, math.inf if shift is None or math.isinf(shift) else abs(shift), shift, band))
+      continue
+    if zmin is not None:
+      if lo < float(zmin):
+        bad.append((i, "bottom", lo, float(zmin) - lo, float(zmin)))
+      else:
+        slack(lo - float(zmin), i, f"bottom above {float(zmin):.0f}")
+    if zmax is not None:
+      if hi > float(zmax):
+        bad.append((i, "top", hi, hi - float(zmax), float(zmax)))
+      else:
+        slack(float(zmax) - hi, i, f"top below {float(zmax):.0f}")
   bad.sort(key=lambda v: -v[3])
   groups: dict[tuple, list] = {}
   for v in bad:
-    groups.setdefault((items[v[0]]["kind"], v[1], round(v[3] / 10) * 10), []).append(v)
+    if v[1] != "band":
+      groups.setdefault((items[v[0]]["kind"], v[1], round(v[3] / 10) * 10), []).append(v)
   patterns = []
   for (kind, side, over), vs in sorted(groups.items(), key=lambda kv: -len(kv[1])):
     if len(vs) > 1:
@@ -341,7 +384,17 @@ def check_z_range(items, roles, spec) -> dict:
       patterns.append([f"{len(vs)} {kind} item(s) have their {side} about {over:.0f} mm {'above' if side == 'top' else 'below'} the limit {lim:.0f}"
                        f" (e.g. {items[vs[0][0]]['id']}): move all of them {'down' if side == 'top' else 'up'} by {over:.0f} mm"])
   lines = []
-  for i, side, val, amt, lim in bad[:TOP]:
+  for v in bad[:TOP]:
+    i, side = v[0], v[1]
+    if side == "band":
+      _, _, val, amt, shift, band = v
+      ib = items[i]["aabb"]
+      how = (f"taller than the band ({ib[5] - ib[2]:.0f} mm against {band[1] - band[0]:.0f} mm)" if math.isinf(amt)
+             else f"nearest band {band[0]:.0f} to {band[1]:.0f}: move it {'up' if shift > 0 else 'down'} by {amt:.0f} mm")
+      lines.append(f"{items[i]['id']}: z {ib[2]:.0f} to {ib[5]:.0f} lies in none of the allowed bands "
+                   f"({', '.join(f'{x:.0f} to {y:.0f}' for x, y in bands)}); {how}")
+      continue
+    _, _, val, amt, lim = v
     near = _above_below(items, i, side, lim, val + 1) if side == "top" else _above_below(items, i, side, val - 1, lim)
     lines.append(f"{items[i]['id']}: {side} at {val:.0f}, limit {lim:.0f}, {amt:.0f} mm too {'high' if side == 'top' else 'low'}"
                  + (f"; in that band over the same footprint: {', '.join(near)}" if near else ""))
@@ -352,6 +405,10 @@ def check_z_range(items, roles, spec) -> dict:
     if i in chosen:
       continue
     lo, hi = it["aabb"][2], it["aabb"][5]
+    if bands:
+      if lo >= FLOOR_TOL and _band_fit(lo, hi, bands)[0] != 0.0:
+        by_kind.setdefault(it["kind"], []).append((i, "outside bands", lo))
+      continue
     if zmin is not None and FLOOR_TOL <= lo < float(zmin):  # hanging below the limit (floor-standing items are not headroom cases)
       by_kind.setdefault(it["kind"], []).append((i, "bottom", lo))
     if zmax is not None and hi > float(zmax):
@@ -360,12 +417,12 @@ def check_z_range(items, roles, spec) -> dict:
   for kind, vs in sorted(by_kind.items(), key=lambda kv: -len(kv[1])):
     sides = sorted({v[1] for v in vs})
     vals = sorted({round(v[2]) for v in vs})
-    lim = float(zmin) if sides == ["bottom"] else float(zmax)
+    lim = ("the allowed bands" if bands else f"limit {float(zmin) if sides == ['bottom'] else float(zmax):.0f}")
     shadow.append(f"{len(vs)} x {kind} (not selected by this check) would break the same limit: {'/'.join(sides)} at "
-                  f"{', '.join(str(v) for v in vals[:3])}{' ...' if len(vals) > 3 else ''} mm, limit {lim:.0f}; e.g. {items[vs[0][0]]['id']}. "
+                  f"{', '.join(str(v) for v in vals[:3])}{' ...' if len(vals) > 3 else ''} mm, {lim}; e.g. {items[vs[0][0]]['id']}. "
                   f"If the requirement covers them, add their role to this check.")
   return {"status": "fail" if bad else "pass", "violations": len(bad), "examined": len(idx), "offenders": lines, "patterns": patterns,
-          "outside_scope": shadow}
+          "outside_scope": shadow, "margin": margin}
 
 
 def check_nearest_within(items, roles, spec) -> dict:
@@ -388,7 +445,12 @@ def check_nearest_within(items, roles, spec) -> dict:
                    f"{d - need:.0f} mm too far; it lies {abs(dx):.0f} mm {'east' if dx > 0 else 'west'} and {abs(dy):.0f} mm {'north' if dy > 0 else 'south'} of it (centre to centre)")
     else:
       lines.append(f"{items[ia[i]]['id']}: there is no item of role '{spec['to']}' to be near")
-  return {"status": "fail" if bad else "pass", "violations": len(bad), "examined": len(ia), "offenders": lines}
+  fin = [(float(need - near[i]), i) for i in range(len(ia)) if np.isfinite(near[i])]
+  margin = None
+  if fin:
+    v, i0 = min(fin)
+    margin = {"value": v, "unit": "mm", "at": items[ia[i0]]["id"]}
+  return {"status": "fail" if bad else "pass", "violations": len(bad), "examined": len(ia), "offenders": lines, "margin": margin}
 
 
 def check_connected(items, roles, spec) -> dict:
@@ -397,7 +459,7 @@ def check_connected(items, roles, spec) -> dict:
   groups: dict[str, list[int]] = {}
   for i in idx:
     groups.setdefault(items[i]["group"] if spec.get("group_by", "group") == "group" else "all", []).append(i)
-  problems, detail = [], []
+  problems, detail, reach_margin = [], [], None
   for gname, gi in sorted(groups.items()):
     b = boxes(items, gi)
     g = gaps(b, b)
@@ -428,11 +490,14 @@ def check_connected(items, roles, spec) -> dict:
       dx = np.maximum(np.maximum(b[:, 0] - px, px - b[:, 3]), 0)
       dy = np.maximum(np.maximum(b[:, 1] - py, py - b[:, 4]), 0)
       d = np.hypot(dx, dy)
+      slackv = float(r - d.min())
+      if reach_margin is None or slackv < reach_margin["value"]:
+        reach_margin = {"value": slackv, "unit": "mm", "at": f"{gname or 'network'} to ({px:.0f}, {py:.0f})"}
       if not np.any(d <= r):
         k = int(d.argmin())
         problems.append(f"group '{gname}' does not reach ({px:.0f}, {py:.0f}) within {r:.0f} mm; the nearest end is {items[gi[k]]['id']}, {d[k]:.0f} mm away")
   return {"status": "fail" if problems else "pass", "violations": len(problems), "examined": len(groups),
-          "offenders": problems[:TOP], "info": detail}
+          "offenders": problems[:TOP], "info": detail, "margin": reach_margin}
 
 
 def _components(adj: np.ndarray) -> list[int]:
@@ -524,7 +589,8 @@ def check_coverage_along(items, roles, spec) -> dict:
   def line(a, g, f, runs, ax):
     gaps_txt = ", ".join(f"{ax} {r0:.0f} to {r1:.0f} ({r1 - r0:.0f} mm)" for r0, r1 in runs[:3])
     return f"{a}{' by ' + g if g else ''}: served along {f * 100:.0f}% of its length, need {frac_need * 100:.0f}%; not served at {gaps_txt}"
-  return {"status": "fail" if bad else "pass", "violations": len(bad), "examined": len(il) * len(groups),
+  margin = {"value": float(min(worst) - frac_need), "unit": "fraction", "at": "the least-served row or line"} if worst else None
+  return {"status": "fail" if bad else "pass", "violations": len(bad), "examined": len(il) * len(groups), "margin": margin,
           "offenders": [line(*v) for v in sorted(bad, key=lambda v: v[2])[:TOP]],
           "info": [f"lowest coverage {min(worst) * 100:.0f}%"] if worst else []}
 
@@ -559,8 +625,14 @@ SAFE_BUILTINS = {n: __builtins__[n] if isinstance(__builtins__, dict) else getat
 
 def check_custom(items, roles, spec) -> dict:
   """A check the library does not cover: `code` defines check(items, roles, helpers) returning {"violations": [str, ...]}."""
-  helpers = {"overlap_depths": overlap_depths, "gaps": gaps, "np": np, "select": select,
-             "items_of": lambda its, rl, role: [its[i] for i in select(its, rl, role)]}  # select gives indices, items_of the item dicts
+  used: set[str] = set()
+  def _select(its, rl, role):
+    used.add(role)
+    return select(its, rl, role)
+  def _items_of(its, rl, role):
+    used.add(role)
+    return [its[i] for i in select(its, rl, role)]  # select gives indices, items_of the item dicts
+  helpers = {"overlap_depths": overlap_depths, "gaps": gaps, "np": np, "select": _select, "items_of": _items_of}
   ns: dict[str, Any] = {"__builtins__": SAFE_BUILTINS}
   try:
     exec(compile(spec["code"], f"custom:{spec['id']}", "exec"), ns)
@@ -575,10 +647,11 @@ def check_custom(items, roles, spec) -> dict:
       tb = tb.tb_next
     hint = ("; the code must define check(items, roles, helpers) and return {'violations': [...], 'examined': n}"
             if isinstance(exc, (KeyError, NameError)) and "check" in str(exc) else "")
-    return {"status": "error", "violations": 0, "examined": 0,
+    return {"status": "error", "violations": 0, "examined": 0, "roles_used": sorted(used),
             "offenders": [f"custom check '{spec['id']}' failed to run: {type(exc).__name__}: {exc}{line}{hint}"]}
   v = [str(x) for x in (out.get("violations") or [])]
-  return {"status": "fail" if v else "pass", "violations": len(v), "examined": int(out.get("examined", len(items))), "offenders": v[:TOP]}
+  return {"status": "fail" if v else "pass", "violations": len(v), "examined": int(out.get("examined", len(items))), "offenders": v[:TOP],
+          "roles_used": sorted(used)}
 
 
 RUNNERS = {"no_overlap": check_no_overlap, "min_clearance": check_min_clearance, "z_range": check_z_range,
@@ -602,6 +675,8 @@ def validate_config(checks: list[dict]) -> list[str]:
     for k in need:
       if k not in c:
         probs.append(f"{cid}: missing '{k}'")
+    if c.get("type") == "z_range" and not any(k in c for k in ("zmin", "zmax", "bands")):
+      probs.append(f"{cid}: a z_range check needs zmin and/or zmax, or bands")
   return probs
 
 
@@ -627,7 +702,7 @@ def evaluate(items_raw: list[dict], checks: list[dict], roles: dict[str, list[st
       r["offenders"] = [f"examined 0 items, so this passes nothing: its roles select no items. Roles in use: "
                         + ", ".join(f"{k} = {roles.get(k, [])}" for k in sorted({x for key in ('roles', 'a', 'b', 'role', 'from', 'to', 'lines', 'by')
                                                                                 for x in ([c[key]] if isinstance(c.get(key), str) else c.get(key, [])) if x != '*'}))] + r["offenders"]
-  report = {"n_items": len(items), "results": results, "scope": scope_facts(items, checks, roles)}
+  report = {"n_items": len(items), "results": results, "scope": scope_facts(items, checks, roles, results)}
   if self_test:
     report["self_test"] = injected_fault_test(items, checks, roles)
   obj = [r["objective"] for r in results.values() if "objective" in r]
@@ -640,6 +715,8 @@ def evaluate(items_raw: list[dict], checks: list[dict], roles: dict[str, list[st
   if sc["uncovered_kinds"]:
     warn.append("no geometric check selects: " + ", ".join(sc["uncovered_kinds"]) + (
         " (kinds only a count check sees: " + ", ".join(sc["counted_only_kinds"]) + ")" if sc["counted_only_kinds"] else ""))
+  if sc["overlap_only_kinds"]:
+    warn.append("tested only for overlap (no height, clearance, connectivity or other check): " + ", ".join(sc["overlap_only_kinds"]))
   report["warnings"] = warn
   report["ready"] = not fails and not misses
   report["not_ready_because"] = ([f"{len(fails)} check(s) failing or in error: {', '.join(fails)}"] if fails else []) + \
@@ -666,31 +743,39 @@ GEOMETRIC = ("no_overlap", "min_clearance", "z_range", "nearest_within", "connec
 ROLE_KEYS = ("roles", "a", "b", "role", "from", "to", "lines", "by", "uses")
 
 
-def scope_facts(items, checks, roles) -> dict:
-  """Which kinds each check selects, the kinds no geometric check selects (a count or length check does not test geometry), and
-  the kinds only such checks select."""
+def scope_facts(items, checks, roles, results: dict | None = None) -> dict:
+  """Which check types test each kind. A count or length check does not test geometry; a clash sweep over everything touches every kind
+  but tests only overlap, so the kinds that no other geometric check tests are listed separately. A custom check's scope is the roles
+  it asked the helpers for when it ran (or the ones it declares with `uses`)."""
   kinds = sorted({it["kind"] for it in items})
-  touched: dict[str, set[str]] = {k: set() for k in kinds}
+  touched: dict[str, set[str]] = {k: set() for k in kinds}  # kind -> geometric check types that select it
   counted: dict[str, set[str]] = {k: set() for k in kinds}
   used_roles = set()
   for c in checks:
-    sel: set[int] = set()
+    names: list[str] = ["*"] if c["type"] == "no_overlap" and "roles" not in c else []  # no_overlap defaults to every item
     for key in ROLE_KEYS:
       v = c.get(key)
-      for r in ([v] if isinstance(v, str) else (v or [])):
-        used_roles.add(r)
-        try:
-          sel |= set(select(items, roles, r))
-        except EngineError:
-          pass
+      names += [v] if isinstance(v, str) else list(v or [])
+    if c["type"] == "custom" and results and c["id"] in results:
+      names += results[c["id"]].get("roles_used", [])
+    sel: set[int] = set()
+    for r in names:
+      used_roles.add(r)
+      try:
+        sel |= set(select(items, roles, r))
+      except EngineError:
+        pass
     for i in sel:
-      (touched if c["type"] in GEOMETRIC else counted)[items[i]["kind"]].add(c["id"])
+      if c["type"] in GEOMETRIC:
+        touched[items[i]["kind"]].add(c["type"])
+      else:
+        counted[items[i]["kind"]].add(c["id"])
   unbound = [r for r in used_roles if r != "*" and r not in roles]
-  custom_without_uses = [c["id"] for c in checks if c["type"] == "custom" and not c.get("uses")]
   return {"kinds": kinds, "by_kind": {k: sorted(v) for k, v in touched.items()},
           "uncovered_kinds": [k for k, v in touched.items() if not v],
           "counted_only_kinds": [k for k in kinds if not touched[k] and counted[k]],
-          "unbound_roles": sorted(unbound), "custom_without_uses": custom_without_uses}
+          "overlap_only_kinds": [k for k, v in touched.items() if v == {"no_overlap"}],
+          "unbound_roles": sorted(unbound)}
 
 
 def injected_fault_test(items, checks, roles, max_pairs: int = 600) -> dict:
@@ -765,8 +850,9 @@ def render(report: dict) -> str:
   L.append(f"  kinds in the model: {', '.join(sc['kinds'])}")
   L.append(f"  kinds that no geometric check selects: {', '.join(sc['uncovered_kinds']) or 'none'}"
            + (f"  (seen only by a count or length check: {', '.join(sc['counted_only_kinds'])})" if sc.get("counted_only_kinds") else ""))
-  if sc.get("custom_without_uses"):
-    L.append(f"  custom checks that do not declare the roles they use (\"uses\": [...]), so their scope is unknown: {', '.join(sc['custom_without_uses'])}")
+  L.append(f"  kinds tested only for overlap: {', '.join(sc['overlap_only_kinds']) or 'none'}")
+  for k, v in sc["by_kind"].items():
+    L.append(f"    {k}: {', '.join(v) or '-'}")
   if sc["unbound_roles"]:
     L.append(f"  roles used by checks but bound to no kind: {', '.join(sc['unbound_roles'])}")
   if "self_test" in report:

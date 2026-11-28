@@ -98,6 +98,22 @@ async def measure_once(session, state, ifc: str, build: str, params_file: str, v
   return await asyncio.to_thread(engine.evaluate, items, state.checks, roles, None, False)
 
 
+BIND_MM = 150.0       # a check whose margin is this small or smaller is binding
+BIND_FRACTION = 0.05
+
+
+def margins(report: dict | None) -> dict[str, dict]:
+  return {cid: r["margin"] for cid, r in (report or {}).get("results", {}).items() if r.get("margin")}
+
+
+def is_binding(m: dict) -> bool:
+  return m["value"] <= (BIND_FRACTION if m["unit"] == "fraction" else BIND_MM)
+
+
+def fmt_margin(m: dict) -> str:
+  return f"{m['value'] * 100:.0f} percentage points" if m["unit"] == "fraction" else f"{m['value']:.0f} mm"
+
+
 def describe(v: dict) -> str:
   return ", ".join(f"{k}={v[k]:g}" for k in sorted(v))
 
@@ -155,6 +171,21 @@ async def optimize_tool(session, state, fields: dict, measure=measure_once) -> d
     lines.append("  stopped at the time limit")
   lines.append(f"The best parameters are written to {pfile} and the IFC at {ifc} is built from them. Bake these values into your script's defaults so the "
                "delivered script reproduces this design without the file, then call evaluate on the final build.")
+  start_report = cache.get(json.dumps(trace[0]["values"], sort_keys=True))
+  m_end, m_start = margins(final), margins(start_report)
+  binding = [(cid, m) for cid, m in sorted(m_end.items()) if is_binding(m)]
+  opaque = [cid for cid, r in (final or {}).get("results", {}).items() if r.get("type") in ("custom", "no_overlap") and not r.get("margin")]
+  if binding:
+    lines.append("BINDING CHECKS at the best design (the search pushed these to their limits, so a wrong number or coordinate in them now decides the design):")
+    for cid, m in binding:
+      was = f", {fmt_margin(m_start[cid])} at the start" if cid in m_start else ""
+      lines.append(f"  {cid}: {fmt_margin(m)} of slack at {m['at']}{was}")
+  if opaque:
+    lines.append("  no margin is available for " + ", ".join(opaque) + " (custom code or clash): the search may be pressing them too, unseen.")
+  if binding or edge or opaque:
+    lines.append("BEFORE YOU KEEP THIS DESIGN: a search finds exactly the places where your checks are wrong or too lax in your favour. For each binding check and "
+                 "each parameter at a bound, re-read the drawing or requirement that fixes the number it uses (coordinates, classes, limits) and call verify_facts on "
+                 "them; if a fact disagrees, fix the check, then run optimize again. If you cannot justify a number, keep the starting design.")
   if final is not None and final.get("warnings"):
     lines.append("  scope warnings in the best design: " + "; ".join(final["warnings"][:3])[:400])
   out = "\n".join(lines)

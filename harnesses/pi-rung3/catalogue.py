@@ -29,7 +29,9 @@ THE CHECK LIBRARY (each check is a JSON object with a unique "id", a "type", a s
                   {"same_group": true}, {"same_kind": true}, {"roles": ["a","b"]}. Every exclusion must be justified by the task text;
                   the checker reports overlaps inside excluded pairs anyway.
   min_clearance   "a", "b" roles, "min" mm, "mode": "euclid" (distance between boxes), "best_axis" (at least one axis keeps it), "z" (vertical gap)
-  z_range         "role", "zmin" and/or "zmax" in mm: every item of the role lies inside the band
+  z_range         "role", and "zmin" and/or "zmax" in mm, or "bands": [[lo, hi], ...] (every item lies fully inside one of the bands, e.g.
+                  overhead [2600, 3100] or plenum [-900, -55]). Prefer this to custom code: the report then also lists items of other kinds
+                  that would break the same limit.
   nearest_within  "from" role, "to" role, "max" mm: every "from" item has a "to" item within max (plan view unless "plan_only": false)
   connected       "role": items of one group form one touching network ("touch_tol" mm, default 5); optional "reach": {"point": [x, y], "tol": mm}
   coverage_along  "lines" role (long items), "by" role, "across" mm, "min_fraction" (0 to 1), optional "each_group": true.
@@ -46,7 +48,8 @@ THE CHECK LIBRARY (each check is a JSON object with a unique "id", a "type", a s
                               for p in helpers["items_of"](items, roles, "pipe"):
                                 if p["aabb"][5] > 2400: v.append(f"{p['id']} top at {p['aabb'][5]:.0f}, 2400 allowed: lower it")
                               return {"violations": v, "examined": len(helpers["items_of"](items, roles, "pipe"))}
-                  Add "uses": [role names] listing every role the code reads, so the report can say which parts of the model the check covers.
+                  The report lists which kinds the check covers from the roles your code asks the helpers for, so always go through
+                  helpers["items_of"] or helpers["select"] with a role name; code that never asks for a role is reported as covering nothing.
                   Use only when the library cannot express the requirement; test_checks runs your code, so an error in it shows up there.
 
 RULES

@@ -45,6 +45,7 @@ from typing import Any
 import catalogue
 import evaluator
 import optimizer
+import verifier
 import inputs
 import taskbridge
 
@@ -79,14 +80,19 @@ NOTE = (
     " the first message says where. Nothing from them is in the conversation yet, so read what you need with the read"
     " tool (it shows images). The ifcopenshell library works in your commands. Put every deliverable exactly where and in the"
     " format the instruction asks. Keep notes and partial results in /tmp/scratch, never in a deliverable folder.\n\n"
-    "You have three more tools. `set_checks` installs your own automatic checker for the design, `evaluate` builds and validates your IFC"
-    " and runs that checker on it, and `optimize` searches your design's parameters for the best design that passes the checker. The checker"
-    " is described below.\n\n"
+    "You have four more tools. `verify_facts` gives you an independent second reading of facts you took from the input files, `set_checks`"
+    " installs your own automatic checker for the design, `evaluate` builds and validates your IFC and runs that checker on it, and"
+    " `optimize` searches your design's parameters for the best design that passes the checker. The checker is described below.\n\n"
     "{catalogue}\n\n"
     "Work in this order.\n"
     "1. Requirements. Read the whole instruction. Do not narrow, soften or reinterpret a requirement.\n"
     "2. Data. Read every input file you need, several at once if you like. In /tmp/scratch/data.md write down what you took from each,"
-    " including every coordinate, limit and facing the checks need. Re-read whatever you are unsure of.\n"
+    " including every coordinate, limit and facing the checks need. Re-read whatever you are unsure of. Then call `verify_facts` on the"
+    " facts your checks, your design and your parameter ranges will rest on: the IFC class of every element type, the coordinates of"
+    " anchors such as each service entry, every numeric limit, counts. Ask neutral questions (do not put your answer in the question). A"
+    " second reader answers from the files without seeing your answers; read each DISAGREE yourself on the sheet it cites and settle it"
+    " before you build. Your checks come from your own reading of the drawings, so a misreading passes every check you write: this is"
+    " the only independent test of it.\n"
     "3. Checks. Write the requirements as checks and install them with `set_checks` before you build. Fix WRONG rows. Then re-read the"
     " instruction once and list any requirement that has no check.\n"
     "4. Build a first version of every deliverable early, then improve it.\n"
@@ -97,9 +103,12 @@ NOTE = (
     "6. When every check passes and every scope warning is resolved or explained, optimize. Choose the design decisions that move the"
     " objective (where a trunk or header runs, an offset, an elevation, which side something goes) and make them parameters that your"
     " script reads from a JSON file, with the current values baked in as defaults and the file optional. Then call `optimize` with their"
-    " bounds: it tries dozens of designs against your checks without using your model calls, and leaves the best one built. Bake the best"
-    " values into the script, call `evaluate`, and look at the parameters that ended at a bound. Do not finish without running `optimize`,"
-    " unless you can say why no parameter affects the objective; then review your checks against the instruction as described above.\n"
+    " bounds: it tries dozens of designs against your checks without using your model calls, and leaves the best one built. A search finds"
+    " the places where your checks are wrong or too lax in your favour, so read its list of binding checks and of parameters at a bound,"
+    " re-read the drawings for the numbers behind each, and use `verify_facts` on them before you keep the design; if you cannot justify a"
+    " number, keep the starting design. Bake the accepted values into the script and call `evaluate`. Do not finish without running"
+    " `optimize`, unless you can say why no parameter affects the objective; then review your checks against the instruction as described"
+    " above.\n"
     "7. Before you finish, re-read the instruction against what you delivered and confirm that every deliverable exists where the"
     " instruction says.\n\n"
     "Batch your tool calls. When several tool calls do not depend on each other, make them together in one reply"
@@ -341,6 +350,45 @@ async def dump_scratch(session: taskbridge.Session) -> None:
     await session.log(f"pi: could not dump the scratch folder: {type(exc).__name__}: {exc}")
 
 
+VERIFIER_MAX_CALLS = 15  # the second reader's own budget per verify_facts call; not part of the agent's 40
+
+
+class SubSession:
+  """The session as a helper run sees it: its own final message, its log lines tagged 'verifier:'."""
+
+  def __init__(self, session):
+    self._s, self.final_message = session, ""
+
+  def __getattr__(self, name):
+    return getattr(self._s, name)
+
+  async def log(self, text: str) -> None:
+    await self._s.log("verifier: " + text[4:] if text.startswith("pi: ") else text)
+
+
+def pi_argv(name: str, model: str, system: str, tools: str) -> list[str]:
+  return [PI, "--print", "--mode", "json", "--no-session", "-nc", "-ns", "-np", "-na", "-e", str(HERE / "task-tools.ts"), "--provider", name,
+          "--model", model, "--thinking", THINKING, "--append-system-prompt", system, "--tools", tools]
+
+
+async def ask_second_reader(session, env, name: str, model: str, prompt: str) -> str:
+  """One fresh-context Pi run (read and bash on the task container, nothing else) that answers the questions; returns its final text."""
+  sub = SubSession(session)
+  run = Run(sub, model, max_calls=VERIFIER_MAX_CALLS)
+  proc = asyncio.create_task(taskbridge.run_process(
+      pi_argv(name, model, verifier.SYSTEM, "read,bash"), session, env=dict(env, TASK_ENGINE="0"), stdin=prompt.encode(), on_line=run.on_line,
+      stop_before_sec=STOP_BEFORE_SEC, log_prefix="verifier: "))
+  budget = asyncio.create_task(run.budget_hit.wait())
+  await asyncio.wait({proc, budget}, return_when=asyncio.FIRST_COMPLETED)
+  if not proc.done():
+    proc.cancel()
+    with contextlib.suppress(asyncio.CancelledError, Exception):
+      await proc
+  budget.cancel()
+  await run.finish()
+  return sub.final_message
+
+
 async def solve(session: taskbridge.Session) -> str:
   """Runs Pi on a single task and returns the final response.
 
@@ -386,8 +434,10 @@ async def solve(session: taskbridge.Session) -> str:
       relay.extra["setchecks"] = lambda f: evaluator.set_checks_tool(session, state, f)
       relay.extra["evaluate"] = lambda f: evaluator.evaluate_tool(session, state, f)
       relay.extra["optimize"] = lambda f: optimizer.optimize_tool(session, state, f)
+      listing = await inputs.listing(session)
+      relay.extra["verify"] = lambda f: verifier.verify_tool(session, state, f, lambda p: ask_second_reader(session, env, name, model, p), listing)
       # Rung 3: the contents are not fed. The first message is the instruction plus a listing of where the files are.
-      prompt = session.instruction + "\n\n" + await inputs.listing(session)
+      prompt = session.instruction + "\n\n" + listing
       argv = [
           PI,
           "--print",
@@ -409,7 +459,7 @@ async def solve(session: taskbridge.Session) -> str:
           "--append-system-prompt",
           NOTE.format(workdir=session.workdir, max_calls=MAX_CALLS, catalogue=catalogue.CATALOGUE),
           "--tools",
-          "read,write,edit,bash,set_checks,evaluate,optimize",
+          "read,write,edit,bash,verify_facts,set_checks,evaluate,optimize",
       ]
       version = (HERE / "VERSION").read_text(encoding="utf-8").strip() if (HERE / "VERSION").is_file() else None
       await session.log("pi: VERSION " + json.dumps({"harness": version, "model": model, "thinking": THINKING,

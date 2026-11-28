@@ -283,7 +283,32 @@ export default function registerTaskTools(pi: ExtensionAPI) {
 			return { content: [{ type: "text", text: r.output ?? "" }], details: {} };
 		},
 	});
+	const verifyFacts = defineTool({
+		name: "verify_facts",
+		label: "Verify facts",
+		description:
+			"Get an independent second reading of facts you took from the input files. List each fact as a neutral question with your own answer. " +
+			"A separate fresh-context reader answers the questions from the files without seeing your answers, and you get back which agree, which " +
+			"disagree (with the sheet it cites), and which it could not find. Use it for what your checks and parameter ranges rest on: the IFC class of each " +
+			"element type, coordinates of anchors such as service entries, numeric limits, counts. Phrase the question without hinting at your answer.",
+		parameters: Type.Object({
+			facts: Type.Array(
+				Type.Object({
+					id: Type.String(),
+					question: Type.String({ description: "Neutral question, e.g. 'Where is the chilled-water service entry (x, y in mm)?'" }),
+					answer: Type.Any({ description: "Your answer: a number, a string, a [x, y] point, or a list" }),
+					unit: Type.Optional(Type.String()),
+					tol: Type.Optional(Type.Number({ description: "Agreement tolerance for numbers and points (default 25 mm for points, 0.5% for numbers)" })),
+				}),
+			),
+		}),
+		async execute(_id: string, params: object) {
+			const r = await relay("verify", params);
+			return { content: [{ type: "text", text: r.output ?? "" }], details: {} };
+		},
+	});
 	if (process.env.TASK_ENGINE === "1") {
+		pi.registerTool(verifyFacts);
 		pi.registerTool(setChecks);
 		pi.registerTool(evaluate);
 		pi.registerTool(optimize);
