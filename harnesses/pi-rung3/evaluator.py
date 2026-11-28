@@ -62,10 +62,14 @@ async def evaluate_tool(session, state: DesignState, fields: dict) -> dict:
     path = f.name
   try:
     try:
-      schema = await asyncio.to_thread(ifc_items.validate_ifc, path)
       items = await asyncio.to_thread(ifc_items.items_from_ifc, path)
     except Exception as exc:  # an unreadable IFC is a finding, not a crash
       return {"output": head + f"The file {ifc} cannot be opened as IFC: {type(exc).__name__}: {str(exc)[:300]}"}
+    try:
+      schema = await asyncio.to_thread(ifc_items.validate_ifc, path)
+    except Exception as exc:  # the validator failing must not hide the checks; say so, loudly
+      schema = {"ok": True, "n_errors": 0, "groups": [], "unavailable": f"{type(exc).__name__}: {str(exc)[:200]}"}
+      await session.log(f"pi: SCHEMA VALIDATION UNAVAILABLE {schema['unavailable']}")
   finally:
     os.unlink(path)
   if not items:
@@ -79,10 +83,11 @@ async def evaluate_tool(session, state: DesignState, fields: dict) -> dict:
   if report.get("objective"):
     tot = report["objective"]["total_mm"]
     state.best_total = tot if state.best_total is None else min(state.best_total, tot)
-  state.evaluations.append({"n": len(state.evaluations) + 1, "ready": report["ready"] and schema["ok"], "schema_errors": schema["n_errors"],
+  state.evaluations.append({"n": len(state.evaluations) + 1, "ready": report["ready"] and schema["ok"] and not schema.get("unavailable"), "schema_errors": schema["n_errors"],
                             "failing": [k for k, r in report["results"].items() if r["status"] in ("fail", "error")],
                             "objective_mm": (report.get("objective") or {}).get("total_mm"), "seconds": round(time.time() - t0, 1)})
-  text = [head.rstrip(), ifc_items.render_validation(schema), engine.render(report)]
+  text = [head.rstrip(), ("SCHEMA: could not be validated here (" + schema["unavailable"] + "); validate it yourself with ifcopenshell.validate"
+                          if schema.get("unavailable") else ifc_items.render_validation(schema)), engine.render(report)]
   if state.best_total is not None and report.get("objective"):
     text.append(f"  best so far: {state.best_total:.0f} mm")
   if state.concerns:
