@@ -800,3 +800,12 @@ setting is one line.
 A different model for the sub-agent cannot be forced (and a submitted entry may only call its declared model), so **the check-builder runs on the declared model with a fresh context**. The independence
 the design relies on is independence of context: it never sees the design, the notes or the drawings. Whether the model's own prior about joints survives that is what the experiment shows. A
 different-model ablation stays possible (the model is a setting) but is not planned.
+
+## Rung 3 v1 built (harnesses/pi-rung3, VERSION "rung 3 v1")
+
+- **Engine messages are the core contribution.** Every library check now says where, by how much and what to change: overlaps are clustered by cause with the exact shortening; clearance gives per-axis gaps and the move; z-range groups items with one cause and names what sits in the band; nearest-within gives direction and shortfall; connected names the closest pair across the gap; coverage lists the unserved intervals; a custom check's error names its line. A check that examined 0 items is an ERROR, not a pass (a role typo can no longer pass silently), and an unbound role lists the kinds present. 41 engine tests.
+- **ifcopenshell is enabled** (no stub). The agent calls one tool, `evaluate(ifc, run?)`: it runs the build command, reads the IFC, validates the schema (validator output translated, e.g. WR11 "one representation shared by N products" becomes "create a new representation per product"), extracts element boxes, resolves roles, runs the fixed checks. Schema errors come first.
+- **Check-builder** (`checkbuilder.py`): one fresh-context call on the declared model, task text only, reply is JSON (requirements, roles as kind globs, library checks, unchecked requirements, objective). Validated; one retry with the error messages; fallback is a bare overlap sweep, logged as `CHECKBUILDER FAILED`. Its calls are logged as `checkbuilder:` lines and kept out of the designer's 40-call budget.
+- **Designer tools** (`task-tools.ts`, relay routes in `taskbridge.py`): `evaluate` and `note_concern`. The checks are fixed; a concern is recorded and shown with every later report.
+- Roles are glob patterns over `IfcClass/ObjectType`, resolved against the kinds actually in the delivered model.
+- Tested: unit tests, the tool on real IFC files, and the whole harness against a fake model server (check-builder call, designer calls, both tools, relay and Pi extension). Not yet run against a real model.

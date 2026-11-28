@@ -55,7 +55,8 @@ def select(items: list[dict], roles: dict[str, list[str]], role: str) -> list[in
   if role == "*":
     return list(range(len(items)))
   if role not in roles:
-    raise EngineError(f"role '{role}' is not bound to any kind")
+    present = sorted({it["kind"] for it in items})
+    raise EngineError(f"role '{role}' is bound to no kind. Kinds in the model: {', '.join(present[:25])}{' ...' if len(present) > 25 else ''}")
   kinds = set(roles[role])
   return [i for i, it in enumerate(items) if it["kind"] in kinds]
 
@@ -274,6 +275,17 @@ def check_no_overlap(items, roles, spec) -> dict:
           "tol": tol, "narrowed": bool(exclude) or spec.get("roles", ["*"]) != ["*"]}
 
 
+AXES = "xyz"
+
+
+def _move_text(g_row, need, val, a_id, b_id) -> str:
+  """How to restore a clearance: the per-axis gaps and the shortest move along the axis that is already widest."""
+  axis = int(np.argmax(g_row))
+  short = need - val
+  gx = ", ".join(f"{AXES[k]} {g_row[k]:.0f}" for k in range(3))
+  return f"gaps per axis (mm): {gx}; moving {b_id} by {short:.0f} mm along {AXES[axis]} away from {a_id} restores {need:.0f} mm"
+
+
 def check_min_clearance(items, roles, spec) -> dict:
   ia, ib = select(items, roles, spec["a"]), select(items, roles, spec["b"])
   need = float(spec["min"])
@@ -286,10 +298,24 @@ def check_min_clearance(items, roles, spec) -> dict:
   else:  # euclid distance between the boxes (0 when they touch or overlap)
     val = np.sqrt((np.clip(g, 0, None) ** 2).sum(axis=2))
   bad = np.argwhere(val < need)
-  bad = [(ia[i], ib[j], float(val[i, j])) for i, j in bad if items[ia[i]]["id"] != items[ib[j]]["id"]]
+  bad = [(i, j, float(val[i, j])) for i, j in bad if items[ia[i]]["id"] != items[ib[j]]["id"]]
   bad.sort(key=lambda v: v[2])
   return {"status": "fail" if bad else "pass", "violations": len(bad), "examined": int(val.size),
-          "offenders": [f"{items[i]['id']} to {items[j]['id']}: {v:.0f} mm, need {need:.0f} ({mode})" for i, j, v in bad[:TOP]]}
+          "offenders": [f"{items[ia[i]]['id']} to {items[ib[j]]['id']}: {v:.0f} mm, need {need:.0f} ({mode}); "
+                        + _move_text(g[i, j], need, v, items[ia[i]]["id"], items[ib[j]]["id"]) for i, j, v in bad[:TOP]]}
+
+
+def _above_below(items, i, side, lo, hi):
+  """Items whose plan footprint overlaps item i and that sit in the z band [lo, hi] (what the offender runs into)."""
+  b = items[i]["aabb"]
+  out = []
+  for j, o in enumerate(items):
+    if j == i:
+      continue
+    ob = o["aabb"]
+    if ob[0] < b[3] and b[0] < ob[3] and ob[1] < b[4] and b[1] < ob[4] and ob[2] < hi and lo < ob[5]:
+      out.append(f"{o['id']} ({o['kind']}, z {ob[2]:.0f} to {ob[5]:.0f})")
+  return out[:2]
 
 
 def check_z_range(items, roles, spec) -> dict:
@@ -300,24 +326,48 @@ def check_z_range(items, roles, spec) -> dict:
   for k, i in enumerate(idx):
     lo, hi = b[k, 2], b[k, 5]
     if zmin is not None and lo < float(zmin):
-      bad.append((i, f"bottom {lo:.0f} below {float(zmin):.0f}", float(zmin) - lo))
+      bad.append((i, "bottom", lo, float(zmin) - lo, float(zmin)))
     if zmax is not None and hi > float(zmax):
-      bad.append((i, f"top {hi:.0f} above {float(zmax):.0f}", hi - float(zmax)))
-  bad.sort(key=lambda v: -v[2])
-  return {"status": "fail" if bad else "pass", "violations": len(bad), "examined": len(idx),
-          "offenders": [f"{items[i]['id']}: {msg}" for i, msg, _ in bad[:TOP]]}
+      bad.append((i, "top", hi, hi - float(zmax), float(zmax)))
+  bad.sort(key=lambda v: -v[3])
+  groups: dict[tuple, list] = {}
+  for v in bad:
+    groups.setdefault((items[v[0]]["kind"], v[1], round(v[3] / 10) * 10), []).append(v)
+  patterns = []
+  for (kind, side, over), vs in sorted(groups.items(), key=lambda kv: -len(kv[1])):
+    if len(vs) > 1:
+      lim = vs[0][4]
+      patterns.append([f"{len(vs)} {kind} item(s) have their {side} about {over:.0f} mm {'above' if side == 'top' else 'below'} the limit {lim:.0f}"
+                       f" (e.g. {items[vs[0][0]]['id']}): move all of them {'down' if side == 'top' else 'up'} by {over:.0f} mm"])
+  lines = []
+  for i, side, val, amt, lim in bad[:TOP]:
+    near = _above_below(items, i, side, lim, val + 1) if side == "top" else _above_below(items, i, side, val - 1, lim)
+    lines.append(f"{items[i]['id']}: {side} at {val:.0f}, limit {lim:.0f}, {amt:.0f} mm too {'high' if side == 'top' else 'low'}"
+                 + (f"; in that band over the same footprint: {', '.join(near)}" if near else ""))
+  return {"status": "fail" if bad else "pass", "violations": len(bad), "examined": len(idx), "offenders": lines, "patterns": patterns}
 
 
 def check_nearest_within(items, roles, spec) -> dict:
   ia, ib = select(items, roles, spec["from"]), select(items, roles, spec["to"])
   g = gaps(boxes(items, ia), boxes(items, ib))
-  dist = np.sqrt((np.clip(g[:, :, :2], 0, None) ** 2).sum(axis=2)) if spec.get("plan_only", True) else np.sqrt((np.clip(g, 0, None) ** 2).sum(axis=2))
+  plan = spec.get("plan_only", True)
+  dist = np.sqrt((np.clip(g[:, :, :2], 0, None) ** 2).sum(axis=2)) if plan else np.sqrt((np.clip(g, 0, None) ** 2).sum(axis=2))
   need = float(spec["max"])
   near = dist.min(axis=1) if dist.shape[1] else np.full(len(ia), np.inf)
-  bad = [(ia[i], float(near[i])) for i in range(len(ia)) if near[i] > need]
+  bad = [(i, float(near[i])) for i in range(len(ia)) if near[i] > need]
   bad.sort(key=lambda v: -v[1])
-  return {"status": "fail" if bad else "pass", "violations": len(bad), "examined": len(ia),
-          "offenders": [f"{items[i]['id']}: nearest is {d:.0f} mm away, limit {need:.0f}" for i, d in bad[:TOP]]}
+  lines = []
+  for i, d in bad[:TOP]:
+    if dist.shape[1]:
+      j = int(dist[i].argmin())
+      a, bb = items[ia[i]]["aabb"], items[ib[j]]["aabb"]
+      dx = (bb[0] + bb[3]) / 2 - (a[0] + a[3]) / 2
+      dy = (bb[1] + bb[4]) / 2 - (a[1] + a[4]) / 2
+      lines.append(f"{items[ia[i]]['id']}: nearest is {items[ib[j]]['id']}, {d:.0f} mm away ({'plan' if plan else '3D'}), limit {need:.0f}: "
+                   f"{d - need:.0f} mm too far; it lies {abs(dx):.0f} mm {'east' if dx > 0 else 'west'} and {abs(dy):.0f} mm {'north' if dy > 0 else 'south'} of it (centre to centre)")
+    else:
+      lines.append(f"{items[ia[i]]['id']}: there is no item of role '{spec['to']}' to be near")
+  return {"status": "fail" if bad else "pass", "violations": len(bad), "examined": len(ia), "offenders": lines}
 
 
 def check_connected(items, roles, spec) -> dict:
@@ -329,20 +379,37 @@ def check_connected(items, roles, spec) -> dict:
   problems, detail = [], []
   for gname, gi in sorted(groups.items()):
     b = boxes(items, gi)
-    g = gaps(b, b).max(axis=2)  # touching or overlapping on every axis => max gap <= tol
-    adj = g <= tol
-    comp = _components(adj)
-    detail.append(f"{gname or '(no group)'}: {len(gi)} items, {len(set(comp))} component(s)")
-    if len(set(comp)) > 1:
-      problems.append(f"group '{gname}' is split into {len(set(comp))} separate networks")
+    g = gaps(b, b)
+    gm = g.max(axis=2)  # touching or overlapping on every axis => max gap <= tol
+    comp = _components(gm <= tol)
+    ncomp = len(set(comp))
+    detail.append(f"{gname or '(no group)'}: {len(gi)} items, {ncomp} component(s)")
+    if ncomp > 1:
+      sizes = {c: comp.count(c) for c in set(comp)}
+      main = max(sizes, key=sizes.get)
+      msgs = []
+      for c in sorted(sizes, key=lambda c: sizes[c]):
+        if c == main:
+          continue
+        mem = [k for k in range(len(gi)) if comp[k] == c]
+        oth = [k for k in range(len(gi)) if comp[k] != c]
+        sub = np.sqrt((np.clip(g[np.ix_(mem, oth)], 0, None) ** 2).sum(axis=2))
+        a, o = np.unravel_index(sub.argmin(), sub.shape)
+        ka, ko = mem[a], oth[o]
+        gv = g[ka, ko]
+        msgs.append(f"{sizes[c]} item(s) incl. {items[gi[ka]]['id']} are cut off; the closest other item is {items[gi[ko]]['id']}, "
+                    f"{sub.min():.0f} mm away (gaps x {gv[0]:.0f}, y {gv[1]:.0f}, z {gv[2]:.0f}): close that gap")
+      problems.append(f"group '{gname}' is split into {ncomp} separate networks: " + "; ".join(msgs[:3]))
     reach = spec.get("reach")
     if reach:
       px, py = reach["point"]
       r = float(reach.get("tol", 50.0))
       dx = np.maximum(np.maximum(b[:, 0] - px, px - b[:, 3]), 0)
       dy = np.maximum(np.maximum(b[:, 1] - py, py - b[:, 4]), 0)
-      if not np.any(np.hypot(dx, dy) <= r):
-        problems.append(f"group '{gname}' does not reach ({px:.0f}, {py:.0f}) within {r:.0f} mm")
+      d = np.hypot(dx, dy)
+      if not np.any(d <= r):
+        k = int(d.argmin())
+        problems.append(f"group '{gname}' does not reach ({px:.0f}, {py:.0f}) within {r:.0f} mm; the nearest end is {items[gi[k]]['id']}, {d[k]:.0f} mm away")
   return {"status": "fail" if problems else "pass", "violations": len(problems), "examined": len(groups),
           "offenders": problems[:TOP], "info": detail}
 
@@ -364,6 +431,20 @@ def _components(adj: np.ndarray) -> list[int]:
           stack.append(int(v))
     c += 1
   return comp
+
+
+def _runs(mask, xs, step=100.0):
+  """Intervals [from, to] of the positions xs where mask is False."""
+  out, start = [], None
+  for k, m in enumerate(mask):
+    if not m and start is None:
+      start = xs[k]
+    if m and start is not None:
+      out.append((start, xs[k - 1] + step))
+      start = None
+  if start is not None:
+    out.append((start, xs[-1] + step))
+  return out
 
 
 def check_coverage_along(items, roles, spec) -> dict:
@@ -388,9 +469,12 @@ def check_coverage_along(items, roles, spec) -> dict:
       frac = float(covered.mean()) if len(xs) else 0.0
       worst.append(frac)
       if frac < frac_need:
-        bad.append((items[li]["id"], gname, frac))
+        bad.append((items[li]["id"], gname, frac, _runs(covered, xs), AXES[axis]))
+  def line(a, g, f, runs, ax):
+    gaps_txt = ", ".join(f"{ax} {r0:.0f} to {r1:.0f} ({r1 - r0:.0f} mm)" for r0, r1 in runs[:3])
+    return f"{a}{' by ' + g if g else ''}: served along {f * 100:.0f}% of its length, need {frac_need * 100:.0f}%; not served at {gaps_txt}"
   return {"status": "fail" if bad else "pass", "violations": len(bad), "examined": len(il) * len(groups),
-          "offenders": [f"{a}{' by ' + g if g else ''}: served along {f * 100:.0f}% of its length, need {frac_need * 100:.0f}%" for a, g, f in sorted(bad, key=lambda v: v[2])[:TOP]],
+          "offenders": [line(*v) for v in sorted(bad, key=lambda v: v[2])[:TOP]],
           "info": [f"lowest coverage {min(worst) * 100:.0f}%"] if worst else []}
 
 
@@ -430,9 +514,19 @@ def check_custom(items, roles, spec) -> dict:
     exec(compile(spec["code"], f"custom:{spec['id']}", "exec"), ns)
     out = ns["check"](copy.deepcopy(items), roles, helpers)
   except Exception as exc:
-    return {"status": "error", "violations": 0, "examined": 0, "offenders": [f"custom check failed to run: {type(exc).__name__}: {exc}"]}
+    line = ""
+    tb = exc.__traceback__
+    while tb is not None:
+      if tb.tb_frame.f_code.co_filename == f"custom:{spec['id']}":
+        src = spec["code"].splitlines()
+        line = f" at line {tb.tb_lineno}: `{src[tb.tb_lineno - 1].strip() if tb.tb_lineno <= len(src) else ''}`"
+      tb = tb.tb_next
+    hint = ("; the code must define check(items, roles, helpers) and return {'violations': [...], 'examined': n}"
+            if isinstance(exc, (KeyError, NameError)) and "check" in str(exc) else "")
+    return {"status": "error", "violations": 0, "examined": 0,
+            "offenders": [f"custom check '{spec['id']}' failed to run: {type(exc).__name__}: {exc}{line}{hint}"]}
   v = [str(x) for x in (out.get("violations") or [])]
-  return {"status": "fail" if v else "pass", "violations": len(v), "examined": int(out.get("examined", 0)), "offenders": v[:TOP]}
+  return {"status": "fail" if v else "pass", "violations": len(v), "examined": int(out.get("examined", len(items))), "offenders": v[:TOP]}
 
 
 RUNNERS = {"no_overlap": check_no_overlap, "min_clearance": check_min_clearance, "z_range": check_z_range,
@@ -474,6 +568,13 @@ def evaluate(items_raw: list[dict], checks: list[dict], roles: dict[str, list[st
       results[c["id"]] = {"type": c["type"], "title": c.get("title", ""), **RUNNERS[c["type"]](items, roles, c)}
     except EngineError as exc:
       results[c["id"]] = {"type": c["type"], "title": c.get("title", ""), "status": "error", "violations": 0, "examined": 0, "offenders": [str(exc)]}
+  for cid, r in results.items():
+    c = next(x for x in checks if x["id"] == cid)
+    if r["status"] in ("pass", "fail") and r["examined"] == 0 and c["type"] not in ("count",):
+      r["status"] = "error"
+      r["offenders"] = [f"examined 0 items, so this passes nothing: its roles select no items. Roles in use: "
+                        + ", ".join(f"{k} = {roles.get(k, [])}" for k in sorted({x for key in ('roles', 'a', 'b', 'role', 'from', 'to', 'lines', 'by')
+                                                                                for x in ([c[key]] if isinstance(c.get(key), str) else c.get(key, [])) if x != '*'}))] + r["offenders"]
   report = {"n_items": len(items), "results": results, "scope": scope_facts(items, checks, roles)}
   if self_test:
     report["self_test"] = injected_fault_test(items, checks, roles)

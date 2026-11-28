@@ -291,5 +291,61 @@ class Robustness(unittest.TestCase):
     self.assertLess(time.time() - t, 15.0)
 
 
+class Messages(unittest.TestCase):
+  """The report says where, by how much, and what to do, for every library check."""
+
+  def res(self, items, check):
+    return run(items, [dict(check, id="c")])["results"]["c"]
+
+  def test_clearance_gives_axis_gaps_and_the_move(self):
+    items = [box("a", "pipe-seg", "", 0, 0, 0, 100, 100, 100), box("b", "rack", "", 150, 0, 0, 250, 100, 100)]
+    r = self.res(items, {"type": "min_clearance", "a": "pipe", "b": "rack", "min": 200})
+    self.assertIn("moving b by 150 mm along x away from a", r["offenders"][0])
+
+  def test_z_range_groups_one_cause_and_names_what_is_in_the_way(self):
+    items = [box(f"p{i}", "pipe-seg", "", i * 500, 0, 2000, i * 500 + 100, 100, 2400) for i in range(4)]
+    items.append(box("roof", "col", "", 0, 0, 2350, 3000, 100, 2500))
+    r = self.res(items, {"type": "z_range", "role": "pipe", "zmax": 2300})
+    self.assertEqual(len(r["patterns"]), 1)
+    self.assertIn("move all of them down by 100 mm", r["patterns"][0][0])
+    self.assertIn("roof", r["offenders"][0])
+
+  def test_nearest_within_gives_shortfall_and_direction(self):
+    items = [box("h", "pipe-seg", "", 0, 0, 0, 10, 10, 10), box("r", "rack", "", 1000, 0, 0, 1100, 10, 10)]
+    r = self.res(items, {"type": "nearest_within", "from": "pipe", "to": "rack", "max": 600})
+    self.assertIn("990 mm away", r["offenders"][0])
+    self.assertIn("390 mm too far", r["offenders"][0])
+    self.assertIn("east", r["offenders"][0])
+
+  def test_connected_names_the_gap_to_close(self):
+    items = [box("a", "pipe-seg", "S", 0, 0, 0, 100, 10, 10), box("b", "pipe-seg", "S", 100, 0, 0, 200, 10, 10),
+             box("c", "pipe-seg", "S", 440, 0, 0, 500, 10, 10)]
+    r = self.res(items, {"type": "connected", "role": "pipe"})
+    self.assertIn("c are cut off", r["offenders"][0])
+    self.assertIn("240 mm away", r["offenders"][0])
+
+  def test_coverage_names_the_unserved_interval(self):
+    items = [box("line", "pipe-seg", "", 0, 0, 0, 3000, 100, 100), box("by", "rack", "", 0, 0, 0, 1000, 100, 100)]
+    r = self.res(items, {"type": "coverage_along", "lines": "pipe", "by": "rack", "across": 50, "min_fraction": 0.9})
+    self.assertIn("not served at x 1100 to 3100", r["offenders"][0])
+
+  def test_a_check_that_selects_nothing_is_an_error_not_a_pass(self):
+    items = [box("a", "col", "", 0, 0, 0, 10, 10, 10), box("b", "col", "", 100, 0, 0, 110, 10, 10)]
+    r = self.res(items, {"type": "z_range", "role": "pipe", "zmax": 5})
+    self.assertEqual(r["status"], "error")
+    self.assertIn("examined 0 items", r["offenders"][0])
+
+  def test_unbound_role_lists_the_kinds_present(self):
+    r = self.res([box("a", "col", "", 0, 0, 0, 10, 10, 10)], {"type": "z_range", "role": "nonexistent", "zmax": 5})
+    self.assertEqual(r["status"], "error")
+    self.assertIn("Kinds in the model: col", r["offenders"][0])
+
+  def test_custom_error_names_the_line(self):
+    code = "def check(items, roles, helpers):\n  x = 1\n  return {'violations': [items[99]['id']]}\n"
+    r = self.res([box("a", "col", "", 0, 0, 0, 10, 10, 10)], {"type": "custom", "code": code})
+    self.assertEqual(r["status"], "error")
+    self.assertIn("at line 3", r["offenders"][0])
+
+
 if __name__ == "__main__":
   unittest.main()
