@@ -63,6 +63,13 @@ class DesignState:
     return self.config["roles"] if self.config else {}
 
 
+async def log_result(session, tool: str, n: int, text: str) -> None:
+  """The text the agent was shown, in chunks, so the run can be analysed afterwards (the relay trajectory does not hold it)."""
+  parts = [text[i:i + 1500] for i in range(0, len(text), 1500)] or [""]
+  for i, part in enumerate(parts[:12], 1):
+    await session.log(f"pi: RESULT[{tool} {n}] {i}/{len(parts)}: " + json.dumps(part))
+
+
 async def set_checks_tool(session, state: DesignState, fields: dict) -> dict:
   try:
     cfg = json.loads(fields.get("config") or "")
@@ -77,8 +84,10 @@ async def set_checks_tool(session, state: DesignState, fields: dict) -> dict:
   state.versions.append({"version": len(state.versions) + 1, "at_evaluation": len(state.evaluations), "config": cfg, "change": change})
   wrong = sum(1 for r in result["rows"] if not r["ok"])
   await session.log(f"pi: CHECKS v{len(state.versions)} " + json.dumps({"change": change, "wrong_probes": wrong, "config": cfg})[:20000])
-  return {"output": f"Installed as version {len(state.versions)} ({'; '.join(change[:6])}).\n" + probe.render(result)
-          + ("\nFix the WRONG rows and call set_checks again." if wrong else "")}
+  out = (f"Installed as version {len(state.versions)} ({'; '.join(change[:6])}).\n" + probe.render(result)
+         + ("\nFix the WRONG rows and call set_checks again." if wrong else ""))
+  await log_result(session, "set_checks", len(state.versions), out)
+  return {"output": out}
 
 
 async def evaluate_tool(session, state: DesignState, fields: dict) -> dict:
@@ -145,4 +154,6 @@ async def evaluate_tool(session, state: DesignState, fields: dict) -> dict:
     text.append(f"  best so far: {state.best_total:.0f} mm")
   if not schema["ok"]:
     text.append("NOT READY: the IFC schema errors above must be fixed too.")
-  return {"output": "\n".join(x for x in text if x)}
+  out = "\n".join(x for x in text if x)
+  await log_result(session, "evaluate", len(state.evaluations), out)
+  return {"output": out}

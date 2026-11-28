@@ -56,6 +56,20 @@ RULES
   go in "unchecked" with the reason.
 - The objective: if the task scores a quantity, say what it is in "objective" and, when it is a length, add a length_sum check.
 
+HOW TO READ THE evaluate REPORT (top to bottom)
+- BUILD: your command's exit code and the end of its output. SCHEMA: IFC validity; fix these first, they can make the file unusable.
+- CHECKS, failing first. A line "CAUSE: N overlap(s) with one cause" is one fix for N findings: apply the stated change (it gives the
+  coordinates and the amount) and re-evaluate instead of fixing the N findings one by one. [ERROR] means the check itself is broken
+  (its roles match nothing, its code fails): that is a problem with your checker, not your design, so repair it with set_checks.
+- INSIDE THE EXCLUDED PAIRS: overlaps among pairs your check was told to skip. The check does not count them. Decide whether the
+  exclusion is justified by the task text; if not, remove it.
+- SCOPE FACTS, "kinds that no check selects": every element kind listed there is untested. For each, add a check or be able to say why none is needed.
+- SELF-TEST: pairs of kinds for which a deliberate overlap would NOT be reported by your clash check. Each one is a blind spot in your own check.
+- OBJECTIVE and "best so far": the quantity the task scores. When every check passes, use the remaining calls to improve it, re-evaluating
+  after each change, and keep the best version that passes every check.
+READY means your checks pass; it does not mean every requirement is met. Before you finish, re-read your checks once against the task text:
+which requirement has no check, which threshold is looser than the text, which check selects fewer elements than the requirement covers?
+
 HOW THE CHECKER WORKS WITH YOUR DESIGN
 - set_checks(config) installs a configuration (the whole thing every time). It validates it, then plants a known fault and a clean case for
   every check in a small synthetic model built from your roles, runs your checks on them, and shows [ok] or WRONG for each, with the message
