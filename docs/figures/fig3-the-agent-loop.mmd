@@ -1,0 +1,15 @@
+stateDiagram-v2
+  [*] --> FirstMessage: evaluator sends the task
+  FirstMessage --> AskModel: harness adds the files, or a list of where they are
+  AskModel --> RunTool: model replies with a tool call
+  RunTool --> AskModel: result returns through the evaluator
+  AskModel --> FinalAnswer: model replies with no tool call
+  RunTool --> BudgetStop: the last allowed reply's tools have finished
+  FinalAnswer --> Done: harness sends the model's summary
+  BudgetStop --> Done: harness sends a note that the budget ran out
+  Done --> [*]: the evaluator grades the files on disk
+  note right of AskModel
+    Every model reply is one call, with or without a tool.
+    Rung 2's note asks for requirements, a data check,
+    checks per requirement, and a final double-check.
+  end note

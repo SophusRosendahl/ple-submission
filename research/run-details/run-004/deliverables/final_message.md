@@ -1,0 +1,12 @@
+### Summary of Deliverables and Missing-Input Notice
+
+**Important limitation:** All seven required drawing sheets (`input/A-101.png`, `A-301.png`, `A-601.png`, `A-602.png`, `E-101.png`, `F-101.png`, and `M-101.png`) were omitted in this text-only environment (`(image: not included as text)`), and I cannot open files or run `ifcopenshell.validate` here. Because the exact hall geometry, column grid, cabinet/CRAH/PDU schedules and coordinates, section elevations, sprinkler coordinates, and service entry points exist only in those PNG drawings, they could **not** be read from the drawing set.
+
+To provide an immediately usable deliverable rather than leaving the submission stub in place, I authored:
+
+1. **`output/solution.py`** — A complete, deterministic, self-contained IFC4 generator (`ifcopenshell==0.8.4` + `numpy` only, no external dependencies, no PNG reads) implementing:
+   - Millimetre project units (`IfcSIUnit` `MILLI` `METRE`) with placement-matrix translations in metres, 2D profile points only, prescribed spatial hierarchy (`IfcProject → IfcSite → IfcBuilding → IfcBuildingStorey`), `IfcSystem` grouping, and `Pset_DCM_*` property sets.
+   - Full provisional ~27 × 21 m, 128-cabinet background model (shell, 9 full-height columns, column-notched raised access floor, 128 `IfcFurniture`/`USERDEFINED`/`"Rack"` cabinets rotated about footprint centres, 4 cold-aisle containment pods, 8 CRAHs including East/West perimeter units, 4 PDUs, ceiling + sub-containment sprinkler heads).
+   - Three single-connected-network, axis-aligned overhead MEP tiers — Power Busway (`z = 2860 mm`), Telecom Cable Tray (`z = 3370 mm`), and insulated Chilled Water (`z = 3700 mm`, 219.1 mm insulated OD) — with a built-in geometric verifier checking zero hard clashes (`> 2 mm`), single-network connectivity, `≥ 80 %` row coverage, `≤ 2500 mm` CRAH reach, `≥ 2600 mm` headroom, `≥ 460 mm` sprinkler deflector clearance, `≥ 300 mm` tray–busway separation, and zero CHW intrusion into the `1800 mm` PDU dedicated zones.
+   - All drawing-derived literals are isolated in the top-level `DRAWING_DATA` dictionary so they can be replaced 1:1 once the seven PNG sheets are inspected.
+2. **`output/reconciliation.json`** — Diagnostic log documenting the missing PNG inputs, how every numeric code constraint from the prompt was applied, and which parameters in `DRAWING_DATA` must be updated from each sheet before running `ifcopenshell.validate(..., express_rules=True)` and submitting for `hall_seed000_d000`.

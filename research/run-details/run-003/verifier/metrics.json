@@ -1,0 +1,7 @@
+{
+  "combined_score": 0.0,
+  "valid": 0.0,
+  "script_seconds": 0.6,
+  "exec_status": "ERR_NO_OUTPUT",
+  "reason": "script wrote no file at the output path"
+}

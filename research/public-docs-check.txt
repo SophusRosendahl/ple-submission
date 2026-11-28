@@ -1,0 +1,27 @@
+== organizers' repository at /home/sophusrosendahl/ple: top level (names only)
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+LICENSE
+README.md
+docs
+eval
+kit
+local.env
+pyproject.toml
+sample_submissions
+uv.lock
+
+== docs/ (names only)
+artifacts.md
+local-models.md
+models.md
+protocol.md
+rules.md
+
+== READMEs and docs: lines naming IFC classes, property sets or a naming convention
+
+== any dataset card or task-family doc named in the READMEs (names only)
+6:  <a href="https://huggingface.co/datasets/google/physical-engineerings-last-exam"><img src="https://img.shields.io/badge/Hugging_Face-PLE--Bench-FFD21E?style=for-the-badge&logo=huggingface&logoColor=FFD21E" alt="PLE-B
+16:In the [PLE competition](https://ple-bench.com), an entry is a GitHub commit containing your **harness** (the server that drives a model through each task), the Google-sponsored **model** it calls, and the **`artifact
+22:The dev tasks are in a gated [Hugging Face dataset](https://huggingface.co/datasets/google/physical-engineerings-last-exam): accept its terms on the dataset page, then create a [read token](https://huggingface.co/sett
+8:  [Hugging Face dataset](https://huggingface.co/datasets/google/physical-engineerings-last-exam) that

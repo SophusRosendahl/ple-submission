@@ -1,0 +1,12 @@
+flowchart TD
+  T["Task text + input files"] --> R["Read the drawings, write data notes"]
+  R --> V["verify_facts: a fresh second reader<br/>answers the same questions from the files<br/>agree / DISAGREE / not found"]
+  V --> C["set_checks: the agent writes its checker<br/>probes plant a fault and a clean case per check"]
+  C --> B["Build the IFC (solution.py)"]
+  B --> E["evaluate: validate schema, run the checks<br/>where it fails, by how much, what to change<br/>scope warnings, self-test, objective"]
+  E -->|"a check is wrong: rewrite it"| C
+  E -->|"design fails a check: fix design"| B
+  E -->|"all checks pass"| O["optimize: search the script's parameters<br/>no model calls inside the search"]
+  O --> A["binding checks, parameters at a bound<br/>re-verify the numbers behind them"]
+  A -->|"a fact disagrees"| V
+  A -->|"accepted: bake values in, evaluate"| F["Done: summary, deliverables on disk"]

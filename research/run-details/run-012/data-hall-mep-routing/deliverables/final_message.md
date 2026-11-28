@@ -1,0 +1,7 @@
+I have delivered the coordinated IFC4 model generator and reconciliation log:
+
+- **`output/solution.py`**: Self-contained Python script using `ifcopenshell` and `numpy` that rebuilds Data Hall 1 (`27000 × 21000 mm`, access floor, 6 full-height structural columns, 128 server/distributor cabinets across Rows A–F, 18 in-row CRAHs, 4 perimeter CRAHs, 6 PDUs, 2 cold-aisle containment assemblies with roofs and end doors, and 79 sprinkler heads) and routes all three MEP services clash-free:
+  - **Telecom Cable Tray (`CT-1`, 683 × 127 mm)**: routed in the under-floor plenum at `z = -200 mm` (top at `-136.5 mm`, 101.5 mm clear below the `-35 mm` access floor panel).
+  - **Power Busway (`BW-1`, 128 × 147 mm)**: routed overhead at `z = 2720 mm` (`2646.5–2793.5 mm`), maintaining > 2700 mm vertical separation from the telecom tray.
+  - **Chilled Water (`CHW-1`, 168.3 mm insulated OD)**: routed overhead at `z = 3010 mm` (`2925.85–3094.15 mm`, keeping > 480 mm clear below ceiling sprinkler deflectors at `3574.6 mm`), serving all 6 rows and all 4 perimeter CRAHs while staying clear of all PDU dedicated spaces and structural columns.
+- **`output/reconciliation.json`**: Diagnostic log of the numeric dimensions, clearances, and rules extracted from sheets `A-101` through `M-101` and how each was applied.

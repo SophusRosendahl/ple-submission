@@ -1,0 +1,7 @@
+{
+  "combined_score": 0.0,
+  "valid": 0.0,
+  "script_seconds": 0.6,
+  "exec_status": "ERR_EXEC",
+  "reason": "script exited 1: object\", model, relating_object=project, product=site)\n  File \"/usr/local/lib/python3.11/site-packages/ifcopenshell/api/__init__.py\", line 115, in run\n    return usecase_function(ifc_file, should_run_listeners=should_run_listeners, **settings)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/ifcopenshell/api/__init__.py\", line 288, in wrapper\n    raise TypeError(msg) from e\nTypeError: Incorrect function arguments provided for aggregate.assign_object\nassign_object() got an unexpected keyword argument 'product'. You specified args (<ifcopenshell.file.file object at 0x70bfa58b0b90>,) and settings {'relating_object': #1=IfcProject('0o5i3dl_93KhPzLyJi_vHJ',$,'Meridian Data Center Phase 1',$,$,$,$,(#10),#5), 'product': #12=IfcSite('0E45yI8wvEHQlRs6GMm$$k',$,'Meridian Site',$,$,$,$,$,$,$,$,$,$,$)}\n\nCorrect signature is (file: ifcopenshell.file.file, products: list[ifcopenshell.entity_instance.entity_instance], relating_object: ifcopenshell.entity_instance.entity_instance) -> Optional[ifcopenshell.entity_instance.entity_instance]\nSee help(ifcopenshell.api.aggregate.assign_object) for documentation.\n"
+}

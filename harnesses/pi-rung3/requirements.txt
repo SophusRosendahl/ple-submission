@@ -1,0 +1,4 @@
+websockets==15.0.1
+numpy==2.2.6
+ifcopenshell==0.8.4
+pytest==8.3.5

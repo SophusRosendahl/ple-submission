@@ -1,0 +1,181 @@
+{
+  "combined_score": 0.6119018977300756,
+  "valid": 1.0,
+  "script_seconds": 1.9,
+  "recovery_confusion": {},
+  "semantics": {},
+  "violation_rate": 0.0851063829787234,
+  "clash_count": 0,
+  "routed_length": {
+    "total_mm": 389642.1,
+    "by_service": {
+      "cable_tray": 119917.0,
+      "busway": 121280.0,
+      "chw_pipe": 148445.1
+    },
+    "l_opt_mm": 260601.59999999998
+  },
+  "objective": 0.6688230044956641,
+  "gates": {
+    "gate_1_no_hard_clash": true,
+    "gate_2_connectivity": {
+      "passed": true,
+      "unserved_rows": {},
+      "disconnected": {},
+      "unreached_consumers": [],
+      "n_rows": 6,
+      "n_chw_consumers": 22,
+      "coverage": {
+        "A": {
+          "cable_tray": 0.989,
+          "busway": 0.989,
+          "chw_pipe": 1.0
+        },
+        "B": {
+          "cable_tray": 0.956,
+          "busway": 0.956,
+          "chw_pipe": 0.956
+        },
+        "C": {
+          "cable_tray": 0.977,
+          "busway": 0.977,
+          "chw_pipe": 0.977
+        },
+        "D": {
+          "cable_tray": 0.956,
+          "busway": 0.956,
+          "chw_pipe": 0.956
+        },
+        "E": {
+          "cable_tray": 1.0,
+          "busway": 1.0,
+          "chw_pipe": 1.0
+        },
+        "F": {
+          "cable_tray": 0.957,
+          "busway": 0.957,
+          "chw_pipe": 0.957
+        }
+      },
+      "reach_mm": 2500.0,
+      "min_coverage": 0.8,
+      "joint_tolerance_mm": 250.0
+    }
+  },
+  "secondary": {
+    "length_detail": {
+      "service_share_of_l_opt": {
+        "cable_tray": 0.4602,
+        "busway": 0.4654,
+        "chw_pipe": 0.5696
+      },
+      "over_length_pct": 49.516,
+      "total_mm": 389642.1,
+      "l_opt_mm": 260601.59999999998
+    },
+    "coverage_quality": {
+      "per_service": {
+        "cable_tray": {
+          "min": 0.956,
+          "mean": 0.9725
+        },
+        "busway": {
+          "min": 0.956,
+          "mean": 0.9725
+        },
+        "chw_pipe": {
+          "min": 0.956,
+          "mean": 0.9743
+        }
+      },
+      "rows_below_90pct": 0,
+      "n_rows": 6
+    },
+    "network_complexity": {
+      "segments_per_service": {
+        "cable_tray": 8,
+        "busway": 8,
+        "chw_pipe": 9
+      },
+      "components_per_service": {
+        "cable_tray": 1,
+        "busway": 1,
+        "chw_pipe": 1
+      },
+      "total_segments": 25
+    },
+    "clash_density": {
+      "clash_count": 0,
+      "per_100m_route": 0.0
+    },
+    "violation_detail": {
+      "distinct_violating_rules": 2,
+      "worst_rule": "clear_height",
+      "worst_rule_count": 16,
+      "rule_counts": {
+        "clear_height": 16,
+        "tray_stack_headroom": 8
+      }
+    },
+    "extended": {
+      "achieved_clearances": {
+        "min_sprinkler_clearance_mm": {
+          "cable_tray": 3761.5,
+          "busway": null,
+          "chw_pipe": null
+        },
+        "min_pdu_chw_clearance_mm": null,
+        "min_tray_busway_separation_mm": 2813.0
+      },
+      "underfloor_overhead_split": {
+        "cable_tray": {
+          "under_floor_mm": 119917.0,
+          "overhead_mm": 0.0,
+          "total_mm": 119917.0
+        },
+        "busway": {
+          "under_floor_mm": 0.0,
+          "overhead_mm": 121280.0,
+          "total_mm": 121280.0
+        },
+        "chw_pipe": {
+          "under_floor_mm": 148445.1,
+          "overhead_mm": 0.0,
+          "total_mm": 148445.1
+        }
+      },
+      "elevation_bands": {
+        "cable_tray": {
+          "in_clear_height_band_mm": 0.0,
+          "above_band_mm": 0.0,
+          "under_floor_mm": 119917.0,
+          "fraction_in_band": 0.0
+        },
+        "busway": {
+          "in_clear_height_band_mm": 0.0,
+          "above_band_mm": 121280.0,
+          "under_floor_mm": 0.0,
+          "fraction_in_band": 0.0
+        },
+        "chw_pipe": {
+          "in_clear_height_band_mm": 0.0,
+          "above_band_mm": 0.0,
+          "under_floor_mm": 148445.1,
+          "fraction_in_band": 0.0
+        }
+      },
+      "support_and_drops": {
+        "drop_count": 0,
+        "support_count": 0,
+        "drops": [],
+        "supports": []
+      },
+      "reconciliation": {
+        "log_present": false,
+        "log": null
+      }
+    }
+  },
+  "exec_status": "OK",
+  "reason": "ok"
+}

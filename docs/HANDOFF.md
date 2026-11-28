@@ -59,10 +59,11 @@ then in your own Terminal:
 
 ## Next steps
 
-1. Fix the HF token (above), copy it to the VM
-   (`gcloud compute scp ple/local.env ple-runner:ple/local.env --zone us-central1-a`), start the VM.
-2. On the VM: `bash ple-submission/infra/local/start_proxy.sh`, then `tmux new -s rung0 "bash ~/rung0.sh 2>&1 | tee ~/rung0.log"`.
-   `~/rung0.sh` runs rung 0 on all 15 half-A tasks (5 at a time, judge Gemini 4 Neon), first with
+1. Fix the HF token (above). Then, from the Mac (or Cloud Shell) in this repo:
+   `ENV_FILE=~/Documents/coding_projects/ple/ple/local.env RUN=1 bash infra/gcp-vm/vm_up.sh`
+   It starts the VM, copies the env file, updates both repos, starts the proxy, checks the models
+   and starts `infra/gcp-vm/rung0.sh` in tmux (log `~/rung0.log`).
+2. `rung0.sh` runs rung 0 on all 15 half-A tasks (5 at a time, judge Gemini 4 Neon), first with
    Gemini 3.8 Flash (the "bad" model), then Gemini 4 Neon (the "better" one). App-task images are
    built in the first run (an hour or more).
 3. Copy `research/runs.jsonl` and the run folders back from the VM, then write the comparison
@@ -74,6 +75,6 @@ then in your own Terminal:
 - Is the task-1 grader analysis (journal section 5) fine for the write-up, given the template's
   AGENTS.md lists "inspect grading scripts" under fair play? Alternative: cite only what
   `eval/run.py --artifacts` reports.
-- The repo has no `main` branch yet; work is on `claude/loving-rubin-jc0fnt`.
+- The repo has no `main` branch yet; work is on `claude/elegant-wozniak-xr6hw7` (continues `claude/loving-rubin-jc0fnt`).
 - The staged workflow architecture (`docs/architecture.md`) is agreed but deliberately not built
   yet: it comes back once the ladder shows where it is needed.

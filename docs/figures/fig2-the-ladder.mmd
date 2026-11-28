@@ -1,0 +1,6 @@
+flowchart LR
+  R0["<b>RUNG 0: one call</b><br/>sees: task, every file as text, drawings attached<br/>tools: none<br/>asked to: write the answer<br/>stops: after 1 reply"]
+  R1["<b>RUNG 1: agent loop</b><br/>sees: task, every file as text, drawings attached<br/>tools: bash, write, edit<br/>asked to: review its work<br/>guards: no re-reading inputs, 20 calls<br/>stops: final answer or budget"]
+  R2["<b>RUNG 2: loop plus method</b><br/>sees: task and a list of the files<br/>tools: read, bash, write, edit<br/>asked to: write requirements, read and verify the data, define and run checks, double-check<br/>guards: 40 calls<br/>stops: final answer or budget"]
+  R0 -->|"adds a loop and tools"| R1
+  R1 -->|"adds reading on demand, and a method to follow"| R2

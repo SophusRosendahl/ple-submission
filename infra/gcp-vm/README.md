@@ -1,6 +1,21 @@
-# Run machine on Google Cloud (optional, not used for now)
+# Run machine on Google Cloud
 
-We run locally (see `infra/local/`). Keep this for when a laptop is not enough.
+Runs go here: the Mac's Docker has too little memory. The VM `ple-runner` already exists and is set up;
+day to day you only need `vm_up.sh` (below). The steps after it are for building a new VM.
+
+## Day to day (VM already set up)
+
+From Cloud Shell or the Mac (signed in to gcloud, in this repo):
+```bash
+bash infra/gcp-vm/vm_up.sh                            # start, update both repos, start the proxy, check models
+ENV_FILE=~/path/to/local.env bash infra/gcp-vm/vm_up.sh   # also copy a fixed local.env (HF token) over first
+RUN=1 bash infra/gcp-vm/vm_up.sh                      # ... and start rung 0 (rung0.sh) in tmux
+gcloud compute ssh ple-runner --zone us-central1-a -- tail -f rung0.log
+gcloud compute instances stop ple-runner --zone us-central1-a
+```
+The VM checks out the branch you run `vm_up.sh` from (`BRANCH=` to override).
+
+## Building a new VM
 
 One VM in your project runs everything: Docker and the task containers, Harbor, the
 competition's model proxy, and our run scripts. Models are called on Vertex AI in the same
@@ -45,3 +60,19 @@ stored anywhere.
   run; `idle_shutdown.sh`) and is stopped after 24 h of running (`MAX_RUN`). The project's budget
   hard cap (`infra/gcp-budget/`) turns off billing entirely at 600 DKK per month.
 - Stop it yourself when done: `gcloud compute instances stop ple-runner --zone us-central1-a`.
+
+## Driving the VM with no laptop (from a Claude cloud session)
+
+Run `infra/gcp-vm/github_bridge_setup.sh` once in Cloud Shell (any browser works). It also asks for the
+Hugging Face token and writes it into `~/ple/local.env` on the VM. After that, each push that changes
+`.github/vm/job.sh` runs that script on the VM through `.github/workflows/vm.yml`. Its options
+(`# start:`, `# stop:`, `# pull:`) are at the top of the workflow file.
+
+## Run outputs and call counts
+
+One-time, in Cloud Shell: `bash infra/gcp-vm/storage_setup.sh` (bucket for full run outputs, access for
+the VM and the workflow).
+
+- Full run outputs: `gs://ple-runs-<project number>/runs/`, synced by `save_runs.sh` after each rung-0 run.
+- Efficiency is measured in model calls, tokens and runtime (`research/costs.py`), not dollars.
+  `research/prices.json` is optional, for a rough dollar figure.

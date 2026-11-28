@@ -1,0 +1,440 @@
+{
+  "combined_score": 0.0,
+  "valid": 1.0,
+  "script_seconds": 4.7,
+  "recovery_confusion": {},
+  "semantics": {},
+  "violation_rate": 0.17391304347826086,
+  "clash_count": 22,
+  "routed_length": {
+    "total_mm": 378383.0,
+    "by_service": {
+      "cable_tray": 120833.0,
+      "busway": 116600.0,
+      "chw_pipe": 140950.0
+    },
+    "l_opt_mm": 260601.59999999998
+  },
+  "objective": null,
+  "gates": {
+    "gate_1_no_hard_clash": false,
+    "gate_2_connectivity": {
+      "passed": true,
+      "unserved_rows": {},
+      "disconnected": {},
+      "unreached_consumers": [],
+      "n_rows": 6,
+      "n_chw_consumers": 22,
+      "coverage": {
+        "A": {
+          "cable_tray": 0.931,
+          "busway": 0.931,
+          "chw_pipe": 1.0
+        },
+        "B": {
+          "cable_tray": 0.9,
+          "busway": 0.9,
+          "chw_pipe": 0.9
+        },
+        "C": {
+          "cable_tray": 0.92,
+          "busway": 0.92,
+          "chw_pipe": 0.92
+        },
+        "D": {
+          "cable_tray": 0.9,
+          "busway": 0.9,
+          "chw_pipe": 0.9
+        },
+        "E": {
+          "cable_tray": 0.931,
+          "busway": 0.931,
+          "chw_pipe": 0.931
+        },
+        "F": {
+          "cable_tray": 0.88,
+          "busway": 0.88,
+          "chw_pipe": 0.88
+        }
+      },
+      "reach_mm": 2500.0,
+      "min_coverage": 0.8,
+      "joint_tolerance_mm": 250.0
+    }
+  },
+  "secondary": {
+    "length_detail": {
+      "service_share_of_l_opt": {
+        "cable_tray": 0.4637,
+        "busway": 0.4474,
+        "chw_pipe": 0.5409
+      },
+      "over_length_pct": 45.196,
+      "total_mm": 378383.0,
+      "l_opt_mm": 260601.59999999998
+    },
+    "coverage_quality": {
+      "per_service": {
+        "cable_tray": {
+          "min": 0.88,
+          "mean": 0.9103
+        },
+        "busway": {
+          "min": 0.88,
+          "mean": 0.9103
+        },
+        "chw_pipe": {
+          "min": 0.88,
+          "mean": 0.9218
+        }
+      },
+      "rows_below_90pct": 1,
+      "n_rows": 6
+    },
+    "network_complexity": {
+      "segments_per_service": {
+        "cable_tray": 8,
+        "busway": 8,
+        "chw_pipe": 9
+      },
+      "components_per_service": {
+        "cable_tray": 1,
+        "busway": 1,
+        "chw_pipe": 1
+      },
+      "total_segments": 25
+    },
+    "clash_density": {
+      "clash_count": 22,
+      "per_100m_route": 5.8142
+    },
+    "violation_detail": {
+      "distinct_violating_rules": 4,
+      "worst_rule": "clear_height",
+      "worst_rule_count": 16,
+      "rule_counts": {
+        "clear_height": 16,
+        "sprinkler_clearance": 14,
+        "tray_stack_headroom": 15,
+        "power_telecom_separation": 7
+      }
+    },
+    "extended": {
+      "achieved_clearances": {
+        "min_sprinkler_clearance_mm": {
+          "cable_tray": 813.0,
+          "busway": null,
+          "chw_pipe": 451.7
+        },
+        "min_pdu_chw_clearance_mm": null,
+        "min_tray_busway_separation_mm": 33.0
+      },
+      "underfloor_overhead_split": {
+        "cable_tray": {
+          "under_floor_mm": 0.0,
+          "overhead_mm": 120833.0,
+          "total_mm": 120833.0
+        },
+        "busway": {
+          "under_floor_mm": 0.0,
+          "overhead_mm": 116600.0,
+          "total_mm": 116600.0
+        },
+        "chw_pipe": {
+          "under_floor_mm": 0.0,
+          "overhead_mm": 140950.0,
+          "total_mm": 140950.0
+        }
+      },
+      "elevation_bands": {
+        "cable_tray": {
+          "in_clear_height_band_mm": 0.0,
+          "above_band_mm": 120833.0,
+          "under_floor_mm": 0.0,
+          "fraction_in_band": 0.0
+        },
+        "busway": {
+          "in_clear_height_band_mm": 0.0,
+          "above_band_mm": 116600.0,
+          "under_floor_mm": 0.0,
+          "fraction_in_band": 0.0
+        },
+        "chw_pipe": {
+          "in_clear_height_band_mm": 0.0,
+          "above_band_mm": 140950.0,
+          "under_floor_mm": 0.0,
+          "fraction_in_band": 0.0
+        }
+      },
+      "support_and_drops": {
+        "drop_count": 0,
+        "support_count": 0,
+        "drops": [],
+        "supports": []
+      },
+      "reconciliation": {
+        "log_present": true,
+        "log": {
+          "A-101": {
+            "hall_dimensions": "27000 mm x 21000 mm overall (45 x 35 access floor tiles of 600x600 mm)",
+            "west_service_strip": "1800 mm clear strip (tiles A-C) carrying service trunks and entry risers",
+            "cross_aisle": "Common east edge at X = 11400 mm per BICSI 002 6.6.4.3; west edge steps with bay sequences",
+            "structural_grid": "8400 mm column pitch; columns at (8400, 8400), (16800, 8400), (25200, 8400), (8400, 16800), (16800, 16800), (25200, 16800)",
+            "aisle_pitches": "Wide hot pitch Class C: cold aisle 1200 mm clear (Rows B/C and D/E), hot aisle 1800 mm clear (Rows A/B, C/D, E/F)"
+          },
+          "A-301": {
+            "vertical_budget": "Structural slab at -900 mm, finished floor at 0 mm (35 mm tile), clear height 2600 mm, ceiling soffit at +3600 mm",
+            "overhead_zone": "Z = 2600 mm to 3115 mm (515 mm height available for coordinated overhead routing)",
+            "containment_roof": "Roof underside at 2000 mm FF, 55.5 mm thick, door height 2055.5 mm",
+            "in_aisle_sprinkler": "Deflector hung from containment roof soffit at 1890 mm FF"
+          },
+          "A-601": {
+            "cabinets": "128 server cabinets across rows A-F: 119 Type C1 (600x1200x2000) and 9 Type N1 (800x1200x2000)",
+            "crah_units": "22 units total: 4 perimeter units (1200x900x2000, 100 kW) and 18 in-row units (600x1200x2000, 50 kW)",
+            "pdus": "6 units (762x813x1959, 225 kVA) set flush with row front face per schedule"
+          },
+          "A-602": {
+            "pathway_sections": "CT-1 683x127 mm, BW-1 128x147 mm, CHW-1 bare OD 114.3 mm / jacketed OD 168.3 mm",
+            "separation": "300 mm minimum separation between tray and busway on at least one axis (achieved >= 344 mm on Y axis and 394 mm on X axis)",
+            "containment_schedule": "CAC-BC and CAC-DE with 1400 mm wide roof panels and 4 end doors each"
+          },
+          "E-101": {
+            "entries": "Busway feed + telecom riser entry on west wall at X = 0, Y = 9900 mm",
+            "pdu_dedicated_space": "1800 mm dedicated electrical space above each PDU respected (no piping routed in X >= 21000 mm)"
+          },
+          "F-101": {
+            "sprinklers": "63 ceiling heads on 3000x3000 mm grid (deflector at +3575 mm) and 16 in-aisle heads under containment (deflector at +1890 mm)",
+            "standoff": "460 mm clear below deflectors strictly maintained (top of overhead pipes at 3108.3 mm < 3115 mm cutoff)",
+            "relocation": "Ceiling heads near columns shifted clear of column keep-out"
+          },
+          "M-101": {
+            "chw_routing": "Entry at X = 0, Y = 9900 mm; header along every row serving all in-row CRAHs; perimeter header at Y = 1500 mm reaching all 4 perimeter CRAHs",
+            "pipe_sizing": "DN100 main with 25.4 mm insulation (OD 168.3 mm) used throughout network"
+          }
+        }
+      }
+    }
+  },
+  "exec_status": "ERR_CLASH",
+  "reason": "ERR_CLASH"
+}{
+  "combined_score": 0.0,
+  "valid": 1.0,
+  "script_seconds": 4.7,
+  "recovery_confusion": {},
+  "semantics": {},
+  "violation_rate": 0.17391304347826086,
+  "clash_count": 22,
+  "routed_length": {
+    "total_mm": 378383.0,
+    "by_service": {
+      "cable_tray": 120833.0,
+      "busway": 116600.0,
+      "chw_pipe": 140950.0
+    },
+    "l_opt_mm": 260601.59999999998
+  },
+  "objective": null,
+  "gates": {
+    "gate_1_no_hard_clash": false,
+    "gate_2_connectivity": {
+      "passed": true,
+      "unserved_rows": {},
+      "disconnected": {},
+      "unreached_consumers": [],
+      "n_rows": 6,
+      "n_chw_consumers": 22,
+      "coverage": {
+        "A": {
+          "cable_tray": 0.931,
+          "busway": 0.931,
+          "chw_pipe": 1.0
+        },
+        "B": {
+          "cable_tray": 0.9,
+          "busway": 0.9,
+          "chw_pipe": 0.9
+        },
+        "C": {
+          "cable_tray": 0.92,
+          "busway": 0.92,
+          "chw_pipe": 0.92
+        },
+        "D": {
+          "cable_tray": 0.9,
+          "busway": 0.9,
+          "chw_pipe": 0.9
+        },
+        "E": {
+          "cable_tray": 0.931,
+          "busway": 0.931,
+          "chw_pipe": 0.931
+        },
+        "F": {
+          "cable_tray": 0.88,
+          "busway": 0.88,
+          "chw_pipe": 0.88
+        }
+      },
+      "reach_mm": 2500.0,
+      "min_coverage": 0.8,
+      "joint_tolerance_mm": 250.0
+    }
+  },
+  "secondary": {
+    "length_detail": {
+      "service_share_of_l_opt": {
+        "cable_tray": 0.4637,
+        "busway": 0.4474,
+        "chw_pipe": 0.5409
+      },
+      "over_length_pct": 45.196,
+      "total_mm": 378383.0,
+      "l_opt_mm": 260601.59999999998
+    },
+    "coverage_quality": {
+      "per_service": {
+        "cable_tray": {
+          "min": 0.88,
+          "mean": 0.9103
+        },
+        "busway": {
+          "min": 0.88,
+          "mean": 0.9103
+        },
+        "chw_pipe": {
+          "min": 0.88,
+          "mean": 0.9218
+        }
+      },
+      "rows_below_90pct": 1,
+      "n_rows": 6
+    },
+    "network_complexity": {
+      "segments_per_service": {
+        "cable_tray": 8,
+        "busway": 8,
+        "chw_pipe": 9
+      },
+      "components_per_service": {
+        "cable_tray": 1,
+        "busway": 1,
+        "chw_pipe": 1
+      },
+      "total_segments": 25
+    },
+    "clash_density": {
+      "clash_count": 22,
+      "per_100m_route": 5.8142
+    },
+    "violation_detail": {
+      "distinct_violating_rules": 4,
+      "worst_rule": "clear_height",
+      "worst_rule_count": 16,
+      "rule_counts": {
+        "clear_height": 16,
+        "sprinkler_clearance": 14,
+        "tray_stack_headroom": 15,
+        "power_telecom_separation": 7
+      }
+    },
+    "extended": {
+      "achieved_clearances": {
+        "min_sprinkler_clearance_mm": {
+          "cable_tray": 813.0,
+          "busway": null,
+          "chw_pipe": 451.7
+        },
+        "min_pdu_chw_clearance_mm": null,
+        "min_tray_busway_separation_mm": 33.0
+      },
+      "underfloor_overhead_split": {
+        "cable_tray": {
+          "under_floor_mm": 0.0,
+          "overhead_mm": 120833.0,
+          "total_mm": 120833.0
+        },
+        "busway": {
+          "under_floor_mm": 0.0,
+          "overhead_mm": 116600.0,
+          "total_mm": 116600.0
+        },
+        "chw_pipe": {
+          "under_floor_mm": 0.0,
+          "overhead_mm": 140950.0,
+          "total_mm": 140950.0
+        }
+      },
+      "elevation_bands": {
+        "cable_tray": {
+          "in_clear_height_band_mm": 0.0,
+          "above_band_mm": 120833.0,
+          "under_floor_mm": 0.0,
+          "fraction_in_band": 0.0
+        },
+        "busway": {
+          "in_clear_height_band_mm": 0.0,
+          "above_band_mm": 116600.0,
+          "under_floor_mm": 0.0,
+          "fraction_in_band": 0.0
+        },
+        "chw_pipe": {
+          "in_clear_height_band_mm": 0.0,
+          "above_band_mm": 140950.0,
+          "under_floor_mm": 0.0,
+          "fraction_in_band": 0.0
+        }
+      },
+      "support_and_drops": {
+        "drop_count": 0,
+        "support_count": 0,
+        "drops": [],
+        "supports": []
+      },
+      "reconciliation": {
+        "log_present": true,
+        "log": {
+          "A-101": {
+            "hall_dimensions": "27000 mm x 21000 mm overall (45 x 35 access floor tiles of 600x600 mm)",
+            "west_service_strip": "1800 mm clear strip (tiles A-C) carrying service trunks and entry risers",
+            "cross_aisle": "Common east edge at X = 11400 mm per BICSI 002 6.6.4.3; west edge steps with bay sequences",
+            "structural_grid": "8400 mm column pitch; columns at (8400, 8400), (16800, 8400), (25200, 8400), (8400, 16800), (16800, 16800), (25200, 16800)",
+            "aisle_pitches": "Wide hot pitch Class C: cold aisle 1200 mm clear (Rows B/C and D/E), hot aisle 1800 mm clear (Rows A/B, C/D, E/F)"
+          },
+          "A-301": {
+            "vertical_budget": "Structural slab at -900 mm, finished floor at 0 mm (35 mm tile), clear height 2600 mm, ceiling soffit at +3600 mm",
+            "overhead_zone": "Z = 2600 mm to 3115 mm (515 mm height available for coordinated overhead routing)",
+            "containment_roof": "Roof underside at 2000 mm FF, 55.5 mm thick, door height 2055.5 mm",
+            "in_aisle_sprinkler": "Deflector hung from containment roof soffit at 1890 mm FF"
+          },
+          "A-601": {
+            "cabinets": "128 server cabinets across rows A-F: 119 Type C1 (600x1200x2000) and 9 Type N1 (800x1200x2000)",
+            "crah_units": "22 units total: 4 perimeter units (1200x900x2000, 100 kW) and 18 in-row units (600x1200x2000, 50 kW)",
+            "pdus": "6 units (762x813x1959, 225 kVA) set flush with row front face per schedule"
+          },
+          "A-602": {
+            "pathway_sections": "CT-1 683x127 mm, BW-1 128x147 mm, CHW-1 bare OD 114.3 mm / jacketed OD 168.3 mm",
+            "separation": "300 mm minimum separation between tray and busway on at least one axis (achieved >= 344 mm on Y axis and 394 mm on X axis)",
+            "containment_schedule": "CAC-BC and CAC-DE with 1400 mm wide roof panels and 4 end doors each"
+          },
+          "E-101": {
+            "entries": "Busway feed + telecom riser entry on west wall at X = 0, Y = 9900 mm",
+            "pdu_dedicated_space": "1800 mm dedicated electrical space above each PDU respected (no piping routed in X >= 21000 mm)"
+          },
+          "F-101": {
+            "sprinklers": "63 ceiling heads on 3000x3000 mm grid (deflector at +3575 mm) and 16 in-aisle heads under containment (deflector at +1890 mm)",
+            "standoff": "460 mm clear below deflectors strictly maintained (top of overhead pipes at 3108.3 mm < 3115 mm cutoff)",
+            "relocation": "Ceiling heads near columns shifted clear of column keep-out"
+          },
+          "M-101": {
+            "chw_routing": "Entry at X = 0, Y = 9900 mm; header along every row serving all in-row CRAHs; perimeter header at Y = 1500 mm reaching all 4 perimeter CRAHs",
+            "pipe_sizing": "DN100 main with 25.4 mm insulation (OD 168.3 mm) used throughout network"
+          }
+        }
+      }
+    }
+  },
+  "exec_status": "ERR_CLASH",
+  "reason": "ERR_CLASH"
+}
+evaluator exit: 0

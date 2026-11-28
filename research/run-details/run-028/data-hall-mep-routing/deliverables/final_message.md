@@ -1,0 +1,10 @@
+Delivered the coordinated IFC4 model generator and drawing-note reconciliation log:
+
+- **`output/solution.py`**: Self-contained Python script (`ifcopenshell==0.8.4` + `numpy`, millimetre project units, metre placement translations, 2D profile points, IFC4 spatial hierarchy and `Pset_DCM_*` property sets) that writes the IFC4 model to `sys.argv[1]` (default `output/model.ifc`).
+  - **Background model**: 27 000 × 21 000 mm hall, 35 mm access floor (`-35..0` mm), 6 full-height `600 × 600` mm structural columns on Grid `(A,B,C) × (1,2)`, 128 racks (`RACK-A01..F20`) with exact bay-sequence accumulation and cross-aisle east edge at `x = 11 400` mm, 22 CRAHs (4 perimeter + 18 in-row), 6 PDUs (`PDU-01..06`, front flush with served row), cold-aisle containment (`CAC-BC`, `CAC-DE` roofs and end doors), and 79 sprinkler heads (63 ceiling at `+3574.6` mm + 16 in-aisle at `+1890` mm).
+  - **MEP routing**: Single connected, butt-jointed comb networks from `(0, 9900)` mm using shared-aisle branches at `y = 4500, 9900, 15300` mm (plus `y = 1500` mm for CHW to reach perimeter CRAHs `CRAH-01..04`):
+    - Telecom Cable Tray (`CT-1`, `683 × 127` mm): overhead at `z = 2900` mm (`2836.5..2963.5` mm, ≥ 2600 mm headroom, 611.1 mm clear below ceiling sprinkler deflectors), total length `61.72` m.
+    - Power Busway (`BW-1`, `128 × 147` mm): under-floor plenum at `z = -200` mm (`-273.5..-126.5` mm, 2963 mm vertical separation from `CT-1`), total length `62.27` m.
+    - Chilled-Water Pipe (`CHW-1`, DN100, `168.3` mm insulated OD): under-floor plenum at `z = -600` mm (`-684.15..-515.85` mm, clear of all 1800 mm PDU dedicated electrical spaces), total length `89.75` m.
+  - **Verification**: Verified 0 inter-group clashes and 0 same-service overlaps (> 2 mm), ≥ 87.0% coverage on every rack row for all three services, and max CHW distance of 1500 mm (≤ 2500 mm) to every CRAH.
+- **`output/reconciliation.json`**: Optional diagnostic log of numeric datums, equipment counts, and clearance rules extracted from the seven sheets.

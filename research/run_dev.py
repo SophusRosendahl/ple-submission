@@ -27,6 +27,7 @@ import datetime as dt
 import json
 import os
 import pathlib
+import platform
 import re
 import shutil
 import subprocess
@@ -84,20 +85,65 @@ def split_by_memory(tasks, max_gb):
     return fits, too_big
 
 
-def with_model(entry: pathlib.Path, model: str) -> pathlib.Path:
-    """A temporary copy of the entry whose submission.yaml calls `model`; the entry itself is unchanged.
+def with_model(entry: pathlib.Path, model: str | None, effort: str | None = None) -> pathlib.Path:
+    """A temporary copy of the entry with another model and/or a reasoning level; the entry itself is unchanged.
 
-    The copy lives outside any git work tree, so the kit builds every file in it.
+    The copy lives outside any git work tree, so the kit builds every file in it. `effort` becomes the
+    REASONING_EFFORT environment variable the harness reads (submission.yaml `env`).
     """
-    model_api = model if "/" in model else f"google-cloud/{model}"
     variant = pathlib.Path(tempfile.mkdtemp(prefix="ple-variant-")) / entry.name
     shutil.copytree(entry, variant, ignore=shutil.ignore_patterns(".venv", "__pycache__", "node_modules", "artifacts"))
     spec = variant / "submission.yaml"
-    text, n = re.subn(r"^model_api:.*$", f"model_api: {model_api}", spec.read_text(encoding="utf-8"), count=1, flags=re.M)
-    if n != 1:
-        sys.exit(f"{entry / 'submission.yaml'} has no model_api line to replace")
+    text = spec.read_text(encoding="utf-8")
+    if model:
+        model_api = model if "/" in model else f"google-cloud/{model}"
+        text, n = re.subn(r"^model_api:.*$", f"model_api: {model_api}", text, count=1, flags=re.M)
+        if n != 1:
+            sys.exit(f"{entry / 'submission.yaml'} has no model_api line to replace")
+    if effort:
+        if re.search(r"^env:\s*$", text, flags=re.M):
+            text = re.sub(r"^env:\s*$", f'env:\n  REASONING_EFFORT: "{effort}"', text, count=1, flags=re.M)
+        else:
+            text = text.rstrip("\n") + f'\nenv:\n  REASONING_EFFORT: "{effort}"\n'
     spec.write_text(text, encoding="utf-8")
     return variant
+
+
+def harness_identity(entry: pathlib.Path) -> dict:
+    """Which harness produced a run: its VERSION label, a hash of its files, and (via git_commit) the repository commit.
+
+    The hash covers every file in the entry folder except caches, node_modules and tests, in path order, so two runs
+    with the same hash ran byte-identical harness code, whatever their commit says.
+    """
+    import hashlib
+    skip = {"__pycache__", "node_modules", ".venv", "artifacts"}
+    h = hashlib.sha256()
+    n = 0
+    for f in sorted(entry.rglob("*")):
+        rel = f.relative_to(entry)
+        if not f.is_file() or skip & set(rel.parts) or rel.name.startswith("test_") or rel.name == "VERSION":
+            continue
+        h.update(str(rel).encode() + b"\0" + f.read_bytes() + b"\0")
+        n += 1
+    version = (entry / "VERSION").read_text(encoding="utf-8").strip() if (entry / "VERSION").is_file() else None
+    return {"version": version, "files_sha256": h.hexdigest()[:16], "n_files": n}
+
+
+def run_environment(started, finished, trials, judge, model_override, effort=None, ple=None):
+    """Where and how long a run took: what the efficiency plots and the VM-hours count need."""
+    try:
+        mem_gb = round(os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") / 2**30, 1)
+    except (ValueError, OSError, AttributeError):
+        mem_gb = None
+    return {
+        "started": started.strftime("%Y-%m-%dT%H:%M:%SZ"), "finished": finished.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "wall_seconds": round((finished - started).total_seconds()),
+        "parallel_trials": trials, "machine": {"host": platform.node(), "cpus": os.cpu_count(), "memory_gb": mem_gb},
+        "judge": judge, "model_override": model_override, "reasoning_effort": effort or "default",
+        # the version of the organizers' repository (grader, task images, eval/run.py) these scores came from;
+        # "+dirty" means it had local changes, which would make the grading not the organizers' own
+        "ple_commit": git_commit(ple) if ple else None,
+    }
 
 
 def main(argv=None):
@@ -120,6 +166,8 @@ def main(argv=None):
     ap.add_argument("--model", default=None,
                     help="run the entry with this model instead of its submission.yaml model_api"
                          " (e.g. gemini-3.8-flash; runs a temporary copy, the entry is unchanged)")
+    ap.add_argument("--effort", default=None, choices=["low", "medium", "high", "max"],
+                    help="reasoning level for the harness's model calls (default: the model's highest, set by the proxy)")
     ap.add_argument("--notes", default="")
     a = ap.parse_args(argv)
     judge = resolve_judge(a.judge, a.env_file)
@@ -149,9 +197,10 @@ def main(argv=None):
             sys.exit("every selected task runs app servers")
 
     entry = a.entry.resolve()
-    run_entry = with_model(entry, a.model) if a.model else entry
-    if a.model:
-        print(f"harness model: {a.model} (temporary copy of {entry.name} at {run_entry})", flush=True)
+    run_entry = with_model(entry, a.model, a.effort) if (a.model or a.effort) else entry
+    if a.model or a.effort:
+        print(f"harness model: {a.model or 'as in the entry'}, reasoning effort: {a.effort or 'default'} "
+              f"(temporary copy of {entry.name} at {run_entry})", flush=True)
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d-%H%M%S")
     out = REPO / "runs" / f"{entry.name}-{a.half}-{stamp}"
     cmd = ["uv", "run", "python", "eval/run.py", str(run_entry), "--tasks", ",".join(tasks),
@@ -161,14 +210,18 @@ def main(argv=None):
     if a.trials:
         cmd += ["--trials", str(a.trials)]
     print("running:", " ".join(cmd), flush=True)
+    started = dt.datetime.now(dt.timezone.utc)
     code = subprocess.run(cmd, cwd=a.ple, check=False, env={**os.environ, "JUDGE_MODEL": judge}).returncode
-    if a.model:
+    finished = dt.datetime.now(dt.timezone.utc)
+    if run_entry != entry:
         shutil.rmtree(run_entry.parent, ignore_errors=True)
     if not (out / "results.json").is_file():
         sys.exit(f"eval/run.py exited {code} and wrote no results.json in {out}")
     partial = len(tasks) < len(half_tasks)
     notes = a.notes + (f" (subset: {len(tasks)} of {len(half_tasks)} tasks)" if partial else "")
-    rec = tracker.import_results(out, a.label, a.half, notes.strip(), git_commit(entry), a.holdout)
+    rec = tracker.import_results(out, a.label, a.half, notes.strip(), git_commit(entry), a.holdout,
+                                  harness_extra=harness_identity(entry),
+                                 env=run_environment(started, finished, a.trials, judge, a.model, a.effort, a.ple))
     print()
     print(tracker.report(rec))
     if partial:

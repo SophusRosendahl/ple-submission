@@ -1,0 +1,84 @@
+# Runs .github/vm/job.sh on the run VM whenever a push changes it, so the VM can be driven from
+# a cloud session with no laptop. Auth is keyless (Workload Identity Federation, set up once with
+# infra/gcp-vm/github_bridge_setup.sh). Job options are comment lines in job.sh:
+#   # start: no            don't start the VM first (default: start it)
+#   # stop: yes            stop the VM afterwards
+#   # stop: idle           stop the VM afterwards unless a rung tmux session (rung0, rung1) is still running
+#   # sync: no            don't copy this branch to the VM first (default: copy it)
+#   # pull: a b            paths under ~/ple-submission on the VM to copy back and commit here
+# The job runs as the VM's owner in ~/ple-submission, after this branch is copied there.
+name: vm
+on:
+  push:
+    paths: [".github/vm/job.sh"]
+permissions:
+  contents: write
+  id-token: write
+concurrency: vm
+env:
+  ZONE: us-central1-a
+  NAME: ple-runner
+jobs:
+  vm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/314857451555/locations/global/workloadIdentityPools/github/providers/ple-submission
+          service_account: gh-ple-vm@ple-submission.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Run job on the VM
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -euo pipefail
+          J=.github/vm/job.sh
+          opt() { sed -n "s/^# $1: *//p" "$J" | head -1; }
+          ssh_vm() { gcloud compute ssh "$NAME" --zone "$ZONE" --quiet --strict-host-key-checking=no --command "$1"; }
+          AS_OWNER='o=$(sudo sh -c "stat -c %U /home/*/ple/local.env" | head -1); sudo -iu "$o" bash -s'
+          [[ "$(opt start)" == "no" ]] || gcloud compute instances start "$NAME" --zone "$ZONE"
+          for i in $(seq 30); do ssh_vm true && break; sleep 10; done
+          ssh_vm true   # fail here, loudly, if the VM never accepted SSH
+          if [[ "$(opt sync)" != "no" ]]; then   # '# sync: no' leaves the code on the VM untouched (status checks during a run)
+            git bundle create /tmp/b.bundle HEAD
+            gcloud compute scp /tmp/b.bundle "$NAME:/tmp/b.bundle" --zone "$ZONE" --quiet --strict-host-key-checking=no
+            printf 'set -e; [ -d ~/ple-submission ] || git clone -q /tmp/b.bundle ~/ple-submission; cd ~/ple-submission; git fetch -q /tmp/b.bundle HEAD; if ! git diff --quiet; then mkdir -p ~/sync-backup; git diff > ~/sync-backup/$(date +%%s).patch; echo "local changes saved to ~/sync-backup"; fi; cp research/runs.jsonl /tmp/runs.before 2>/dev/null; git checkout -q -f -B %s FETCH_HEAD; python3 infra/gcp-vm/merge_runs.py /tmp/runs.before research/runs.jsonl; git log -1 --oneline\n' "$GITHUB_REF_NAME" \
+              | ssh_vm "$AS_OWNER"
+          fi
+          if [[ -n "${HF_TOKEN:-}" ]]; then   # repo secret HF_TOKEN -> ~/ple/local.env (bash builtins only: never in a command line)
+            { printf 't=%q\n' "$HF_TOKEN"
+              echo 'mapfile -t L < ~/ple/local.env; f=0; for i in "${!L[@]}"; do [[ ${L[i]} == HF_TOKEN=* ]] && L[i]="HF_TOKEN=$t" && f=1; done'
+              echo '((f)) || L+=("HF_TOKEN=$t"); printf "%s\n" "${L[@]}" > ~/ple/local.env; echo "HF_TOKEN written from the repo secret"'
+            } | ssh_vm "$AS_OWNER"
+          fi
+          # run the job from a file, not stdin: a command in the job that reads stdin would eat the rest of the script
+          { echo "cat > /tmp/job.sh <<'JOB_EOF'"; echo 'cd ~/ple-submission; export PATH="$HOME/.local/bin:$PATH"'; cat "$J"; echo 'JOB_EOF'
+            echo 'bash /tmp/job.sh </dev/null'; } | ssh_vm "$AS_OWNER"
+          PULL="$(opt pull)"
+          if [[ -n "$PULL" ]]; then
+            echo "cd ~/ple-submission && tar -cz $PULL" | ssh_vm "$AS_OWNER" | tar -xz
+            git config user.name "vm job"; git config user.email "actions@github.com"
+            if git add -A -- $PULL && git commit -qm "VM results: $PULL"; then
+              for try in 1 2 3 4; do   # the branch may have moved while the job ran: rebase, then push
+                # -X theirs while rebasing keeps the VM's version of a file both sides changed (for example a repeated check)
+                git pull -q --rebase -X theirs origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && break
+                git rebase --abort 2>/dev/null || true
+                echo "push failed (try $try)"; sleep 5; [[ $try == 4 ]] && { echo "RESULTS NOT PUSHED"; exit 1; }
+              done
+            else echo "nothing to commit"; fi
+          fi
+      - name: Stop the VM
+        if: always()
+        run: |
+          mode="$(sed -n 's/^# stop: *//p' .github/vm/job.sh | head -1)"
+          if [[ "$mode" == "idle" ]]; then
+            if gcloud compute ssh "$NAME" --zone "$ZONE" --quiet --strict-host-key-checking=no \
+                 --command 'sudo -u "$(sudo sh -c "stat -c %U /home/*/ple/local.env" | head -1)" sh -c "tmux ls | grep -q ^rung"' 2>/dev/null; then
+              echo "a run is still going: leaving the VM on"; exit 0
+            fi
+            mode=yes
+          fi
+          [[ "$mode" == "yes" ]] && gcloud compute instances stop "$NAME" --zone "$ZONE" || true

@@ -1,0 +1,17 @@
+flowchart LR
+  AG["AGENT (one Pi loop, 40 calls)<br/>reads, designs, writes checks,<br/>rewrites them when wrong"]
+  subgraph ENG["WHAT WE PROVIDE (serve container, deterministic, tested)"]
+    SC["set_checks<br/>library: overlap, clearance, z bands, nearest,<br/>connected, coverage, count, length, custom<br/>probes with planted faults"]
+    EV["evaluate<br/>IFC schema messages, diagnosed report:<br/>causes, fixes, margins, scope shadows,<br/>self-test, per-kind coverage, objective"]
+    OP["optimize<br/>seeded search over script parameters<br/>binding checks, parameters at a bound"]
+    VF["verify_facts<br/>fresh second reader, answers withheld<br/>compares readings"]
+  end
+  TC["TASK CONTAINER<br/>input files, solution.py, model.ifc"]
+  AG <--> SC
+  AG <--> EV
+  AG <--> OP
+  AG <--> VF
+  EV <-->|"build, read the IFC"| TC
+  OP <-->|"build many candidates"| TC
+  VF -->|"reads the files"| TC
+  AG <-->|"read, write, edit, bash"| TC

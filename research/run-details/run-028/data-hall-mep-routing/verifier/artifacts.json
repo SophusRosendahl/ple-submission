@@ -1,0 +1,373 @@
+{
+  "report": {
+    "task": "B",
+    "score": 0.9213483146067416,
+    "exec_status": "OK",
+    "gate_0": {
+      "passed": true,
+      "status": "OK",
+      "reason": "",
+      "errors": [],
+      "n_errors": 0
+    },
+    "gates": {
+      "gate_1_no_hard_clash": true,
+      "gate_2_connectivity": {
+        "passed": true,
+        "unserved_rows": {},
+        "disconnected": {},
+        "unreached_consumers": [],
+        "n_rows": 6,
+        "n_chw_consumers": 22,
+        "coverage": {
+          "A": {
+            "cable_tray": 0.92,
+            "busway": 0.92,
+            "chw_pipe": 1.0
+          },
+          "B": {
+            "cable_tray": 0.889,
+            "busway": 0.889,
+            "chw_pipe": 0.889
+          },
+          "C": {
+            "cable_tray": 0.909,
+            "busway": 0.909,
+            "chw_pipe": 0.909
+          },
+          "D": {
+            "cable_tray": 0.889,
+            "busway": 0.889,
+            "chw_pipe": 0.889
+          },
+          "E": {
+            "cable_tray": 0.92,
+            "busway": 0.92,
+            "chw_pipe": 0.92
+          },
+          "F": {
+            "cable_tray": 0.87,
+            "busway": 0.87,
+            "chw_pipe": 0.87
+          }
+        },
+        "reach_mm": 2500.0,
+        "min_coverage": 0.8,
+        "joint_tolerance_mm": 250.0
+      }
+    },
+    "recovery_confusion": {},
+    "semantics": {},
+    "violations_by_rule": {
+      "clear_height": {
+        "rule": "clear_height",
+        "source": "TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4",
+        "threshold": ">= 2600 mm",
+        "gradeable": true,
+        "n_checkable": 82,
+        "n_violations": 16,
+        "violations": [
+          {
+            "id": "1nqT5N5GL0nPLZt_plVvwg",
+            "name": "SPR-A01",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "1lHEO_iXfEAO9cC6CN0hS_",
+            "name": "SPR-A02",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "0fxxabvFr1nPyBqEClufJR",
+            "name": "SPR-A03",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "2aXh_l7aXFbg4dR12vsFsn",
+            "name": "SPR-A04",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "1Sxy1f0Gv27hzhx60noXt8",
+            "name": "SPR-A05",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "3JdvLW8gn8bwgpSuEncAqR",
+            "name": "SPR-A06",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "0V_nDq_fL03OYMOI417Dmx",
+            "name": "SPR-A07",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "1LSQkx3KP2cARvugVk04jg",
+            "name": "SPR-A08",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "3ESohe8_DFH9sqJlWiAqec",
+            "name": "SPR-A09",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "0CY4yqLR1AhPJvBdeS0Snp",
+            "name": "SPR-A10",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "0_W1B$53bEofRByrSIxv_6",
+            "name": "SPR-A11",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "2sWXypsGL7yvM79D$4ZROt",
+            "name": "SPR-A12",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "05RwoYAB11ug4Hzwp03PS2",
+            "name": "SPR-A13",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "0T_ECliGz8nhfmjOBdhbhT",
+            "name": "SPR-A14",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "0oa_SBgcfAMBxDTNe71aRt",
+            "name": "SPR-A15",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          },
+          {
+            "id": "15jgglqan1mw5iMDSW0mb8",
+            "name": "SPR-A16",
+            "detail": "underside at 1890mm above finished floor, needs 2600mm (TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4)"
+          }
+        ]
+      },
+      "sprinkler_clearance": {
+        "rule": "sprinkler_clearance",
+        "source": "TIA-942 5.3.4.3 / TIA-942-B-2017 6.4.2.4 + Annex C",
+        "threshold": ">= 460 mm",
+        "gradeable": true,
+        "n_checkable": 79,
+        "n_violations": 0,
+        "violations": []
+      },
+      "sprinkler_obstruction_offset": {
+        "rule": "sprinkler_obstruction_offset",
+        "source": "NFPA 13 (2019, 2022) 10.2.7.2.1.3",
+        "threshold": "3x the obstruction, capped at 610 mm, within 450 mm below the deflector",
+        "gradeable": true,
+        "n_checkable": 79,
+        "n_violations": 0,
+        "violations": []
+      },
+      "wide_obstruction_needs_sprinkler": {
+        "rule": "wide_obstruction_needs_sprinkler",
+        "source": "NFPA 13 (2019, 2022) 9.5.5.3.1 / 10.2.7.4.2",
+        "threshold": "a head beneath any obstruction wider than 1200 mm",
+        "gradeable": true,
+        "n_checkable": 0,
+        "n_violations": 0,
+        "violations": []
+      },
+      "tray_stack_headroom": {
+        "rule": "tray_stack_headroom",
+        "source": "ANSI/TIA-569-B, cited in ANSI/TIA-942 7.3.2",
+        "threshold": ">= 300 mm between stacked runs",
+        "gradeable": true,
+        "n_checkable": 16,
+        "n_violations": 5,
+        "violations": [
+          {
+            "id": "25bL8hwOf1z8DJzGZ5xkxJ",
+            "name": "CHW-ENTRY",
+            "detail": "242mm of access below BW-ENTRY (2y7Qsah1b4e9_CVhN2uuEA), needs 300mm (ANSI/TIA-569-B, cited in ANSI/TIA-942 7.3.2)"
+          },
+          {
+            "id": "1U3ovI0vf0K9TmeuwGF_rk",
+            "name": "CHW-SPINE",
+            "detail": "242mm of access below BW-ENTRY (2y7Qsah1b4e9_CVhN2uuEA), needs 300mm (ANSI/TIA-569-B, cited in ANSI/TIA-942 7.3.2)"
+          },
+          {
+            "id": "0R8TLQ8ZH6l8qPcHY7EMZ8",
+            "name": "CHW-BR-AB",
+            "detail": "242mm of access below BW-BR-AB (2DUn_HM6zFA8RWyVrYX2Li), needs 300mm (ANSI/TIA-569-B, cited in ANSI/TIA-942 7.3.2)"
+          },
+          {
+            "id": "3W8UZfs4f4sAeVJmA9yvi3",
+            "name": "CHW-BR-CD",
+            "detail": "242mm of access below BW-BR-CD (00bwy7zWHCBuYyO_uyagu6), needs 300mm (ANSI/TIA-569-B, cited in ANSI/TIA-942 7.3.2)"
+          },
+          {
+            "id": "1itxasdJ1DfgdN9Y_6sMtJ",
+            "name": "CHW-BR-EF",
+            "detail": "242mm of access below BW-BR-EF (2evvPaae1AefCX4kq7OXrC), needs 300mm (ANSI/TIA-569-B, cited in ANSI/TIA-942 7.3.2)"
+          }
+        ]
+      },
+      "tray_below_tile": {
+        "rule": "tray_below_tile",
+        "source": "TIA-942-B-2017 8.6.2",
+        "threshold": ">= 20 mm",
+        "gradeable": true,
+        "n_checkable": 0,
+        "n_violations": 0,
+        "violations": []
+      },
+      "pdu_dedicated_space": {
+        "rule": "pdu_dedicated_space",
+        "source": "NFPA 70 (NEC) 110.26(E)(1)(a)",
+        "threshold": "no foreign piping within 1800 mm above a PDU",
+        "gradeable": true,
+        "n_checkable": 6,
+        "n_violations": 0,
+        "violations": []
+      },
+      "power_telecom_separation": {
+        "rule": "power_telecom_separation",
+        "source": "ANSI/TIA-942 7.3.1 Table 2",
+        "threshold": ">= 300 mm on at least one axis",
+        "gradeable": true,
+        "n_checkable": 5,
+        "n_violations": 0,
+        "violations": []
+      }
+    },
+    "advisory": {},
+    "violation_rate": 0.07865168539325842,
+    "checkable_pairs": 267,
+    "clash_count": 0,
+    "clashes": [],
+    "routed_length": {
+      "total_mm": 213861.04999999996,
+      "by_service": {
+        "cable_tray": 61841.499999999985,
+        "busway": 62272.0,
+        "chw_pipe": 89747.54999999997
+      },
+      "l_opt_mm": 260601.59999999998
+    },
+    "objective": 1.0,
+    "secondary": {
+      "length_detail": {
+        "service_share_of_l_opt": {
+          "cable_tray": 0.2373,
+          "busway": 0.239,
+          "chw_pipe": 0.3444
+        },
+        "over_length_pct": 0.0,
+        "total_mm": 213861.04999999996,
+        "l_opt_mm": 260601.59999999998
+      },
+      "coverage_quality": {
+        "per_service": {
+          "cable_tray": {
+            "min": 0.87,
+            "mean": 0.8995
+          },
+          "busway": {
+            "min": 0.87,
+            "mean": 0.8995
+          },
+          "chw_pipe": {
+            "min": 0.87,
+            "mean": 0.9128
+          }
+        },
+        "rows_below_90pct": 3,
+        "n_rows": 6
+      },
+      "network_complexity": {
+        "segments_per_service": {
+          "cable_tray": 5,
+          "busway": 5,
+          "chw_pipe": 6
+        },
+        "components_per_service": {
+          "cable_tray": 1,
+          "busway": 1,
+          "chw_pipe": 1
+        },
+        "total_segments": 16
+      },
+      "clash_density": {
+        "clash_count": 0,
+        "per_100m_route": 0.0
+      },
+      "violation_detail": {
+        "distinct_violating_rules": 2,
+        "worst_rule": "clear_height",
+        "worst_rule_count": 16,
+        "rule_counts": {
+          "clear_height": 16,
+          "tray_stack_headroom": 5
+        }
+      },
+      "extended": {
+        "achieved_clearances": {
+          "min_sprinkler_clearance_mm": {
+            "cable_tray": 611.1,
+            "busway": 3701.1,
+            "chw_pipe": 4090.6
+          },
+          "min_pdu_chw_clearance_mm": null,
+          "min_tray_busway_separation_mm": 2963.0
+        },
+        "underfloor_overhead_split": {
+          "cable_tray": {
+            "under_floor_mm": 0.0,
+            "overhead_mm": 61841.5,
+            "total_mm": 61841.5
+          },
+          "busway": {
+            "under_floor_mm": 62272.0,
+            "overhead_mm": 0.0,
+            "total_mm": 62272.0
+          },
+          "chw_pipe": {
+            "under_floor_mm": 89747.5,
+            "overhead_mm": 0.0,
+            "total_mm": 89747.5
+          }
+        },
+        "elevation_bands": {
+          "cable_tray": {
+            "in_clear_height_band_mm": 0.0,
+            "above_band_mm": 61841.5,
+            "under_floor_mm": 0.0,
+            "fraction_in_band": 0.0
+          },
+          "busway": {
+            "in_clear_height_band_mm": 0.0,
+            "above_band_mm": 0.0,
+            "under_floor_mm": 62272.0,
+            "fraction_in_band": 0.0
+          },
+          "chw_pipe": {
+            "in_clear_height_band_mm": 0.0,
+            "above_band_mm": 0.0,
+            "under_floor_mm": 89747.5,
+            "fraction_in_band": 0.0
+          }
+        },
+        "support_and_drops": {
+          "drop_count": 0,
+          "support_count": 0,
+          "drops": [],
+          "supports": []
+        },
+        "reconciliation": {
+          "log_present": false,
+          "log": null
+        }
+      }
+    }
+  },
+  "task": "dc_model__hall_seed000_d000__mep_routing"
+}

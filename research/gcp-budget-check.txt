@@ -1,0 +1,38 @@
+== checked 2026-11-27T13:15:40Z by the VM's own service account: ple-runner@ple-submission.iam.gserviceaccount.com
+
+== billing link of the project
+billingAccountName: billingAccounts/014E2A-DF78C0-BF5687
+billingEnabled: true
+name: projects/ple-submission/billingInfo
+projectId: ple-submission
+
+== budgets on billing account '014E2A-DF78C0-BF5687'
+ERROR: (gcloud.billing.budgets.list) [ple-runner@ple-submission.iam.gserviceaccount.com] does not have permission to access billingAccounts instance [014E2A-DF78C0-BF5687] (or it may not exist): The caller does not have permission. This command is authenticated as ple-runner@ple-submission.iam.gserviceaccount.com which is the active account specified by the [core/account] property
+
+== Vertex AI quota overrides on the project (consumer quota)
+ERROR: (gcloud.alpha.services.quota.list) PERMISSION_DENIED: Permission denied to get quota on service [aiplatform.googleapis.com]
+Help Token: AaVM3aNb6jqbJCSjlIx1UJr-WA9MiyB6DEdhy4-WTQqLp88lIG3_wqFJw2CjXlFSFlUD2rOyWvsiM7khCndr51tJ7R0sLM0cIDEV1t5S5luS3iE2. This command is authenticated as ple-runner@ple-submission.iam.gserviceaccount.com which is the active account specified by the [core/account] property
+- '@type': type.googleapis.com/google.rpc.PreconditionFailure
+  violations:
+  - subject: ?error_code=110002&service=serviceusage.googleapis.com&permission=serviceusage.quotas.get&error_info_id=CiQwMWEyMWQyNS1jNzhkLTdjM2YtOGMyMy1kZTlmNDgzODIwZGESOHByb2plY3RzLzMxNDg1NzQ1MTU1NS9zZXJ2aWNlcy9haXBsYXRmb3JtLmdvb2dsZWFwaXMuY29t&troubleshooter_url=https://console.cloud.google.com/iam-admin/troubleshooter/summary;errorId%3DCiQwMWEyMWQyNS1jNzhkLTdjM2YtOGMyMy1kZTlmNDgzODIwZGESOHByb2plY3RzLzMxNDg1NzQ1MTU1NS9zZXJ2aWNlcy9haXBsYXRmb3JtLmdvb2dsZWFwaXMuY29t
+    type: googleapis.com
+- '@type': type.googleapis.com/google.rpc.ErrorInfo
+  domain: serviceusage.googleapis.com
+  metadata:
+    error_info_id: CiQwMWEyMWQyNS1jNzhkLTdjM2YtOGMyMy1kZTlmNDgzODIwZGESOHByb2plY3RzLzMxNDg1NzQ1MTU1NS9zZXJ2aWNlcy9haXBsYXRmb3JtLmdvb2dsZWFwaXMuY29t
+    permission: serviceusage.quotas.get
+    service: serviceusage.googleapis.com
+    troubleshooter_url: https://console.cloud.google.com/iam-admin/troubleshooter/summary;errorId=CiQwMWEyMWQyNS1jNzhkLTdjM2YtOGMyMy1kZTlmNDgzODIwZGESOHByb2plY3RzLzMxNDg1NzQ1MTU1NS9zZXJ2aWNlcy9haXBsYXRmb3JtLmdvb2dsZWFwaXMuY29t
+  reason: AUTH_PERMISSION_DENIED
+
+== enabled billing-related services
+ERROR: (gcloud.services.list) [ple-runner@ple-submission.iam.gserviceaccount.com] does not have permission to access projects instance [ple-submission] (or it may not exist): Permission denied to list services for consumer container [projects/314857451555]
+Help Token: AaVM3aO-_klg-pGMm8ca70o_kxoLAnW3DSuqIESjWhsZp1ROHGSYmGwbFX1Bkv5XJgJcQg43mRpakQZhQp-2oTZSy6izlPFvtfWj6qNnW5URnbOt. This command is authenticated as ple-runner@ple-submission.iam.gserviceaccount.com which is the active account specified by the [core/account] property
+- '@type': type.googleapis.com/google.rpc.PreconditionFailure
+  violations:
+  - subject: ?error_code=110002&service=cloudresourcemanager.googleapis.com&permission=serviceusage.services.list&error_info_id=CiQwMWEyMWQyNS1jOWUzLTc4MWQtYTRjZC05ZThhNmJmM2VjMGQSFXByb2plY3RzLzMxNDg1NzQ1MTU1NQ%3D%3D&troubleshooter_url=https://console.cloud.google.com/iam-admin/troubleshooter/summary;errorId%3DCiQwMWEyMWQyNS1jOWUzLTc4MWQtYTRjZC05ZThhNmJmM2VjMGQSFXByb2plY3RzLzMxNDg1NzQ1MTU1NQ%253D%253D
+    type: googleapis.com
+- '@type': type.googleapis.com/google.rpc.ErrorInfo
+  domain: serviceusage.googleapis.com
+  metadata:
+    error_info_id: CiQwMWEyMWQyNS1jOWUzLTc4MWQtYTRjZC05ZThhNmJmM2VjMGQSFXByb2plY3RzLzMxNDg1NzQ1MTU1NQ==

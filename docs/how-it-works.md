@@ -1,0 +1,23 @@
+# How a run works
+
+```mermaid
+flowchart TB
+  EV["EVALUATOR<br/>starts everything, grades"]
+  AG["AGENT<br/>our harness"]
+  TC["TASK CONTAINER<br/>files, drawings, deliverables<br/>no network"]
+  LLM[("LLM<br/>Gemini, via the model proxy<br/>shared by agent and evaluator")]
+  RP["REPORT<br/>reward.json, metrics.json, artifacts.json"]
+
+  EV <-->|"task, cancel<br/>done"| AG
+  AG <-->|"read / run / write<br/>result (relayed by the evaluator)"| TC
+  AG <-->|"prompt, files, results so far<br/>reply or next action"| LLM
+  EV <-->|"starts it<br/>reads the deliverables after"| TC
+  EV <-->|"rubric tasks only<br/>deliverable and rubric, scores"| LLM
+  EV -->|"after grading"| RP
+```
+
+1. **Starts:** the evaluator starts the task container and our agent, and sends the task.
+2. **Agent and task container:** the agent reads, runs and writes in the container and gets the result back. Four actions exist: `exec`, `read_file`, `write_file`, `http`. Physically the request goes through the evaluator, which performs it; the agent never has a direct connection.
+3. **Agent and LLM:** the agent sends the model the prompt, files and results so far, and gets a reply or the next action.
+4. **Evaluator and LLM:** after the agent says `done`, the evaluator grades. Plain-code checks need no LLM; rubric tasks send the deliverable and rubric to the same LLM and get scores back.
+5. **Report:** the evaluator writes three JSON files, which our tracker and journal read.

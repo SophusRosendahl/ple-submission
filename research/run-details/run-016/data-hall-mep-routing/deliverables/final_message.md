@@ -1,0 +1,9 @@
+I have delivered the self-contained IFC4 model builder script at `output/solution.py`.
+
+### Summary of Delivery
+- **Background Rebuild (`output/solution.py`)**: Reconstructs Data Hall 1 (`27000 × 21000 mm`) from sheets `A-101`, `A-301`, `A-601`, `A-602`, `E-101`, `F-101`, and `M-101`, including structural/access/ceiling slabs, 6 full-height structural columns (`600 × 600 mm`), 128 server/distributor cabinets (`IfcFurniture`/`USERDEFINED`/`Rack`) with exact bay accumulations and north/south facings, 18 in-row CRAHs, 4 perimeter CRAHs, 6 PDUs, cold-aisle containment roofs and end doors (`CAC-BC`, `CAC-DE`), and 63 ceiling + 16 in-aisle sprinkler heads.
+- **Clash-Free MEP Routing**:
+  - **Power Busway (`BW-1`, `128 × 147 mm`)**: Routed in the overhead plenum at `Z_cl = 2800 mm` (`2726.5..2873.5 mm`, clear of the `2600 mm` minimum headroom and the `460 mm` sprinkler standoff below `+3574.6 mm`).
+  - **Telecom Cable Tray (`CT-1`, `683 × 127 mm`)**: Routed in the under-floor plenum at `Z_cl = -200 mm` (`-263.5..-136.5 mm`, `101.5 mm` clear below the `-35 mm` access-floor underside and `> 2800 mm` vertical separation from busway).
+  - **Chilled-Water Pipe (`CHW-1`, `168.3 mm` insulated OD)**: Routed in the under-floor plenum at `Z_cl = -600 mm` (`-684.15..-515.85 mm`), serving all 6 cabinet rows and all 4 perimeter CRAHs while staying completely clear of columns, tray, and PDU dedicated electrical spaces.
+- **Diagnostics**: Running `output/solution.py` writes the IFC4 model to `sys.argv[1]` (default `output/model.ifc`) and also writes `output/reconciliation.json` next to it with extracted datums, achieved clearances, and service lengths.

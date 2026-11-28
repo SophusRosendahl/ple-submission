@@ -1,0 +1,86 @@
+== eval/run.py and kit/*.py: lines on network / internet
+/home/sophusrosendahl/ple/eval/run.py:154:    "NetworkConnectionError",
+/home/sophusrosendahl/ple/eval/run.py:477:  """Returns the host gateway IP on Docker's default bridge network.
+/home/sophusrosendahl/ple/eval/run.py:483:    stack.InfraError: If Docker's bridge network reports no gateway address.
+/home/sophusrosendahl/ple/eval/run.py:486:      "network",
+/home/sophusrosendahl/ple/eval/run.py:494:    raise stack.InfraError("Docker's bridge network names no gateway address")
+/home/sophusrosendahl/ple/eval/run.py:607:  """Raised when Hugging Face cannot be reached due to a network error."""
+/home/sophusrosendahl/ple/eval/run.py:697:    A `TasksError` for access refusal or `HubUnreachable` for network errors.
+/home/sophusrosendahl/ple/eval/run.py:713:      " check this machine's internet access and run again, or give"
+/home/sophusrosendahl/ple/eval/run.py:1011:  """Rewrites `task.toml` content so verifier networks allow only `host`.
+/home/sophusrosendahl/ple/eval/run.py:1024:      'network_mode = "allowlist"',
+/home/sophusrosendahl/ple/eval/run.py:1041:        r"\s*(network_mode|allowed_hosts)\s*=", line
+/home/sophusrosendahl/ple/eval/run.py:1330:  network allowlist updated to permit `judge_host`. No API keys are written to
+/home/sophusrosendahl/ple/eval/run.py:2374:  Cleans up task containers and networks left behind if Harbor is killed.
+/home/sophusrosendahl/ple/eval/run.py:2800:  Configures verifier network allowlists for judge tasks (`asks_judge`). Tasks
+/home/sophusrosendahl/ple/kit/build.py:17:Submission files are copied into a clean builder container (with internet access
+/home/sophusrosendahl/ple/kit/build.py:57:# git's message for a fetch that never reached the repository: no network, a
+/home/sophusrosendahl/ple/kit/build.py:221:  """Returns the Docker endpoint URL if reached over the network, else None.
+/home/sophusrosendahl/ple/kit/build.py:362:            " this network, or linux/amd64 is emulated on this machine; run it"
+/home/sophusrosendahl/ple/kit/build.py:886:  `install` runs as root with the internet, and a dependency's install script
+/home/sophusrosendahl/ple/kit/check.py:935:      A shell command string to remove kept containers and networks, or `""`
+/home/sophusrosendahl/ple/kit/check.py:944:    networks = [st.network for st in self.stacks]
+/home/sophusrosendahl/ple/kit/check.py:947:        f"; docker network rm {' '.join(networks)}" if networks else ""
+/home/sophusrosendahl/ple/kit/check.py:1429:    Runs with `--network none` and `TASK_LIMITS`. When `mcp` is True, starts
+/home/sophusrosendahl/ple/kit/check.py:1461:              "--network",
+/home/sophusrosendahl/ple/kit/check.py:2002:    The number of containers and networks removed.
+/home/sophusrosendahl/ple/kit/models.py:82:# How a local run reaches a model server on this machine or network, which
+/home/sophusrosendahl/ple/kit/models.py:85:    "for a server on your machine or network, keep a placeholder such as"
+/home/sophusrosendahl/ple/kit/models.py:95:# names that resolve only inside a private network
+/home/sophusrosendahl/ple/kit/models.py:118:        f"resolves only inside a local network ({', '.join(LOCAL_SUFFIXES)}"
+/home/sophusrosendahl/ple/kit/stack.py:17:Runs each serve container and its egress proxy on an internal Docker network
+/home/sophusrosendahl/ple/kit/stack.py:52:# Docker Compose's label on a project's containers and networks
+/home/sophusrosendahl/ple/kit/stack.py:68:EGRESS_NETWORK = "plebench-serve-egress"
+/home/sophusrosendahl/ple/kit/stack.py:69:# The serve network's bridge gets no address on the host (Docker 28 and later),
+/home/sophusrosendahl/ple/kit/stack.py:72:ISOLATED = ("-o", "com.docker.network.bridge.gateway_mode_ipv4=isolated")
+/home/sophusrosendahl/ple/kit/stack.py:708:  """Ensures `EGRESS_IMAGE` is present and `EGRESS_NETWORK` exists.
+/home/sophusrosendahl/ple/kit/stack.py:711:    InfraError: If pulling the image or creating the network fails.
+/home/sophusrosendahl/ple/kit/stack.py:714:  if not _exists("network", EGRESS_NETWORK):
+/home/sophusrosendahl/ple/kit/stack.py:716:        "network",
+/home/sophusrosendahl/ple/kit/stack.py:720:        EGRESS_NETWORK,
+/home/sophusrosendahl/ple/kit/stack.py:723:    if r.returncode != 0 and not _exists("network", EGRESS_NETWORK):
+
+== Harbor (/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor): lines on allow_internet / network_mode in the docker environment code
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/langsmith.py:228:            # creation, so a network_mode="allowlist" task can reach only its
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/langsmith.py:1282:        if self.task_env_config.allow_internet is not None:
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/langsmith.py:1283:            return self.task_env_config.allow_internet
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/tensorlake.py:419:        # TensorLake supports allow_internet_access=False at creation time.
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/tensorlake.py:1041:            allow_internet_access=not self._network_disabled,
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/harbor-docker-egress-control-sidecar/entrypoint.sh:12:INITIAL_NETWORK_MODE="${EGRESS_CONTROL_INITIAL_NETWORK_MODE:-public}"
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/harbor-docker-egress-control-sidecar/entrypoint.sh:29:case "$INITIAL_NETWORK_MODE" in
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/harbor-docker-egress-control-sidecar/entrypoint.sh:33:  no-network)
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/harbor-docker-egress-control-sidecar/entrypoint.sh:43:    echo "invalid EGRESS_CONTROL_INITIAL_NETWORK_MODE: $INITIAL_NETWO
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/harbor-docker-egress-control-sidecar/entrypoint.sh:49:echo "harbor-docker-egress-control-sidecar ready: initial egress poli
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/docker.py:186:            network_mode=NetworkMode.PUBLIC
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/docker.py:245:            egress_control_initial_network_mode=self.network_policy.network_mode.value,
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/docker.py:275:        return any(policy.network_mode != NetworkMode.PUBLIC for policy in policies)
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/docker.py:344:        ``extra_docker_compose_paths`` without an explicit ``network_mode`` or
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/docker.py:405:                    "network_mode" in config or "networks" in config
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/docker.py:430:                "network_mode": f"service:{self._EGRESS_CONTROL_SERVICE_NAME}",
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/docker.py:558:            env_vars.pop("EGRESS_CONTROL_INITIAL_NETWORK_MODE", None)
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/docker.py:570:            and network_policy.network_mode != NetworkMode.PUBLIC
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/docker.py:573:                f"network_mode={network_policy.network_mode.value!r} is not supported "
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/docker.py:1183:            if network_policy.network_mode == NetworkMode.PUBLIC:
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/docker.py:1196:        match network_policy.network_mode:
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/docker.py:1204:                raise ValueError(f"Invalid network mode: {network_policy.network_mode}")
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/compose_env.py:18:    egress_control_initial_network_mode: str | None = None
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/docker-compose-egress-control.yaml:7:      EGRESS_CONTROL_INITIAL_NETWORK_MODE: ${EGRESS_CONTROL_INITIAL_NETWORK_MODE:-publ
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/docker-compose-no-network.yaml:3:    network_mode: none
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/docker/__init__.py:10:COMPOSE_NO_NETWORK_PATH = COMPOSE_DIR / "docker-compose-no-network.yaml"
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/blaxel.py:99:_NO_NETWORK_SENTINEL_DOMAIN = "harbor-no-network.invalid"
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/blaxel.py:367:        # Blaxel enforces egress through an allowlist. A no-network sandbox is
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/blaxel.py:1016:            files.append(f"{self._COMPOSE_DIR}/docker-compose-no-network.yaml")
+/home/sophusrosendahl/.local/share/uv/tools/harbor/lib/python3.12/site-packages/harbor/environments/daytona/environment.py:541:            files.append(f"{self._COMPOSE_DIR}/docker-compose-no-network.yaml")
+
+== the task's own configuration (/home/sophusrosendahl/ple-submission/runs/pi-rung2-A-20261127-141121/tasks/data-hall-mep-routing): task.toml and environment/ (not tests/)
+/home/sophusrosendahl/ple-submission/runs/pi-rung2-A-20261127-141121/tasks/data-hall-mep-routing/task.toml:16:network_mode = "no-network"
+/home/sophusrosendahl/ple-submission/runs/pi-rung2-A-20261127-141121/tasks/data-hall-mep-routing/task.toml:20:network_mode = "no-network"
+/home/sophusrosendahl/ple-submission/runs/pi-rung2-A-20261127-141121/tasks/data-hall-mep-routing/task.toml:21:cpus = 2
+/home/sophusrosendahl/ple-submission/runs/pi-rung2-A-20261127-141121/tasks/data-hall-mep-routing/task.toml:22:memory_mb = 4096
+/home/sophusrosendahl/ple-submission/runs/pi-rung2-A-20261127-141121/tasks/data-hall-mep-routing/task.toml:26:network_mode = "no-network"
+/home/sophusrosendahl/ple-submission/runs/pi-rung2-A-20261127-141121/tasks/data-hall-mep-routing/task.toml:30:network_mode = "public"
+/home/sophusrosendahl/ple-submission/runs/pi-rung2-A-20261127-141121/tasks/data-hall-mep-routing/task.toml:32:cpus = 2
+/home/sophusrosendahl/ple-submission/runs/pi-rung2-A-20261127-141121/tasks/data-hall-mep-routing/task.toml:33:memory_mb = 4096
+Dockerfile
+filesystem
+requirements.txt

@@ -1,0 +1,9 @@
+Delivered the coordinated IFC4 model generator and reconciliation log:
+
+- **`output/solution.py`**: Self-contained Python script (`ifcopenshell==0.8.4` + `numpy`) that writes the IFC4 model in millimetre project units (with metre placement translations and 2D profile extrusions) to `sys.argv[1]` (default `output/model.ifc`).
+  - **Background model (254 elements)**: 128 server racks (`IfcFurniture`/`USERDEFINED`/`"Rack"`, 119 `C1` + 9 `N1`) across rows A–F with exact bay accumulation and common cross-aisle east edge (`x = 11200 mm`), 18 in-row CRAHs + 4 perimeter CRAHs (`IfcUnitaryEquipment`), 6 PDUs (`IfcElectricDistributionBoard`), 6 full-height structural columns (`IfcColumn`, `400 × 400 × 3600 mm`), 35 mm access floor (`IfcSlab`), 4 cold-aisle containment roof panels (`IfcCovering`) + 8 end doors (`IfcDoor`), and 79 sprinkler heads (`IfcFireSuppressionTerminal`: 63 ceiling + 16 in-aisle).
+  - **Coordinated MEP routing (25 segments, 0 clashes)**:
+    - **Power Busway (`BW-1`, `128 × 147 mm`)**: Overhead at `z_cl = 2700 mm` (`2626.5..2773.5 mm`, 801.5 mm below ceiling sprinkler deflectors, > 2600 mm clear height), offset `-400 mm` from row centerlines to clear all columns (total length `121.28 m`).
+    - **Telecom Cable Tray (`CT-1`, `683 × 127 mm`)**: Under-floor plenum at `z_cl = -250 mm` (`-313.5..-186.5 mm`, < `-55 mm` under panel), maintaining `2813 mm` vertical separation from busway (total length `119.89 m`).
+    - **Chilled Water Pipe (`CHW-1`, `168.3 mm` insulated OD)**: Under-floor plenum at `z_cl = -600 mm` (`-684.15..-515.85 mm`), serving all 6 rack rows (all 18 in-row CRAHs) and the south perimeter header (`y = 450 mm`) reaching all 4 perimeter CRAHs, with zero piping in PDU dedicated electrical space (total length `148.45 m`).
+- **`output/reconciliation.json`**: Drawing-note reconciliation log summarizing extracted dimensions, datums, clearances, and how each was applied.
