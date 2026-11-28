@@ -44,6 +44,7 @@ from typing import Any
 
 import catalogue
 import evaluator
+import optimizer
 import inputs
 import taskbridge
 
@@ -78,8 +79,9 @@ NOTE = (
     " the first message says where. Nothing from them is in the conversation yet, so read what you need with the read"
     " tool (it shows images). The ifcopenshell library works in your commands. Put every deliverable exactly where and in the"
     " format the instruction asks. Keep notes and partial results in /tmp/scratch, never in a deliverable folder.\n\n"
-    "You have two more tools. `set_checks` installs your own automatic checker for the design, and `evaluate` builds and validates your IFC"
-    " and runs that checker on it. The checker is described below.\n\n"
+    "You have three more tools. `set_checks` installs your own automatic checker for the design, `evaluate` builds and validates your IFC"
+    " and runs that checker on it, and `optimize` searches your design's parameters for the best design that passes the checker. The checker"
+    " is described below.\n\n"
     "{catalogue}\n\n"
     "Work in this order.\n"
     "1. Requirements. Read the whole instruction. Do not narrow, soften or reinterpret a requirement.\n"
@@ -92,8 +94,12 @@ NOTE = (
     " described above and fix what it reports, starting with schema errors and then failing checks."
     " If a check itself is wrong (it errors, measures something other than its requirement, or lacks a number you have since read),"
     " rewrite it with `set_checks`; never loosen a check to make the design pass.\n"
-    "6. When every check passes, use the remaining budget to improve the objective (see the report), and to look at what the report says is"
-    " untested; then review your checks against the instruction as described above.\n"
+    "6. When every check passes and every scope warning is resolved or explained, optimize. Choose the design decisions that move the"
+    " objective (where a trunk or header runs, an offset, an elevation, which side something goes) and make them parameters that your"
+    " script reads from a JSON file, with the current values baked in as defaults and the file optional. Then call `optimize` with their"
+    " bounds: it tries dozens of designs against your checks without using your model calls, and leaves the best one built. Bake the best"
+    " values into the script, call `evaluate`, and look at the parameters that ended at a bound. Do not finish without running `optimize`,"
+    " unless you can say why no parameter affects the objective; then review your checks against the instruction as described above.\n"
     "7. Before you finish, re-read the instruction against what you delivered and confirm that every deliverable exists where the"
     " instruction says.\n\n"
     "Batch your tool calls. When several tool calls do not depend on each other, make them together in one reply"
@@ -379,6 +385,7 @@ async def solve(session: taskbridge.Session) -> str:
       env["TASK_ENGINE"] = "1"
       relay.extra["setchecks"] = lambda f: evaluator.set_checks_tool(session, state, f)
       relay.extra["evaluate"] = lambda f: evaluator.evaluate_tool(session, state, f)
+      relay.extra["optimize"] = lambda f: optimizer.optimize_tool(session, state, f)
       # Rung 3: the contents are not fed. The first message is the instruction plus a listing of where the files are.
       prompt = session.instruction + "\n\n" + await inputs.listing(session)
       argv = [
@@ -402,7 +409,7 @@ async def solve(session: taskbridge.Session) -> str:
           "--append-system-prompt",
           NOTE.format(workdir=session.workdir, max_calls=MAX_CALLS, catalogue=catalogue.CATALOGUE),
           "--tools",
-          "read,write,edit,bash,set_checks,evaluate",
+          "read,write,edit,bash,set_checks,evaluate,optimize",
       ]
       version = (HERE / "VERSION").read_text(encoding="utf-8").strip() if (HERE / "VERSION").is_file() else None
       await session.log("pi: VERSION " + json.dumps({"harness": version, "model": model, "thinking": THINKING,

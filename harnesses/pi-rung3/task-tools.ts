@@ -251,9 +251,42 @@ export default function registerTaskTools(pi: ExtensionAPI) {
 			return { content: [{ type: "text", text: r.output ?? "" }], details: {} };
 		},
 	});
+	const optimize = defineTool({
+		name: "optimize",
+		label: "Optimize",
+		description:
+			"Search the design parameters of your build script for a better design, without spending model calls inside the search. " +
+			"Your script must read its parameters from the JSON file `params_file` (defaults baked in, the file optional). Each trial writes " +
+			"candidate values there, runs `build`, reads `ifc`, and runs your installed checks; a design with fewer check violations wins, then " +
+			"the better objective (shorter total length, unless `minimize` is false). The best values are left in the file and built. " +
+			"Afterwards put them into your script's defaults and call evaluate.",
+		parameters: Type.Object({
+			build: Type.String({ description: "Shell command that builds the IFC, run in the working directory (it reads params_file)" }),
+			ifc: Type.String({ description: "Path of the IFC the build writes" }),
+			params_file: Type.String({ description: "Path of the JSON file the build reads, e.g. /tmp/scratch/params.json" }),
+			params: Type.Record(
+				Type.String(),
+				Type.Object({
+					min: Type.Number(),
+					max: Type.Number(),
+					init: Type.Optional(Type.Number({ description: "Starting value (default: the middle of the range)" })),
+					integer: Type.Optional(Type.Boolean()),
+				}),
+				{ description: "Parameter name -> bounds, in the units your script uses" },
+			),
+			evaluations: Type.Optional(Type.Number({ description: "Designs to try (default 30, at most 80)" })),
+			minimize: Type.Optional(Type.Boolean({ description: "Minimise the objective (default true); false to maximise" })),
+			seconds: Type.Optional(Type.Number({ description: "Time limit in seconds (default 600)" })),
+		}),
+		async execute(_id: string, params: object) {
+			const r = await relay("optimize", params);
+			return { content: [{ type: "text", text: r.output ?? "" }], details: {} };
+		},
+	});
 	if (process.env.TASK_ENGINE === "1") {
 		pi.registerTool(setChecks);
 		pi.registerTool(evaluate);
+		pi.registerTool(optimize);
 	}
 
 	pi.on("before_agent_start", (event) => {

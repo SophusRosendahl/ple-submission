@@ -46,6 +46,7 @@ THE CHECK LIBRARY (each check is a JSON object with a unique "id", a "type", a s
                               for p in helpers["items_of"](items, roles, "pipe"):
                                 if p["aabb"][5] > 2400: v.append(f"{p['id']} top at {p['aabb'][5]:.0f}, 2400 allowed: lower it")
                               return {"violations": v, "examined": len(helpers["items_of"](items, roles, "pipe"))}
+                  Add "uses": [role names] listing every role the code reads, so the report can say which parts of the model the check covers.
                   Use only when the library cannot express the requirement; test_checks runs your code, so an error in it shows up there.
 
 RULES
@@ -124,7 +125,7 @@ def validate(cfg: dict | None) -> list[str]:
   for c in checks:
     cid = c.get("id", "?")
     used = []
-    for key in ("roles", "a", "b", "role", "from", "to", "lines", "by"):
+    for key in ("roles", "a", "b", "role", "from", "to", "lines", "by", "uses"):
       v = c.get(key)
       used += [v] if isinstance(v, str) else (v if isinstance(v, list) else [])
     for r in used:

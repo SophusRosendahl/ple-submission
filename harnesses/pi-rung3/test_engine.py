@@ -362,5 +362,42 @@ class RowsAndHelpers(unittest.TestCase):
     self.assertEqual(r["offenders"], ["p"])
 
 
+class ScopeShadow(unittest.TestCase):
+  def model(self):
+    return [box("p", "pipe-seg", "S", 0, 0, 2700, 100, 100, 2800),            # the routed service, above the headroom limit
+            box("spr", "col", "", 500, 0, 1890, 520, 20, 1990),               # a hanging element of another kind, below the limit
+            box("rack1", "rack", "", 900, 0, 0, 1500, 1200, 2000)]           # stands on the floor: not a headroom case
+
+  def test_z_range_reports_the_unexamined_kind_that_would_break_the_limit(self):
+    r = run(self.model(), [{"id": "h", "type": "z_range", "role": "pipe", "zmin": 2600}])
+    res = r["results"]["h"]
+    self.assertEqual(res["status"], "pass")  # the check's own verdict is unchanged
+    self.assertEqual(len(res["outside_scope"]), 1)
+    self.assertIn("1 x col", res["outside_scope"][0])
+    self.assertIn("1890", res["outside_scope"][0])
+    self.assertIn("SCOPE WARNING", E.render(r))
+    self.assertTrue(r["ready"])  # a warning does not change READY
+
+  def test_widening_the_roles_removes_the_warning(self):
+    roles = dict(ROLES, hung=["pipe-seg", "col"])
+    r = E.evaluate(self.model(), [{"id": "h", "type": "z_range", "role": "hung", "zmin": 2600}], roles, self_test=False)
+    self.assertEqual(r["results"]["h"]["status"], "fail")
+    self.assertEqual(r["results"]["h"]["outside_scope"], [])
+
+  def test_a_count_check_does_not_count_as_coverage(self):
+    r = run(self.model(), [{"id": "c", "type": "count", "role": "rack", "equals": 1}, {"id": "h", "type": "z_range", "role": "pipe", "zmin": 2600}])
+    sc = r["scope"]
+    self.assertIn("rack", sc["uncovered_kinds"])
+    self.assertIn("rack", sc["counted_only_kinds"])
+    self.assertNotIn("pipe-seg", sc["uncovered_kinds"])
+
+  def test_custom_check_declares_its_roles(self):
+    code = "def check(items, roles, helpers):\n  return {'violations': []}\n"
+    sc = run(self.model(), [{"id": "x", "type": "custom", "code": code, "uses": ["rack"]}])["scope"]
+    self.assertNotIn("rack", sc["uncovered_kinds"])
+    sc = run(self.model(), [{"id": "x", "type": "custom", "code": code}])["scope"]
+    self.assertEqual(sc["custom_without_uses"], ["x"])
+
+
 if __name__ == "__main__":
   unittest.main()

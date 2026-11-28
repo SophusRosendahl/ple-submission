@@ -20,6 +20,7 @@ import numpy as np
 CHECK_TYPES = ("no_overlap", "min_clearance", "z_range", "nearest_within", "connected", "coverage_along", "count",
                "length_sum", "custom")
 TOP = 5  # offenders listed per check
+FLOOR_TOL = 300.0  # an item whose bottom is within this of the floor datum stands on it: not a headroom case
 
 
 class EngineError(ValueError):
@@ -344,7 +345,27 @@ def check_z_range(items, roles, spec) -> dict:
     near = _above_below(items, i, side, lim, val + 1) if side == "top" else _above_below(items, i, side, val - 1, lim)
     lines.append(f"{items[i]['id']}: {side} at {val:.0f}, limit {lim:.0f}, {amt:.0f} mm too {'high' if side == 'top' else 'low'}"
                  + (f"; in that band over the same footprint: {', '.join(near)}" if near else ""))
-  return {"status": "fail" if bad else "pass", "violations": len(bad), "examined": len(idx), "offenders": lines, "patterns": patterns}
+  # Scope shadow: the same limit applied to the kinds this check did not select. Not counted; the agent decides whether they are in scope.
+  chosen = set(idx)
+  by_kind: dict[str, list[tuple[int, str, float]]] = {}
+  for i, it in enumerate(items):
+    if i in chosen:
+      continue
+    lo, hi = it["aabb"][2], it["aabb"][5]
+    if zmin is not None and FLOOR_TOL <= lo < float(zmin):  # hanging below the limit (floor-standing items are not headroom cases)
+      by_kind.setdefault(it["kind"], []).append((i, "bottom", lo))
+    if zmax is not None and hi > float(zmax):
+      by_kind.setdefault(it["kind"], []).append((i, "top", hi))
+  shadow = []
+  for kind, vs in sorted(by_kind.items(), key=lambda kv: -len(kv[1])):
+    sides = sorted({v[1] for v in vs})
+    vals = sorted({round(v[2]) for v in vs})
+    lim = float(zmin) if sides == ["bottom"] else float(zmax)
+    shadow.append(f"{len(vs)} x {kind} (not selected by this check) would break the same limit: {'/'.join(sides)} at "
+                  f"{', '.join(str(v) for v in vals[:3])}{' ...' if len(vals) > 3 else ''} mm, limit {lim:.0f}; e.g. {items[vs[0][0]]['id']}. "
+                  f"If the requirement covers them, add their role to this check.")
+  return {"status": "fail" if bad else "pass", "violations": len(bad), "examined": len(idx), "offenders": lines, "patterns": patterns,
+          "outside_scope": shadow}
 
 
 def check_nearest_within(items, roles, spec) -> dict:
@@ -614,6 +635,12 @@ def evaluate(items_raw: list[dict], checks: list[dict], roles: dict[str, list[st
   report["objective_change"] = _change(report["objective"], previous)
   fails = [k for k, r in results.items() if r["status"] in ("fail", "error")]
   misses = [m for m in report.get("self_test", {}).get("missed", [])]
+  warn = [f"{cid}: {s}" for cid, r in results.items() for s in r.get("outside_scope", [])]
+  sc = report["scope"]
+  if sc["uncovered_kinds"]:
+    warn.append("no geometric check selects: " + ", ".join(sc["uncovered_kinds"]) + (
+        " (kinds only a count check sees: " + ", ".join(sc["counted_only_kinds"]) + ")" if sc["counted_only_kinds"] else ""))
+  report["warnings"] = warn
   report["ready"] = not fails and not misses
   report["not_ready_because"] = ([f"{len(fails)} check(s) failing or in error: {', '.join(fails)}"] if fails else []) + \
                                 ([f"{len(misses)} injected fault(s) not caught by a check"] if misses else [])
@@ -635,25 +662,35 @@ def _change(now, prev):
           "vs_best_mm": now["total_mm"] - min(prev.get("best_total_mm", prev["objective"]["total_mm"]), prev["objective"]["total_mm"])}
 
 
+GEOMETRIC = ("no_overlap", "min_clearance", "z_range", "nearest_within", "connected", "coverage_along", "custom")
+ROLE_KEYS = ("roles", "a", "b", "role", "from", "to", "lines", "by", "uses")
+
+
 def scope_facts(items, checks, roles) -> dict:
-  """Which kinds each check selects, and the kinds no check selects at all."""
+  """Which kinds each check selects, the kinds no geometric check selects (a count or length check does not test geometry), and
+  the kinds only such checks select."""
   kinds = sorted({it["kind"] for it in items})
   touched: dict[str, set[str]] = {k: set() for k in kinds}
+  counted: dict[str, set[str]] = {k: set() for k in kinds}
+  used_roles = set()
   for c in checks:
     sel: set[int] = set()
-    for key in ("roles", "a", "b", "role", "from", "to", "lines", "by"):
+    for key in ROLE_KEYS:
       v = c.get(key)
       for r in ([v] if isinstance(v, str) else (v or [])):
+        used_roles.add(r)
         try:
           sel |= set(select(items, roles, r))
         except EngineError:
           pass
     for i in sel:
-      touched[items[i]["kind"]].add(c["id"])
-  unbound = [r for r in {x for c in checks for key in ("roles", "a", "b", "role", "from", "to", "lines", "by")
-                         for x in ([c[key]] if isinstance(c.get(key), str) else c.get(key, []))} if r != "*" and r not in roles]
-  return {"kinds": kinds, "by_kind": {k: sorted(v) for k, v in touched.items()}, "uncovered_kinds": [k for k, v in touched.items() if not v],
-          "unbound_roles": sorted(unbound)}
+      (touched if c["type"] in GEOMETRIC else counted)[items[i]["kind"]].add(c["id"])
+  unbound = [r for r in used_roles if r != "*" and r not in roles]
+  custom_without_uses = [c["id"] for c in checks if c["type"] == "custom" and not c.get("uses")]
+  return {"kinds": kinds, "by_kind": {k: sorted(v) for k, v in touched.items()},
+          "uncovered_kinds": [k for k, v in touched.items() if not v],
+          "counted_only_kinds": [k for k in kinds if not touched[k] and counted[k]],
+          "unbound_roles": sorted(unbound), "custom_without_uses": custom_without_uses}
 
 
 def injected_fault_test(items, checks, roles, max_pairs: int = 600) -> dict:
@@ -693,6 +730,8 @@ def render(report: dict) -> str:
   L.append(f"EVALUATION: {'READY' if report['ready'] else 'NOT READY'}  ({report['n_items']} items, {len(report['results'])} checks)")
   for why in report["not_ready_because"]:
     L.append(f"  not ready: {why}")
+  if report.get("warnings"):
+    L.append(f"  {len(report['warnings'])} SCOPE WARNING(S), listed below: parts of the model your checks do not test. Resolve each: widen a check, add a check, or be able to say why the requirement does not cover it.")
   L.append("")
   L.append("CHECKS (failing first)")
   order = sorted(report["results"].items(), key=lambda kv: {"error": 0, "fail": 1, "pass": 2, "info": 3}.get(kv[1]["status"], 4))
@@ -704,6 +743,8 @@ def render(report: dict) -> str:
       L.extend(pat[1:])
     for o in r["offenders"]:
       L.append(f"        - {o}")
+    for o in r.get("outside_scope", []):
+      L.append(f"        OUTSIDE THIS CHECK'S SCOPE (not counted): {o}")
     if r["type"] == "no_overlap":
       scope = f"pairs examined {r['examined']}, excluded {r['excluded']}"
       if r["excluded"]:
@@ -722,7 +763,10 @@ def render(report: dict) -> str:
   sc = report["scope"]
   L.append("SCOPE FACTS")
   L.append(f"  kinds in the model: {', '.join(sc['kinds'])}")
-  L.append(f"  kinds that no check selects: {', '.join(sc['uncovered_kinds']) or 'none'}")
+  L.append(f"  kinds that no geometric check selects: {', '.join(sc['uncovered_kinds']) or 'none'}"
+           + (f"  (seen only by a count or length check: {', '.join(sc['counted_only_kinds'])})" if sc.get("counted_only_kinds") else ""))
+  if sc.get("custom_without_uses"):
+    L.append(f"  custom checks that do not declare the roles they use (\"uses\": [...]), so their scope is unknown: {', '.join(sc['custom_without_uses'])}")
   if sc["unbound_roles"]:
     L.append(f"  roles used by checks but bound to no kind: {', '.join(sc['unbound_roles'])}")
   if "self_test" in report:
