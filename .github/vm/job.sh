@@ -1,6 +1,6 @@
 # stop: idle
 # pull: research/runs.jsonl research/run-details
-# Rung 3 v1 (check-builder agent + evaluate tool + ifcopenshell). Neon only, ONE run, one task, effort low.
+# Rung 3 v1 (check-builder agent + evaluate tool + ifcopenshell). Neon only, ONE run (v1 after the pytest fix; run-046 was void), one task, effort low.
 cd ~/ple-submission && git log -1 --oneline
 if tmux has-session -t rung3 2>/dev/null; then echo "rung3 already running"; else
   tmux new -d -s rung3 "MODELS=gemini-4-neon TASKS=data-hall-mep-routing EFFORT=low REP=1 bash ~/ple-submission/infra/gcp-vm/rung3.sh 2>&1 | tee ~/rung3-v1.log"
