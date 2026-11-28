@@ -29,14 +29,14 @@ Each model reply is one call. A reply with a tool call runs the tool through the
 reply with no tool call is the final answer. If the call budget runs out, the harness lets the last reply's tools
 finish, stops the agent, and sends an honest note as the final message. Either way the evaluator then grades the files.
 
-## Figure 4. The structured workflow (rung 3, proposed)
+## Figure 4. The workflow of rung 3 (v5)
 
-![The structured workflow](figures/fig4-structured-workflow.png)
+![The workflow](figures/fig4-structured-workflow.png)
 
-A check-builder (a sub-agent with a fresh context that sees only the task) programs the checks once, from a prepopulated library, before the design exists. The designer builds, binds the check-builder's roles to its own item kinds, evaluates, and reviews; the checks stay as built. The engine's report is made of facts it computed: failures, what was examined, which kinds no check touches, which checks missed an injected fault. The designer's concerns are recorded and shown with the engine's evidence.
+One agent. It reads the drawings, has a second reader check the facts its checks will rest on (`verify_facts`), writes its own checker (`set_checks`, probed with planted faults), builds, and evaluates (`evaluate`); when a check is wrong it rewrites it, when the design fails a check it fixes the design. Once every check passes it searches the design's parameters (`optimize`, no model calls inside the search), reads which checks the search pushed to their limits, and re-verifies the numbers behind them before accepting the design.
 
-## Figure 5. The parts of the structured workflow (proposed)
+## Figure 5. What we provide (rung 3, v5)
 
-![The parts of the structured workflow](figures/fig5-structured-architecture.png)
+![What we provide](figures/fig5-structured-architecture.png)
 
-The engine (check library and evaluation) runs in the serve container, outside the task container and outside the agent's code. Strict defaults, scope facts, an injected-fault self-test and an objective tracker; the designer cannot make it skip a pair, and the check-builder never sees the design.
+The agent is the same Pi loop as in rungs 1 and 2. Four tools are ours, all in the serve container and deterministic: the check library with its probes, the evaluation (diagnosed messages, margins, scope shadows, self-test, per-kind coverage, objective), the optimizer, and the second reader. The first versions of this figure showed a separate check-builder agent; the v1 runs showed why it was dropped (`docs/design-decisions.md`, "Rung 3 v1, second Neon run").

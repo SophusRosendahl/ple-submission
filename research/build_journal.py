@@ -32,11 +32,11 @@ Status: `todo` / `draft` / `done`. Update the table in `research/build_journal.p
 
 | # | Criterion (points) | What judges look for | What we have / still need | Status |
 |---|---|---|---|---|
-| 1 | **Insight & failure analysis** (25) | Something non-obvious; real dev-set failures; controlled ablations ("we added X, score went A to B"); ideas that failed | Near miss in section 5; lab log; **rung 1: the model writes its own checks unprompted and gets one wrong (section 6a)**. Need: one-change-at-a-time ladder runs, repeats, failures read task by task, failed ideas written down | draft |
-| 2 | **Engineering reasoning** (25) | One concrete dev task walked through, our agent's trajectory against a licensed engineer's workflow: where it held up, where it took shortcuts, which domain skills separated pass from fail | Need: keep the full trajectory of each run (not just scores) and pick one task | todo |
+| 1 | **Insight & failure analysis** (25) | Something non-obvious; real dev-set failures; controlled ablations ("we added X, score went A to B"); ideas that failed | Section 6: the agent writes its own checks and gets the scope wrong (6a); failure analysis of 18 runs against four hypotheses (6b); the engine and what it provides (6c); rung 3 version by version with five findings: the biggest lever was enabling ifcopenshell, not the engine; a tool failing silently in the evaluator environment; the score plateau at the checks' scope; the optimizer amplifying check error (two of three runs fell to 0.000); rewriting the checker did not loosen checks (6d). Need: the engine-off ablation, more repeats, a second task | draft |
+| 2 | **Engineering reasoning** (25) | One concrete dev task walked through, our agent's trajectory against a licensed engineer's workflow: where it held up, where it took shortcuts, which domain skills separated pass from fail | Section 6d has the sprinkler-head case: drawing says 1,890 mm, code says 2,600 mm, every agent built the drawing and scoped the headroom check to routes. Need: the full trajectory of one run laid against an engineer's workflow, step by step | draft |
 | 3 | **Cross-model generalizability** (15) | All 29 dev tasks with at least two models, ideally across families; which changes help every model, which only one; how model choice shifts accuracy and token cost; comparison table in the write-up; one target `google-cloud/<id>` committed in `submission.yaml` for Stage 2 | Rung 0 runs two models on half A only. Need: every rung on 2+ models, a final pass over all 29 (half B needs a stated reason), and the single target model chosen | todo |
-| 4 | **Efficiency & scaling** (20) | Dev score against compute budget (calls, tokens, runtime or parallel verification attempts); where accuracy plateaus; remaining headroom | The harness now counts model calls exactly (section 4); tracker stores tokens and seconds per task. Need: read the call counts into the tracker, a score-vs-budget chart per rung, and one budget knob to vary (for example verification attempts) | draft |
-| 5 | **Clarity & visuals** (15) | Written for an ML researcher with no civil, mechanical or electrical background; headline finding near the top; the 3 required figures; under 2,000 words | Need: which 3 figures are required (not yet read), and a short plain-language glossary. Word count is checked at the end | todo |
+| 4 | **Efficiency & scaling** (20) | Dev score against compute budget (calls, tokens, runtime or parallel verification attempts); where accuracy plateaus; remaining headroom | Calls, tokens and minutes per rung version are generated into the table in 6b (rung 3 uses 9 to 12 designer calls of 40, plus the second reader's own budget). The optimizer spends dozens of designs inside one tool call with no model calls. The plateau at 0.92 is explained (6d). Need: a score-vs-calls chart per rung and one budget knob varied | draft |
+| 5 | **Clarity & visuals** (15) | Written for an ML researcher with no civil, mechanical or electrical background; headline finding near the top; the 3 required figures; under 2,000 words | Five schematics are drawn (`docs/figures.md`: how a run works, the ladder, the agent loop, the rung 3 workflow, what we provide); the three to use are still to be chosen. Need: a plain-language glossary, the headline finding at the top, and the word count checked at the end | draft |
 
 Gate: the top 100 submissions from Stage 1 advance to Stage 2, and an entry must first pass the
 automated `kit check` and artifacts verification before its write-up is scored.
@@ -184,7 +184,11 @@ def plot_runs(run_ids, title):
                 if sc == 0:
                     ax.text(0.005, yi, "0", color=MUTED, fontsize=9, va="center")
         else:
-            ax.scatter(f["score"], list(y), s=46, color=SERIES[i], zorder=3, label=label,
+            model = run["harness"]["model"]
+            col = SERIES[sorted({r["harness"]["model"] for r in chosen}).index(model) % len(SERIES)]
+            seen_models = {r["harness"]["model"] for r in chosen[:i]}
+            ax.scatter(f["score"], list(y), s=46, color=col, zorder=3, alpha=0.75,
+                       label=None if model in seen_models else tracker.judge_name(model) if False else model.split("/")[-1],
                        edgecolors=SURFACE, linewidths=2)
     mean = tracker.score(chosen[0])["score"]
     ax.axvline(mean, color=MUTED, lw=1, ls=(0, (3, 3)))
@@ -212,7 +216,7 @@ the model's thinking tokens count against that cap. Output was at the cap in 15 
 **v2.** The cap is 64,000 for Gemini and every call now records its finish reason, so a cut-off
 shows up as one. Filled in from the tracker below (`rung 0` in the run label)."""),
 
-    code("""rung0 = [r for r in runs if r["label"].lower().startswith("rung 0")]
+    code("""rung0 = [r for r in runs if r["label"].lower().startswith("rung 0") and not tracker.invalid_reason(r)]
 if rung0:
     display(plot_runs([r["run_id"] for r in rung0], "Rung 0: one model call, score per task on half A"))
     print(overview[overview["label"].str.lower().str.startswith("rung 0")].to_string(index=False))
@@ -479,6 +483,8 @@ half A.
 |---|---|---|
 | 0 | **one model call**: files pasted in as plain text, deliverables written from the reply | how far does one careful read of the project get? |
 | 1 | Pi agent loop; files fed as context (not read by tool); write, edit, bash; a review-your-work instruction; no structured checks, no ifcopenshell | how much does a loop that can look at its own work add? |
+| 2 | rung 1 with the data out of the first message, a `read` tool, a requirements-then-checks method | does a method help? |
+| 3 | rung 2 plus ifcopenshell, and an evaluation engine the agent programs (`set_checks`, `evaluate`, `optimize`, `verify_facts`) | what can a tool supply that the agent will not write for itself? |
 | ... | each next capability is chosen from what rung *n* got wrong | |
 
 Rung 1 is chosen after we have read rung 0's failures task by task."""),
@@ -514,6 +520,130 @@ the only gate that failed. The check agreed with the model's belief, not with th
    the requirement as written.
 3. **It motivates the next rung** (structured self-check against the task's own words) with a failure we
    observed, rather than a guess. Whether it works is for the next measurement; one run per model so far."""),
+
+    md("""### 6b. Rungs 1 and 2: a loop and a method, and the clash gate still fails
+
+Neon, one task (`data-hall-mep-routing`), valid runs only (the agent could not run ifcopenshell in rung 1 v4 and
+rung 2 v2 and v3: a stub shadowed the library so the loop had to rely on its own checks; the later rungs lift that).
+The table is generated from the run tracker (`research/rung_summary.py`)."""),
+
+    code("""import sys
+sys.path.insert(0, str(HERE))
+import rung_summary
+from IPython.display import Markdown
+Markdown(rung_summary.table("gemini-4-neon"))"""),
+
+    md("""**What the six-run groups show.** Rung 1 v4 passes the gates in 2 of 6 runs (0.921 and 0.612), rung 2 v2 and v3 in
+0 of 6, and every failure is the clash gate. A loop, a read tool and a method did not move the result. We read all 18
+runs (`docs/failure-analysis.md`) against four hypotheses:
+
+| Hypothesis | Verdict | Main evidence |
+|---|---|---|
+| The agent misreads the drawings | **Not the main cause** | 12 data notes share a 70-number consensus; position-dependent gates passed in every run that reached them |
+| It turns a requirement into the wrong check | **Partly, at one step: what a requirement applies to** | all 20 requirement groups are in every list; "no overlap anywhere" became checks on the pairs the agent had designed for, "2600 mm headroom" became a test of routes only |
+| The checks are not designed well enough | **Yes, the main cause** | 9 of 12 rung 2 checks passed the first time they ran; they exclude the pairs that are wrong, so they cannot fail on the real defect |
+| It fails to adapt to feedback | **No, with one caveat** | every real failure was followed by a fix and a re-run; but the first all-pass ends the work (8 to 10 of 40 calls used) |
+
+**The central observation.** The same belief ("pieces of one run meet at joints, so they overlap there") shapes the design
+and the check, so the two never disagree. In 12 of 12 rung 2 runs the check excluded same-service pairs. One added
+sentence in the prompt ("check every item or pair, nothing excluded, say what you left out") completed the background
+sweeps and left the same-service exclusion untouched in 6 of 6. **An instruction can fix a check's scope; it cannot fix
+the belief behind it.** That is what a tool has to supply."""),
+
+    md("""### 6c. The engine: what we can provide that an agent will not write for itself
+
+Agents already write checks unprompted, so a check library alone adds little. What an agent does not produce on its own is
+(1) **semantics validated against the grader**, (2) **diagnosis**, (3) **a report of what its checks leave out**, and (4) **an
+independent test of the check itself**. We built an evaluation engine (`harnesses/pi-rung3/engine.py`, tested) around those:
+
+* **Strict by default and validated.** `no_overlap` examines every pair of the selected items; excluding pairs is an
+  explicit rule, and the report counts pairs examined and excluded and measures the overlaps *inside* the excluded
+  group. On the 12 delivered models we could rebuild, the engine's clash pairs equal the grader's pair for pair
+  (`research/engine_vs_grader.py`).
+* **Diagnosis, not a count.** Overlaps are clustered by cause and each cause gets the exact fix ("end X at x = 664
+  instead of 600: shorten by 64 mm so it butts against Y"): 22 overlaps became 5 causes on a real failing model. Every
+  other check reports where, by how much, and the move that fixes it, plus its **margin** (slack to its limit).
+* **Scope facts and scope shadows.** Which check types test each kind of element; kinds tested only for overlap; and
+  for a height check, the elements *outside* its roles that would break the same limit (not counted, but shown).
+* **Probes.** Each check is run on a tiny synthetic model with a planted fault and a clean case; a check that cannot
+  fail its own fault is flagged before the design is judged by it. A check that examines nothing is an error, not a pass.
+* **IFC schema messages.** The validator's express-rule output is translated into what to change (for example "one
+  shape representation shared by 79 products: create one per product").
+* **Tools around it:** `set_checks` (the agent programs the engine and may rewrite it), `evaluate` (build, validate,
+  run), `optimize` (a seeded search over the script's parameters, no model calls inside the loop) and `verify_facts`
+  (a fresh second reader answers the same questions from the files; answers withheld).
+
+![What we provide](../docs/figures/fig5-structured-architecture.png)"""),
+
+    md("""### 6d. Rung 3, version by version: what each run taught us
+
+Neon, one task. Scores from the tracker; "gates" means the grader's schema, clash and connectivity gates.
+
+| Version | Change (one at a time where possible) | Runs and scores | What it showed |
+|---|---|---|---|
+| v1 | a separate check-builder agent writes the checks from the task text; the designer builds against them | run-046 0.925 (**invalid**), run-047 0.000 | run-046: the engine never ran (below). run-047: three custom checks crashed, the service-entry coordinates live only in the drawings the check-builder never saw, and the row-coverage check measured the wrong thing |
+| v2 | **one agent does everything** and may rewrite its checker; ifcopenshell enabled | 0.940, 0.921, 0.923 | all gates pass; every agent read the entry coordinates from the drawings, fixed bugs in its own checks after the probes flagged them, and loosened nothing |
+| v3 | instructions on how to read the report; tool results logged | 0.921, 0.923, 0.925 | no change; the agents used spare calls to shorten the route, which the grader's score does not reward here |
+| v4 | scope shadows for height checks; the `optimize` tool | 0.925, **0.000, 0.000** | the optimizer drove two designs onto errors in the agent's own checks (below) |
+| v5 | binding-check report from `optimize`; `verify_facts`; `bands` in the height check; per-kind scope table | not yet run | targets the v4 failures |
+
+```
+run-046 (engine void)  0.925        <- ifcopenshell enabled, the engine's report never reached the agent
+v2   0.940 0.921 0.923
+v3   0.921 0.923 0.925               <- the same 20 grader violations in every one of these runs
+v4   0.925 0.000 0.000
+```"""),
+
+    code("""rows = []
+for r in runs:
+    v = tracker.harness_version(r)
+    if not v or not v.startswith("rung 3"):
+        continue
+    t = next(iter(r["tasks"].values()))
+    rows.append({"run": r["run_id"], "version": v, "score": round(t["score"], 3),
+                 "valid": "NO" if tracker.invalid_reason(r) else "yes",
+                 "wall time (s)": t.get("seconds")})
+pd.DataFrame(rows)"""),
+
+    md("""**Five findings worth keeping (each from a failure, with the run that showed it).**
+
+1. **The biggest lever was not the engine.** Run-046, where the engine never reached the agent, scored 0.925: inside the
+   v2 range (0.921 to 0.940). Rung 2 v3, where ifcopenshell was blocked, passed the gates in 0 of 6. Letting the agent run the
+   real library is what moved the result; the engine's own contribution is still to be separated with an ablation (same
+   harness, engine off). *We say this because the data say it, not because it is the story we built.*
+2. **A tool that fails in the evaluator's environment fails silently for the score.** ifcopenshell's express-rule validator
+   imports `pytest`; our test environment had it, the serve environment did not, so `evaluate` crashed on the agent's only call and
+   the run was void (run-046, marked invalid, kept). Fixed by pinning the dependency and by making a validator failure
+   visible but not fatal. Tests have to run in the environment the build produces.
+3. **Agent-written checks encode the agent's beliefs, and the score plateaus where the checks stop looking.** All six
+   v2 and v3 runs hit the same two grader rules (`clear_height`: 16 in-aisle sprinkler heads at 1,890 mm against 2,600 mm;
+   `tray_stack_headroom`: 4), because each agent scoped its headroom check to the routes. The score is exactly
+   1 minus the violation rate (20 of 266 = 0.075), so the compliance gap, not the route length, is what is left. The report
+   even said "no kind is uncovered": a clash sweep over everything touches every kind. v4 and v5 changed what the report says
+   about scope for that reason.
+4. **An optimizer is a faithful amplifier of check error.** In v4 the search shortened the route 4 to 8% in all three runs with
+   zero violations at every accepted trial, and two of the three scored 0.000: one had modelled the busway with the wrong IFC
+   class (the grader saw no busway), one had the search push the trunks to the edge of its range, 5,000 mm from the grader's
+   service entry, which the agent's own checks placed elsewhere. The checks were consistent with the misreading, so no check
+   could object. The search found exactly where a check was wrong in the agent's favour. This is the learned-checker version of
+   Goodhart's law; v5 answers it with margins (which checks were pushed to their limits), a prompt to re-verify those numbers,
+   and an independent second reading of the facts.
+5. **The freedom to rewrite the checker went the right way.** In the runs we read (v2 to v4) no rewrite loosened a requirement's
+   threshold or dropped a check. The exclusion that 12 of 12 rung 2 agents kept (same-service pairs "meet at joints") was
+   *removed by the agent itself* in three of the six v3 and v4 runs (run-053, run-054, run-056): their first configuration had
+   it, the probe (a planted overlap between two items of one group) or the strict-sweep rule exposed it, and their final
+   messages say they dropped it to check butt-jointed segments strictly. The agent that built the design and the checker that
+   judges it no longer shared that belief once a planted fault could contradict it. Every installed version is logged with a
+   change list, and each evaluation says what was rewritten since the last, so a loosening would have shown. What the planted
+   faults cannot reach is a misreading that the check and the design share (finding 4)."""),
+
+    md("""**Engineering reasoning, one concrete case: the sprinkler heads.** A licensed fire-protection or data-centre engineer
+reads "2,600 mm minimum headroom" as a requirement on everything in the room that people walk under, and notices that the
+drawing sets the in-aisle sprinkler heads at 1,890 mm. That is a conflict between a drawing dimension and a code, and the
+engineer resolves it (raise the heads, or document an exception). Our agents read the drawing correctly, built what it said,
+and wrote the headroom requirement as a check on pipes and trays, so the conflict never appeared in any report. The failure is
+not in perception or arithmetic; it is the engineering step of deciding **what a rule applies to**, which is why the engine now
+shows the agent the elements outside a check's scope that would break the same limit."""),
 
     md("""## Lab log
 
@@ -591,7 +721,32 @@ Dated, honest notes, including what went wrong. Newest last.
 * **2026-11-26.** Review of `harnesses/naive` found that a reply cut off at the token limit
   silently lost its last file. Fixed in the harness (the partial file is now written and the cut-off
   is logged); rung 0's first runs predate that fix, which matters only for tasks where the reply
-  was cut off."""),
+  was cut off.
+* **2026-11-27.** Rung 1 v4 and rung 2 v2 and v3, six Neon runs each (ifcopenshell blocked for the agent by a stub on its
+  `PYTHONPATH`, removed at the end so the grader is untouched): rung 1 v4 passed the gates in 2 of 6, rungs 2 v2 and v3 in 0 of 6,
+  all on the clash gate. Failure analysis over 18 runs (section 6b): the checks, not the reading, are the main cause. Dropped
+  Gemini 3.8 Flash for now ("maybe flash is just a bad model for this"); everything below is Neon.
+* **2026-11-27.** Decision (user): the next rung is a structured workflow where the agent gets tooling to design requirements,
+  checks and objective calculation, with precise feedback. Rejected the idea of requiring quotes for each check ("quotes can be
+  fabricated"); a robust engine instead. A sub-agent cannot be forced onto a different model in a submitted entry (the declared
+  model must be the one called), so any helper agent runs on the same model with a fresh context.
+* **2026-11-27.** Built the engine and validated it against the grader: 12 of 12 delivered models agree pair for pair.
+  Added diagnosis (overlaps clustered by cause, exact fixes). Built the IFC bridge with the validator's output translated.
+* **2026-11-28.** Rung 3 v1 (a separate check-builder agent). Run-046 scored 0.925 but the engine never ran: ifcopenshell's
+  validator needs `pytest`, missing from the serve environment (our tests had it). Marked invalid, kept. Run-047: 0.000; the
+  check-builder could not see the drawings. Lesson recorded: a tool that fails in the evaluator's environment fails silently
+  for the score.
+* **2026-11-28.** Decision (user): simplify. One agent does everything and may rewrite its own checker. Rung 3 v2, three runs:
+  0.940, 0.921, 0.923. Read the evidence honestly: run-046 (engine void) was 0.925, so most of the gain over rung 2 is ifcopenshell.
+* **2026-11-28.** v3 (instructions on reading the report): 0.921, 0.923, 0.925. All six v2 and v3 runs violate the same grader rules
+  (16 sprinkler heads at 1,890 mm; 4 tray stacks). Cause: the headroom check was scoped to routes, and "kinds no check selects:
+  none" was vacuous. v4: scope shadows and an optimizer tool (user's idea: let the agent call an optimization algorithm).
+* **2026-11-28.** v4: 0.925, 0.000, 0.000. The optimizer drove two designs onto errors in the agent's own checks (a busway class
+  misread; trunks pushed to the edge of the range, away from the grader's service entry). v5, at the user's request: a
+  binding-check report from the optimizer, `verify_facts` (an independent second reading), `bands` in the height check and a
+  per-kind scope table. Not yet run.
+* **2026-11-28.** Tried to read another team's public Kaggle notebook: blocked by the session's network policy; we did not work
+  around it. No other notebook has been read, so we make no claim about what other entries struggled with."""),
 ]
 
 nb = nbf.v4.new_notebook(cells=cells, metadata={

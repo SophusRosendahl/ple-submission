@@ -1,14 +1,17 @@
 flowchart LR
-  CB["CHECK-BUILDER<br/>sub-agent, same model, fresh context<br/>sees only the task and the library<br/>never sees the design<br/>programs the checks once"]
-  DS["DESIGNER<br/>the main agent, Pi loop<br/>builds, reviews, fixes"]
-  subgraph ENG["ENGINE WE PROVIDE (serve container, deterministic, tested)"]
-    LB["Check library<br/>all-pairs overlap, clearance, ranges,<br/>connectivity, coverage, counts, length<br/>plus custom checks"]
-    EV["Evaluation<br/>strict defaults, nothing excluded unless declared<br/>what was examined, injected-fault self-test, objective"]
+  AG["AGENT (one Pi loop, 40 calls)<br/>reads, designs, writes checks,<br/>rewrites them when wrong"]
+  subgraph ENG["WHAT WE PROVIDE (serve container, deterministic, tested)"]
+    SC["set_checks<br/>library: overlap, clearance, z bands, nearest,<br/>connected, coverage, count, length, custom<br/>probes with planted faults"]
+    EV["evaluate<br/>IFC schema messages, diagnosed report:<br/>causes, fixes, margins, scope shadows,<br/>self-test, per-kind coverage, objective"]
+    OP["optimize<br/>seeded search over script parameters<br/>binding checks, parameters at a bound"]
+    VF["verify_facts<br/>fresh second reader, answers withheld<br/>compares readings"]
   end
-  TC["TASK CONTAINER<br/>solution.py exposes its items"]
-  CB <-->|"reads the library, returns the checks"| LB
-  DS <-->|"tags items, asks to evaluate"| EV
-  EV <-->|"report: what fails, by how much, what is not checked"| DS
-  LB --> EV
-  EV <-->|"runs solution, reads the items"| TC
-  DS <-->|"read, write, edit, bash"| TC
+  TC["TASK CONTAINER<br/>input files, solution.py, model.ifc"]
+  AG <--> SC
+  AG <--> EV
+  AG <--> OP
+  AG <--> VF
+  EV <-->|"build, read the IFC"| TC
+  OP <-->|"build many candidates"| TC
+  VF -->|"reads the files"| TC
+  AG <-->|"read, write, edit, bash"| TC
