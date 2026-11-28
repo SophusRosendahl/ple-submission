@@ -447,10 +447,40 @@ def _runs(mask, xs, step=100.0):
   return out
 
 
+def _merge_rows(items, idx, gap) -> list[list[int]]:
+  """Union of items that touch or sit within `gap` mm along one axis while overlapping on the other (racks standing in a row)."""
+  parent = {i: i for i in idx}
+  def find(a):
+    while parent[a] != a:
+      parent[a] = parent[parent[a]]
+      a = parent[a]
+    return a
+  for n, i in enumerate(idx):
+    a = items[i]["aabb"]
+    for j in idx[n + 1:]:
+      b = items[j]["aabb"]
+      ox, oy = min(a[3], b[3]) - max(a[0], b[0]), min(a[4], b[4]) - max(a[1], b[1])
+      if (oy > 0 and -ox <= gap) or (ox > 0 and -oy <= gap):
+        parent[find(i)] = find(j)
+  out: dict[int, list[int]] = {}
+  for i in idx:
+    out.setdefault(find(i), []).append(i)
+  return list(out.values())
+
+
 def check_coverage_along(items, roles, spec) -> dict:
   """Every item of `lines` (a long box) must be served along min_fraction of its length by items of `by`, within `across` mm."""
   il, ib = select(items, roles, spec["lines"]), select(items, roles, spec["by"])
   across, frac_need = float(spec["across"]), float(spec.get("min_fraction", 0.8))
+  if spec.get("merge_lines"):  # items of `lines` that sit side by side (within row_gap mm) are one row, judged along its whole length
+    items = list(items)
+    rows = _merge_rows(items, il, float(spec.get("row_gap", 300.0)))
+    il = []
+    for n, mem in enumerate(rows):
+      bb = np.array([items[i]["aabb"] for i in mem])
+      box = [*bb[:, :3].min(0), *bb[:, 3:].max(0)]
+      items.append({"id": f"row of {len(mem)} ({items[mem[0]]['id']} ...)", "kind": items[mem[0]]["kind"], "group": "", "aabb": [float(v) for v in box], "attrs": {}})
+      il.append(len(items) - 1)
   groups = sorted({items[i]["group"] for i in ib}) if spec.get("each_group") else [None]
   bad, worst = [], []
   for li in il:
@@ -508,7 +538,8 @@ SAFE_BUILTINS = {n: __builtins__[n] if isinstance(__builtins__, dict) else getat
 
 def check_custom(items, roles, spec) -> dict:
   """A check the library does not cover: `code` defines check(items, roles, helpers) returning {"violations": [str, ...]}."""
-  helpers = {"overlap_depths": overlap_depths, "gaps": gaps, "np": np, "select": select}
+  helpers = {"overlap_depths": overlap_depths, "gaps": gaps, "np": np, "select": select,
+             "items_of": lambda its, rl, role: [its[i] for i in select(its, rl, role)]}  # select gives indices, items_of the item dicts
   ns: dict[str, Any] = {"__builtins__": SAFE_BUILTINS}
   try:
     exec(compile(spec["code"], f"custom:{spec['id']}", "exec"), ns)

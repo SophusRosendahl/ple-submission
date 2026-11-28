@@ -111,5 +111,21 @@ class Probes(unittest.TestCase):
     self.assertTrue(any(not x["ok"] for x in r["rows"]))
 
 
+class CustomProbe(unittest.TestCase):
+  def test_the_run047_bug_is_caught_by_the_probe(self):
+    import probe
+    bad = "def check(items, roles, helpers):\n  v = []\n  for m in helpers['select'](items, roles, 'pipe'):\n    z = m['aabb'][2]\n  return {'violations': v}\n"
+    cfg = {"roles": {"pipe": ["IfcPipeSegment*"]}, "checks": [{"id": "h", "type": "custom", "code": bad}]}
+    rows = probe.run_probes(cfg)["rows"]
+    self.assertFalse(rows[0]["ok"])
+    self.assertIn("at line 4", rows[0]["detail"])
+
+  def test_a_working_custom_check_passes_the_probe(self):
+    import probe
+    good = "def check(items, roles, helpers):\n  return {'violations': [i['id'] for i in helpers['items_of'](items, roles, 'pipe') if i['aabb'][5] > 5]}\n"
+    cfg = {"roles": {"pipe": ["IfcPipeSegment*"]}, "checks": [{"id": "h", "type": "custom", "code": good}]}
+    self.assertTrue(probe.run_probes(cfg)["rows"][0]["ok"])
+
+
 if __name__ == "__main__":
   unittest.main()

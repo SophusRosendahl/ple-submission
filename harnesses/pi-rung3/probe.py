@@ -71,12 +71,20 @@ def probes_for(cfg: dict, c: dict):
     long = _box("line", ln, "G", 0, 0, 0, dx=3000.0)
     return [("line fully served", [long, _box("s", by, "G", 0, 0, 0, dx=3000.0)], False),
             ("line served over a fifth", [long, _box("s", by, "G", 0, 0, 0, dx=600.0)], True)]
+  if t == "custom":  # no known verdict: the code must run without error on one item of every kind its roles name
+    items, x = [], 0.0
+    for r, pats in cfg["roles"].items():
+      for k in kinds_of(pats)[:2]:
+        for _ in range(2):
+          items.append(_box(f"{r}-{len(items)}", k, "G", x, 0, 0))
+          x += 1000.0
+    return [("runs on one item of every role kind", items, None)] if items else []
   return []
 
 
 def run_probes(cfg: dict) -> dict:
   """Returns {"rows": [{check, probe, expected, got, ok}], "untested": [check ids]}."""
-  rows, untested = [], []
+  rows, untested = [], []  # expect_fail None = must not error
   roles_all = {r: [kinds_of(p)[0]] for r, p in cfg["roles"].items() if p}
   for c in cfg["checks"]:
     ps = probes_for(cfg, c)
@@ -90,8 +98,11 @@ def run_probes(cfg: dict) -> dict:
         detail = res["offenders"][0] if res["offenders"] else ""
       except engine.EngineError as exc:
         got, detail = "error", str(exc)
-      ok = got == ("fail" if expect_fail else "pass")
-      rows.append({"check": c["id"], "probe": label, "expected": "fail" if expect_fail else "pass", "got": got, "ok": ok, "detail": detail})
+      if expect_fail is None:
+        ok, want = got != "error", "no error"
+      else:
+        ok, want = got == ("fail" if expect_fail else "pass"), "fail" if expect_fail else "pass"
+      rows.append({"check": c["id"], "probe": label, "expected": want, "got": got, "ok": ok, "detail": detail})
   return {"rows": rows, "untested": untested}
 
 
@@ -106,5 +117,5 @@ def render(result: dict) -> str:
     if not r["ok"] and r["detail"]:
       lines.append(f"        {r['detail']}")
   if result["untested"]:
-    lines.append("  not probed (no generic probe): " + ", ".join(result["untested"]) + " -- test custom code yourself by reasoning through the helpers")
+    lines.append("  not probed: " + ", ".join(result["untested"]))
   return "\n".join(lines)

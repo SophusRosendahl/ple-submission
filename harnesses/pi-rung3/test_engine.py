@@ -347,5 +347,20 @@ class Messages(unittest.TestCase):
     self.assertIn("at line 3", r["offenders"][0])
 
 
+class RowsAndHelpers(unittest.TestCase):
+  def test_rows_of_small_items_are_judged_along_the_whole_row(self):
+    racks = [box(f"r{i}", "rack", "", i * 600, 0, 0, i * 600 + 600, 1200, 2000) for i in range(10)]  # one row 6000 mm long
+    feed = [box("f", "pipe-seg", "S", 0, 0, 2400, 1200, 100, 2500)]  # serves the first 20 % of the row
+    row = run(racks + feed, [{"id": "c", "type": "coverage_along", "lines": "rack", "by": "pipe", "across": 3000, "min_fraction": 0.8, "merge_lines": True}])["results"]["c"]
+    self.assertEqual(row["status"], "fail")
+    self.assertIn("row of 10", row["offenders"][0])
+    self.assertEqual(row["examined"], 1)
+
+  def test_items_of_gives_dicts_and_select_gives_indices(self):
+    code = "def check(items, roles, helpers):\n  its = helpers['items_of'](items, roles, 'pipe')\n  return {'violations': [i['id'] for i in its], 'examined': len(its)}\n"
+    r = run([box("p", "pipe-seg", "", 0, 0, 0, 10, 10, 10)], [{"id": "c", "type": "custom", "code": code}])["results"]["c"]
+    self.assertEqual(r["offenders"], ["p"])
+
+
 if __name__ == "__main__":
   unittest.main()

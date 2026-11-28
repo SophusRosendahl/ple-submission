@@ -33,12 +33,21 @@ THE CHECK LIBRARY (each check is a JSON object with a unique "id", a "type", a s
   z_range         "role", "zmin" and/or "zmax" in mm: every item of the role lies inside the band
   nearest_within  "from" role, "to" role, "max" mm: every "from" item has a "to" item within max (plan view unless "plan_only": false)
   connected       "role": items of one group form one touching network ("touch_tol" mm, default 5); optional "reach": {"point": [x, y], "tol": mm}
-  coverage_along  "lines" role (long items), "by" role, "across" mm, "min_fraction" (0 to 1), optional "each_group": true
+  coverage_along  "lines" role (long items), "by" role, "across" mm, "min_fraction" (0 to 1), optional "each_group": true.
+                  For rows made of many small items (racks standing side by side) add "merge_lines": true (optional "row_gap" mm, default 300):
+                  the items of a row are judged together along the row's whole length, not one by one.
   count           "role" and "equals" or "at_least"
   length_sum      "role": the objective's route length in mm, by group (use this when the objective is total length)
   custom          "code": Python defining  def check(items, roles, helpers)  returning {"violations": [strings], "examined": n}.
-                  items are dicts as above; roles maps role to its kinds; helpers has np, overlap_depths(a, b), gaps(a, b), select(items, roles, role).
-                  No imports, no file access. Use only when the library cannot express the requirement.
+                  items are dicts as above; roles maps role to its kinds. helpers: np; helpers["items_of"](items, roles, "pipe") returns the
+                  item DICTS of a role (helpers["select"] returns INDICES into items, not items); overlap_depths(a_aabb, b_aabb) returns
+                  the (x, y, z) overlap depths of two boxes (negative = a gap); gaps(a, b) the per-axis gaps. No imports, no file access.
+                  Example:  def check(items, roles, helpers):
+                              v = []
+                              for p in helpers["items_of"](items, roles, "pipe"):
+                                if p["aabb"][5] > 2400: v.append(f"{p['id']} top at {p['aabb'][5]:.0f}, 2400 allowed: lower it")
+                              return {"violations": v, "examined": len(helpers["items_of"](items, roles, "pipe"))}
+                  Use only when the library cannot express the requirement; test_checks runs your code, so an error in it shows up there.
 
 RULES
 - Encode every numeric limit in the task with its own number and unit (convert to mm). Do not soften, narrow or reinterpret.
